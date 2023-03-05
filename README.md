@@ -58,9 +58,9 @@ http://192.168.5.1:4395/url/A.m3u
 
 4-我只编译了arm64位系统的镜像，想要其他镜像的自己做吧：
 
-    1- 把源码复制到一个文件夹下
+     把源码复制到一个文件夹下
     
-    2- sudo docker build -t m3usubscriber .     
+     sudo docker build -t m3usubscriber .     
     
-    3- docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80 -d m3usubscriber:latest
+     docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80 -d m3usubscriber:latest
 
