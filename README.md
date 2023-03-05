@@ -17,7 +17,7 @@ m3u超融合
 
 安装步骤:
 
-docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80  jkld310/m3usubscriber:0001。
+docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80  jkld310/m3usubscriber:0001
 
 接下来，您只需要按照以下步骤即可使用本工具：
 
@@ -59,5 +59,5 @@ http://192.168.5.1:4395/url/A.m3u
     
      sudo docker build -t m3usubscriber .     
     
-     docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80 -d m3usubscriber:latest
+     docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80  jkld310/m3usubscriber:0001
 
