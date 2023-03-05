@@ -22,7 +22,7 @@ m3u超融合
 
 2-在同一路径下，执行sudo docker load < m3usubscriber.tar；
 
-3-执行以下命令：docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80 -d m3usubscriber:latest。
+3-执行以下命令：docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80 -d jkld310/m3usubscriber:latest。
 
 接下来，您只需要按照以下步骤即可使用本工具：
 
