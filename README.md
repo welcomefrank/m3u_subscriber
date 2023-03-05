@@ -32,7 +32,7 @@ m3u超融合
 
 3-按照以下格式填写M3U超融合直播源订阅链接：
 
-https://局域网docker所在主机ip:当前页面端口/url/A.m3u
+http://局域网docker所在主机ip:当前页面端口/url/A.m3u
 
 例如，若您的docker挂载在软路由上，软路由WAN的ip地址为192.168.5.1，
 
