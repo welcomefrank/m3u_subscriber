@@ -16,13 +16,8 @@ m3u超融合
 4-工具在后台每隔半小时会自动执行生成M3U超融合直播源订阅功能，即会自动刷新所有直播源订阅链接内容。
 
 安装步骤:
-若您的docker网络连接不畅，请按照以下步骤安装：
 
-1-直接下载m3usubscriber.tar，并将其放置于linux-arm64位主机中；
-
-2-在同一路径下，执行sudo docker load < m3usubscriber.tar；
-
-3-执行以下命令：docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80  jkld310/m3usubscriber:0001。
+docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80  jkld310/m3usubscriber:0001。
 
 接下来，您只需要按照以下步骤即可使用本工具：
 
