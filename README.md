@@ -1,7 +1,7 @@
 # m3usubscriber
 m3u超融合
 简单的做了一个网络直播源连接工具
-
+https://raw.githubusercontent.com/liudaoguiguzi/m3u_subscriber/main/%E5%9B%BE%E7%89%871.png
 目前实现的功能如下:
 1-保存来自互联网的直播源订阅链接
 2-可以把所有保存的链接的配置文件下载后整合到一起，生成一个局域网直播源订阅链接，你可以通过这个直播源链接获取你保存的全部直播源链接内容
