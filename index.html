@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>M3U 超融合</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #057748;
+            color: aliceblue;
+        }
+
+        .button, #add-row,
+        .save-button,
+        .delete-button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 5px;
+            margin-top: 5px;
+            float: right
+        }
+
+        .button:hover {
+            background-color: #3e8e41;
+        }
+
+        #tag {
+
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 5px;
+            margin-top: 5px;
+            float: right;
+            width: 100%
+        }
+
+        .save-button,
+        .delete-button {
+            margin-right: 5px;
+        }
+
+        .save-button,
+        .delete-button {
+            width: 45%
+        }
+
+        .subUrl {
+            width: 70%;
+            background-color: #758a99;
+            color: aliceblue;
+            font-size: x-large;
+        }
+
+        .subname {
+            width: 20%;
+            background-color: #758a99;
+            color: aliceblue;
+            font-size: x-large;
+        }
+
+        .subname,.subUrl,#step2,#add-row,.notice,#tag,.save-button,#download-json-btn,#upload-json-btn,
+        .delete-button,#tag2{
+            font-size: x-large;
+        }
+
+        #upload-json-btn {
+            float: right;
+
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 5px;
+            margin-top: 5px;
+        }
+
+    </style>
+</head>
+<body onload="reload()">
+<h1>M3U 超融合</h1>
+<h3>后台默认半小时自动执行生成操作</h3>
+<h3>M3U超融合直播源订阅地址:</h3>
+<h3>https://局域网docker所在主机ip:当前页面端口/url/A.m3u</h3>
+<h3>上传文件导入合并M3U超融合备份</h3>
+
+<div style="width:100%">
+    <div>
+        <input type="file"  id="upload-json-btn"  style="width: 100%"></input>
+    </div>
+    <div><button id="add-row" style="width:100%">新增网络直播源订阅</button></div>
+    <div><button id="step2" class="button" onclick="execute()" style="width: 100%">生成M3U超融合直播源订阅</button></div>
+    <div><button id="download-json-btn" class="button" style="width: 100%">导出M3U超融合备份</button></div>
+    <div style="display: flex;width: 100%;">
+        <div class="notice" style="display: flex;width: 80%;">订阅来源:M3U网络直播源订阅地址+直播源备注</div>
+        <div class="notice" style="display: flex;width: 20%;">操作</div>
+    </div>
+    <table id="input-table" style="width:100%">
+        <tbody style="width:100%">
+        </tbody>
+    </table>
+</div>
+
+<script>
+    const addRowButton = document.getElementById('add-row');
+    const inputTable = document.getElementById('input-table');
+    const downloadBtn = document.getElementById('download-json-btn');
+    const fileInput = document.getElementById('upload-json-btn');
+    fileInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        // 使用 FileReader 读取 JSON 文件内容
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const fileContent = event.target.result;
+            // 将 JSON 文件上传至 Flask 后端
+            fetch('/upload_json_file', {
+                method: 'POST',
+                body: fileContent
+            })
+                .then(response => response.json())
+                .then(data => console.log(data))
+                .catch(error => console.log(error));
+        };
+        reader.readAsText(file);
+        location.reload();
+        reload();
+    });
+
+
+    downloadBtn.addEventListener('click', () => {
+        fetch('/download_json_file')
+            .then(response => response.blob())
+            .then(data => {
+                // 创建 a 元素
+                const a = document.createElement('a');
+                const url = window.URL.createObjectURL(new Blob([data]));
+                a.href = url;
+                a.download = 'temp_json.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            })
+            .catch(error => console.log(error));
+    });
+
+    //只添加一行列表，不存储数据
+    addRowButton.addEventListener('click', () => {
+        const newRow = createInputRow();
+        inputTable.querySelector('tbody').prepend(newRow);
+    });
+
+    //新增输入框
+    function createInputRow() {
+        const row = document.createElement('tr');
+        const valueCell = document.createElement('td');
+        const valueInput = document.createElement('input');
+        valueInput.type = 'text';
+        valueInput.classList.add('subUrl');
+        valueCell.appendChild(valueInput);
+        const taeinput = document.createElement('input');
+        taeinput.type = 'text';
+        taeinput.classList.add('subname');
+        valueCell.appendChild(taeinput);
+        const actionsCell = document.createElement('td');
+        const saveButton = document.createElement('button');
+        saveButton.textContent = '保存';
+        saveButton.classList.add('save-button');
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = '删除';
+        deleteButton.classList.add('delete-button');
+        actionsCell.appendChild(saveButton);
+        actionsCell.appendChild(deleteButton);
+        row.appendChild(valueCell);
+        row.appendChild(actionsCell);
+        return row;
+    }
+
+    //从数据库拉取列表数据
+    function reload() {
+        fetch('/getall')
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(item => {
+                    //创建一个新的行
+                    const row = document.createElement('tr');
+                    const valueCell = document.createElement('td');
+                    const valueInput = document.createElement('input');
+                    valueInput.type = 'text';
+                    valueInput.classList.add('subUrl');
+                    valueInput.value= item[1];
+                    valueCell.appendChild(valueInput);
+                    const taeinput = document.createElement('input');
+                    taeinput.type = 'text';
+                    taeinput.classList.add('subname');
+                    taeinput.value= item[2];
+                    valueCell.appendChild(taeinput);
+                    const actionsCell = document.createElement('td');
+                    const saveButton = document.createElement('button');
+                    saveButton.textContent = '保存';
+                    saveButton.classList.add('save-button');
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = '删除';
+                    deleteButton.classList.add('delete-button');
+                    actionsCell.appendChild(saveButton);
+                    actionsCell.appendChild(deleteButton);
+                    row.appendChild(valueCell);
+                    row.appendChild(actionsCell);
+                    inputTable.querySelector('tbody').appendChild(row);
+                    //行内填充元素
+                });
+            })
+            .catch(error => console.error(error));
+    }
+
+    //保留输入行数据进入数据库
+    function saveInputValue(inputValue, name) {
+        // 其他情况
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/addnewm3u');
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                if (xhr.status === 200) {
+                    //const response = JSON.parse(xhr.responseText);
+                    //alert('存储结果：' + response.addresult);
+                } else {
+                    alert('存储失败：' + xhr.statusText);
+                }
+            }
+        };
+        xhr.send(JSON.stringify({'addurl': inputValue, 'name': name}));
+        location.reload();
+        reload();
+    }
+
+    //删除输入行并且抹除数据库
+    function deleteInputRow(row, inputValue) {
+        if (inputValue === null || inputValue === "") {
+            row.remove();
+        } else {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/deletewm3u');
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        //const response = JSON.parse(xhr.responseText);
+                        //alert('删除结果：' + response.deleteresult);
+                    } else {
+                        alert('删除失败：' + xhr.statusText);
+                    }
+                }
+            };
+            xhr.send(JSON.stringify({'deleteurl': inputValue}));
+            row.remove();
+        }
+    }
+
+    inputTable.addEventListener('click', (event) => {
+        if (event.target.classList.contains('save-button')) {
+            var x = event.target.parentElement.parentElement.querySelectorAll('input');
+            const inputValue = x[0].value.trim();
+            if (inputValue === null || inputValue === "") {
+                // 空指针或者空字符串的情况
+                alert('请输入M3U订阅地址');
+                return;
+            }
+            const tagnameval = x[1].value;
+            saveInputValue(inputValue, tagnameval);
+        }
+        if (event.target.classList.contains('delete-button')) {
+            const row = event.target.parentElement.parentElement;
+            var x = event.target.parentElement.parentElement.querySelectorAll('input');
+            const inputValue = x[0].value;
+            deleteInputRow(row, inputValue);
+        }
+    });
+
+    //超融合
+    function execute() {
+        // 获取按钮
+        const button = document.querySelector('button');
+        // 禁用按钮
+        button.disabled = true;
+        fetch('/chaoronghe')
+            .then(response => response.text()) // 将响应转化为字符串
+            .then(data => {
+                if (data === 'empty') {
+                    alert('超融合失败');
+                } else {
+                    alert('超融合成功');
+                }
+            });
+        // 恢复按钮
+        button.disabled = false;
+    }
+
+</script>
+</body>
+</html>
