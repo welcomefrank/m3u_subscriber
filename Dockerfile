@@ -10,10 +10,14 @@ COPY index.html /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/nginx.conf
 
 RUN apt-get update && apt-get install -y python3-pip && \
-    pip3 install flask && pip3 install requests 
+    pip3 install flask && \
+    pip3 install --no-cache-dir requests && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # 暴露容器的端口
 EXPOSE 80 
 
 # 启动 Nginx 和 Python 应用程序
 CMD ["/bin/bash", "-c", "python3 /app/main.py & nginx -g 'daemon off;'"]
+
