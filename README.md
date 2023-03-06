@@ -15,6 +15,10 @@ m3u超融合
 
 4-工具在后台每隔半小时会自动执行生成M3U超融合直播源订阅功能，即会自动刷新所有直播源订阅链接内容。
 
+5-m3u文件标准格式转换，您可以上传M3U直播源文件获得去重复且格式统一的M3U文件
+
+6-融合链接自带第五条功能
+
 安装步骤:
 
 docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80  jkld310/m3usubscriber:latest
