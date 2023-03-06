@@ -5,6 +5,7 @@ import sqlite3
 import threading
 import time
 import json
+import re
 from flask import Flask, jsonify, request, send_file
 
 app = Flask(__name__)
@@ -155,8 +156,66 @@ def chaoronghe():
     if len(my_array) == 0:
         return 'empty'
     result = download_files(my_array.split("\n"))
-    write_m3u(result)
-    return result
+    # 格式优化
+    new_content = formatTxt(result.split("\n"))
+    # 格式优化
+    write_m3u(new_content)
+    return "result"
+
+
+def formatTxt(data):
+    new_content = ""
+    defalutname = "佚名"
+    tmpurl = []
+    for i in range(len(data)):
+        line = data[i].strip()
+        if line == "":
+            continue
+        # 假定直播名字和直播源不在同一行
+        if line.encode().startswith(b"#EXTINF"):
+            continue
+        # 不是http开头，可能是直播源
+        if not line.encode().startswith(b"http"):
+            # 匹配格式：频道,url
+            if re.match(r"^[^#].*,http", line):
+                name, url = line.split(",", 1)
+                if url in tmpurl:
+                    continue
+                tmpurl.append(url)
+                if name:
+                    new_content += f'#EXTINF:-1 tvg-name="{name}"\n{url}\n'
+                else:
+                    new_content += f'#EXTINF:-1 tvg-name="{defalutname}"\n{url}\n'
+            # 匹配:不是直播源和频道
+            else:
+                new_content += line + "\n"
+        # http开始
+        else:
+            # 去重复
+            if line in tmpurl:
+                continue
+            # index=0
+            if i == 0:
+                new_content += f'#EXTINF:-1 tvg-name="{defalutname}"\n{line}\n'
+                tmpurl.append(line)
+                continue
+            preline = data[i - 1].strip()
+            # 没有名字
+            if preline == "":
+                new_content += f'#EXTINF:-1 tvg-name="{defalutname}"\n{line}\n'
+                tmpurl.append(line)
+                continue
+            # 不是名字
+            if not preline.encode().startswith(b"#EXTINF"):
+                new_content += f'#EXTINF:-1 tvg-name="{defalutname}"\n{line}\n'
+                tmpurl.append(line)
+                continue
+            # 有名字
+            else:
+                new_content += f'{preline}\n{line}\n'
+                tmpurl.append(line)
+                continue
+    return new_content
 
 
 # 数据库全部数据转json字符串
@@ -187,7 +246,7 @@ def download_json_file():
         os.remove("/app/temp_json.json")
     # 保存JSON数据到临时文件
     with open("/app/temp_json.json", 'w') as f:
-        #json.dump(json_data, f)
+        # json.dump(json_data, f)
         f.write(json_data)
     # 发送JSON文件到前端
     return send_file("temp_json.json", as_attachment=True)
@@ -195,42 +254,172 @@ def download_json_file():
 
 @app.route('/upload_json_file', methods=['POST'])
 def upload_json_file():
-    # 获取POST请求中的JSON文件内容
-    file_content = request.get_data()
-    # 将字节对象解码为字符串
-    file_content_str = file_content.decode('utf-8')
-    # 将JSON字符串保存到临时文件
-    with open('/tmp_data.json', 'w') as f:
-        json.dump(json.loads(file_content_str), f)
-    with open("/tmp_data.json", 'r') as f:
-        json_dict = json.load(f)
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM items")
-    items = cursor.fetchall()
-    # 将字典中的数据更新到数据库表
-    for jsondata in json_dict['data']:
-        link = jsondata.get('link')
-        for item in items:
-            if item[1] == link:
+    try:
+        # 获取POST请求中的JSON文件内容
+        file_content = request.get_data()
+        # 将字节对象解码为字符串
+        file_content_str = file_content.decode('utf-8')
+        # 将JSON字符串保存到临时文件
+        with open('/tmp_data.json', 'w') as f:
+            json.dump(json.loads(file_content_str), f)
+        with open("/tmp_data.json", 'r') as f:
+            json_dict = json.load(f)
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM items")
+        items = cursor.fetchall()
+        # 将字典中的数据更新到数据库表
+        for jsondata in json_dict['data']:
+            link = jsondata.get('link')
+            flag = False
+            for item in items:
+                if item[1] == link:
+                    flag = True
+                    break
+            if flag:
                 continue
-        tag = jsondata.get('tag')
-        cursor.execute("INSERT INTO items (name, value) VALUES (?, ?)", (link, tag))
-    # 返回成功信息
-    conn.commit()
-    # 关闭数据库连接
-    cursor.close()
-    conn.close()
-    os.remove("/tmp_data.json")
-    return jsonify({'success': True})
+            tag = jsondata.get('tag')
+            cursor.execute("INSERT INTO items (name, value) VALUES (?, ?)", (link, tag))
+            # 返回成功信息
+            conn.commit()
+        # 关闭数据库连接
+        cursor.close()
+        conn.close()
+        os.remove("/tmp_data.json")
+        return jsonify({'success': True})
+    except Exception as e:
+        print("An error occurred: ", e)
+        return jsonify({'success': False})
+
+
+@app.route('/process-file', methods=['POST'])
+def process_file():
+    if os.path.exists("/app/tmp.m3u"):
+        os.remove("/app/tmp.m3u")
+    # Get the uploaded file
+    file = request.files['file']
+    # Process the file to standardize it to m3u format
+    new_content = format(file.readlines())
+    with open("/app/tmp.m3u", "w") as f:
+        f.write(new_content)
+    # Return the processed file for download
+    return send_file("tmp.m3u", as_attachment=True)
+
+
+def formatStr(data):
+    new_content = ""
+    defalutname = "佚名"
+    tmpurl = []
+    for i in range(len(data)):
+        line = data[i].strip()
+        if line == "":
+            continue
+        # 假定直播名字和直播源不在同一行
+        if line.startswith("#EXTINF"):
+            continue
+        # 不是http开头，可能是直播源
+        if not line.startswith("http"):
+            # 匹配格式：频道,url
+            if re.match(r"^[^#].*,http", line):
+                name, url = line.split(",", 1)
+                if url in tmpurl:
+                    continue
+                tmpurl.append(url)
+                if name:
+                    new_content += f'#EXTINF:-1 tvg-name="{name}"\n{url}\n'
+                else:
+                    new_content += f'#EXTINF:-1 tvg-name="{defalutname}"\n{url}\n'
+            # 匹配:不是直播源和频道
+            else:
+                new_content += line + "\n"
+        # http开始
+        else:
+            # 去重复
+            if line in tmpurl:
+                continue
+            # index=0
+            if i == 0:
+                new_content += f'#EXTINF:-1 tvg-name="{defalutname}"\n{line}\n'
+                tmpurl.append(line)
+                continue
+            preline = data[i - 1].strip()
+            # 没有名字
+            if preline == "":
+                new_content += f'#EXTINF:-1 tvg-name="{defalutname}"\n{line}\n'
+                tmpurl.append(line)
+                continue
+            # 不是名字
+            if not preline.startswith("#EXTINF"):
+                new_content += f'#EXTINF:-1 tvg-name="{defalutname}"\n{line}\n'
+                tmpurl.append(line)
+                continue
+            # 有名字
+            else:
+                new_content += f'{preline}\n{line}\n'
+                tmpurl.append(line)
+                continue
+    return new_content
+
+
+def format(data):
+    new_content = ""
+    defalutname = "佚名"
+    tmpurl = []
+    for i in range(len(data)):
+        line = data[i].decode("utf-8").strip()
+        if line == "":
+            continue
+        # 假定直播名字和直播源不在同一行
+        if line.startswith("#EXTINF"):
+            continue
+        # 不是http开头，可能是直播源
+        if not line.startswith("http"):
+            # 匹配格式：频道,url
+            if re.match(r"^[^#].*,http", line):
+                name, url = line.split(",", 1)
+                if url in tmpurl:
+                    continue
+                tmpurl.append(url)
+                if name:
+                    new_content += f'#EXTINF:-1 tvg-name="{name}"\n{url}\n'
+                else:
+                    new_content += f'#EXTINF:-1 tvg-name="{defalutname}"\n{url}\n'
+            # 匹配:不是直播源和频道
+            else:
+                new_content += line + "\n"
+        # http开始
+        else:
+            # 去重复
+            if line in tmpurl:
+                continue
+            # index=0
+            if i == 0:
+                new_content += f'#EXTINF:-1 tvg-name="{defalutname}"\n{line}\n'
+                tmpurl.append(line)
+                continue
+            preline = data[i - 1].decode("utf-8").strip()
+            # 没有名字
+            if preline == "":
+                new_content += f'#EXTINF:-1 tvg-name="{defalutname}"\n{line}\n'
+                tmpurl.append(line)
+                continue
+            # 不是名字
+            if not preline.startswith("#EXTINF"):
+                new_content += f'#EXTINF:-1 tvg-name="{defalutname}"\n{line}\n'
+                tmpurl.append(line)
+                continue
+            # 有名字
+            else:
+                new_content += f'{preline}\n{line}\n'
+                tmpurl.append(line)
+                continue
+    return new_content
 
 
 # Initialize the database
 init_db()
 
 if __name__ == '__main__':
-    # process_m3u()
-    # app.run(debug=True, host='0.0.0.0', port=5000)
     timer_thread = threading.Thread(target=timer_func)
     timer_thread.start()
     try:
