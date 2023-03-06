@@ -65,14 +65,13 @@
             font-size: x-large;
         }
 
-        .subname,.subUrl,#step2,#add-row,.notice,#tag,.save-button,#download-json-btn,#upload-json-btn,
-        .delete-button,#tag2{
+        .subname,.subUrl,#step2,#add-row,.notice,#tag,.save-button,#download-json-btn,#upload-json-btn,#upload-m3u,
+        .delete-button,#tag2,#sub-m3u{
             font-size: x-large;
         }
 
-        #upload-json-btn {
+        #upload-json-btn,#upload-m3u,sub-m3u{
             float: right;
-
             background-color: #4CAF50;
             color: white;
             border: none;
@@ -86,10 +85,24 @@
 </head>
 <body onload="reload()">
 <h1>M3U 超融合</h1>
-<h3>后台默认半小时自动执行生成操作</h3>
-<h3>M3U超融合直播源订阅地址:</h3>
-<h3>http://局域网docker所在主机ip:当前页面端口/url/A.m3u</h3>
-<h3>上传文件导入合并M3U超融合备份</h3>
+<div>
+    <div style="float: left;width: 70%">
+        <h3>后台默认半小时自动执行生成操作</h3>
+        <h3>M3U超融合直播源订阅地址:</h3>
+        <h3>http://局域网docker所在主机ip:当前页面端口/url/A.m3u</h3>
+        <h3>上传文件导入合并M3U超融合备份</h3>
+    </div>
+    <div style="float: right;width: 30%">
+        <h2>m3u文件标准格式转换</h2>
+        <form enctype="multipart/form-data" method="post" >
+            <input id="upload-m3u" type="file" name="file" style="float: left;width: 80%">
+            <br>
+            <input id="sub-m3u" type="submit" value="上传你的m3u文件" style="float: left">
+        </form>
+        <br>
+    </div>
+</div>
+
 
 <div style="width:100%">
     <div>
@@ -113,6 +126,49 @@
     const inputTable = document.getElementById('input-table');
     const downloadBtn = document.getElementById('download-json-btn');
     const fileInput = document.getElementById('upload-json-btn');
+    const form = document.querySelector('form');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(form);
+        const response = await fetch('/process-file', {
+            method: 'POST',
+            body: formData
+        });
+        if (response.ok) {
+            // 创建 a 元素
+            const a = document.createElement('a');
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            a.href = url;
+            a.download = 'tmp.m3u';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        } else {
+            alert('上传文件失败');
+        }
+        document.getElementById('upload-m3u').value = '';
+    });
+
+    downloadBtn.addEventListener('click', () => {
+        fetch('/download_json_file')
+            .then(response => response.blob())
+            .then(data => {
+                // 创建 a 元素
+                const a = document.createElement('a');
+                const url = window.URL.createObjectURL(new Blob([data]));
+                a.href = url;
+                a.download = 'temp_json.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            })
+            .catch(error => console.log(error));
+    });
+
     fileInput.addEventListener('change', (event) => {
         const file = event.target.files[0];
         // 使用 FileReader 读取 JSON 文件内容
@@ -131,24 +187,6 @@
         reader.readAsText(file);
         location.reload();
         reload();
-    });
-
-
-    downloadBtn.addEventListener('click', () => {
-        fetch('/download_json_file')
-            .then(response => response.blob())
-            .then(data => {
-                // 创建 a 元素
-                const a = document.createElement('a');
-                const url = window.URL.createObjectURL(new Blob([data]));
-                a.href = url;
-                a.download = 'temp_json.json';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-            })
-            .catch(error => console.log(error));
     });
 
     //只添加一行列表，不存储数据
@@ -229,8 +267,6 @@
         xhr.onreadystatechange = function () {
             if (xhr.readyState === XMLHttpRequest.DONE) {
                 if (xhr.status === 200) {
-                    //const response = JSON.parse(xhr.responseText);
-                    //alert('存储结果：' + response.addresult);
                 } else {
                     alert('存储失败：' + xhr.statusText);
                 }
