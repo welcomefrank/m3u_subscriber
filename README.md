@@ -31,7 +31,17 @@ m3u超融合
 
 安装步骤:
 
+默认arm64:
+
 docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80  jkld310/m3usubscriber:latest
+
+或者:
+
+docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80  jkld310/m3usubscriber:arm64v8
+
+adm64/x86_64:
+
+docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80  jkld310/m3usubscriber:x86_64     
 
 接下来，您只需要按照以下步骤即可使用本工具：
 
