@@ -13,7 +13,7 @@
 
         .button, #add-row,
         .save-button,
-        .delete-button {
+        .delete-button,.save-m3u-button,.delete-m3u-button {
             padding: 10px 20px;
             background-color: #4CAF50;
             color: white;
@@ -29,25 +29,13 @@
             background-color: #3e8e41;
         }
 
-        #tag {
-
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-bottom: 5px;
-            margin-top: 5px;
-            float: right;
-            width: 100%
-        }
-
         .save-button,
-        .delete-button {
+        .delete-button,.save-m3u-button,.delete-m3u-button {
             margin-right: 5px;
         }
 
         .save-button,
-        .delete-button {
+        .delete-button,.save-m3u-button,.delete-m3u-button {
             width: 45%
         }
 
@@ -65,12 +53,29 @@
             font-size: x-large;
         }
 
-        .subname,.subUrl,#step2,#add-row,.notice,#tag,.save-button,#download-json-btn,#upload-json-btn,#upload-m3u,
-        .delete-button,#tag2,#sub-m3u{
+        .subm3uUrl {
+            width: 100%;
+            background-color: #758a99;
+            color: aliceblue;
             font-size: x-large;
         }
 
-        #upload-json-btn,#upload-m3u,sub-m3u{
+        .subm3uname {
+            width: 100%;
+            background-color: #758a99;
+            color: aliceblue;
+            font-size: x-large;
+        }
+
+
+        .subname,.subUrl,#step2,#add-row,.notice,.save-button,#download-json-btn,#upload-json-btn,#upload-m3u,
+        .delete-button,#sub-m3u,#generatepass,#savem3uareas,.save-m3u-button,.delete-m3u-button,#upload-m3u-btn,
+        #download-m3u-btn,#remove-m3u-btn,#remove-m3u-btn,#removem3ulinks,#upload-m3u-btn,#sub-m3u-btn{
+            font-size: x-large;
+        }
+
+        #upload-json-btn,#upload-m3u,#sub-m3u,#generatepass,#savem3uareas,#upload-m3u-btn,#download-m3u-btn
+        ,#remove-m3u-btn,#remove-m3u-btn,#removem3ulinks,#upload-m3u-btn,#sub-m3u-btn{
             float: right;
             background-color: #4CAF50;
             color: white;
@@ -80,48 +85,136 @@
             margin-bottom: 5px;
             margin-top: 5px;
         }
-        
+
+        .delete-button,.delete-m3u-button{
+            background-color: crimson;
+        }
+
+        #remove-m3u-btn,#removem3ulinks{
+            background-color: crimson;
+            float: left;
+            width: 25%;
+        }
+
 
 
     </style>
 </head>
-<body onload="reload()">
+<body onload="reloadm3udata();reload()">
 <h1>M3U 超融合</h1>
-<div>
-    <div style="float: left;width: 70%">
-        <h3>后台默认1小时自动执行生成操作</h3>
-        <h3>M3U超融合直播源订阅地址:</h3>
-        <h3>http://局域网docker所在主机ip:当前页面端口/url/A.m3u</h3>
-        <h3>上传文件导入合并M3U超融合备份</h3>
-    </div>
-    <div style="float: right;width: 30%">
-        <h2>m3u文件标准格式转换</h2>
-        <form enctype="multipart/form-data" method="post" >
-            <input id="upload-m3u" type="file" name="file" style="float: left;width: 80%">
+<div id="switchbox" style="font-size: x-large">
+    <label>
+        <input type="radio" name="page" id="page1" checked>
+        <span>公共网络直播源订阅</span>
+    </label>
+    <label>
+        <input type="radio" name="page" id="page2">
+        <span>直播源粘贴板</span>
+    </label>
+    <label>
+        <input type="radio" name="page" id="page3">
+        <span>密码本</span>
+    </label>
+    <label>
+        <input type="radio" name="page" id="page4">
+        <span>批量生成随机密码</span>
+    </label>
+</div>
+<div id="choice">
+    <div id="page1" style="display: none;">
+        <h1>公共网络直播源订阅:从网络下载直播源</h1>
+        <div style="float: left;width: 70%">
+            <h3>后台默认1小时自动执行生成操作</h3>
+            <h3>M3U超融合直播源订阅地址:</h3>
+            <h3>http://局域网docker所在主机ip:当前页面端口/url/A.m3u</h3>
+            <h3>上传文件导入合并M3U超融合备份</h3>
+        </div>
+        <div style="float: right;width: 30%">
+            <h2>m3u文件标准格式转换</h2>
+            <form enctype="multipart/form-data" method="post">
+                <input id="upload-m3u" type="file" name="file" style="float: left;width: 80%">
+                <br>
+                <input id="sub-m3u" type="submit" value="上传你的m3u文件" style="float: left">
+            </form>
             <br>
-            <input id="sub-m3u" type="submit" value="上传你的m3u文件" style="float: left">
-        </form>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row" style="width:100%">新增网络直播源订阅</button>
+            </div>
+            <div>
+                <button id="step2" class="button" onclick="execute()" style="width: 100%">生成M3U超融合直播源订阅
+                </button>
+            </div>
+            <div>
+                <button id="download-json-btn" class="button" style="width: 100%">导出M3U超融合备份</button>
+            </div>
+            <button id="removem3ulinks"  class="button" onclick="removem3ulinks()">删除全部订阅
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:M3U网络直播源订阅地址+直播源备注
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="page2" style="display: none;">
+        <h1>直播源粘贴板:永久保存直播源到本地</h1>
+        <h3>点击超融合链接，则会合并这里的直播源到A.m3u</h3>
+        <h3>这部分的直播源只能通过手动删除</h3>
+        <h3>上传m3u文件自动/复制直播源到文本框手动合并直播源</h3>
+        <input type="file" id="upload-m3u-btn" style="width: 100%"></input>
+        <textarea id="m3uarea" rows="10"  style="width: 100%;background-color: #758a99;color: aliceblue"></textarea>
         <br>
+		<button id="savem3uareas" style="width: 100%" class="button" type="button" onclick="savem3uarea()">合并文本框直播源</button>
+        <button id="download-m3u-btn" class="button" style="width: 100%">导出全部本地直播源</button>
+        <button id="remove-m3u-btn" onclick="removem3u()" class="button" style="width: 25%;float: left">删除全部本地直播源</button>
+        <div style="display: flex;width: 100%;">
+            <div class="notice" style="display: flex;width: 80%;">备注+直播源地址
+            </div>
+            <div class="notice" style="display: flex;width: 20%;">操作</div>
+        </div>
+        <table id="input-m3u-table" style="width:100%">
+            <tbody style="width:100%">
+            </tbody>
+        </table>
+    </div>
+    <div id="page3" style="display: none;">
+        <h1>密码本</h1>
+    </div>
+    <div id="page4" style="display: block;">
+        <h1>批量生成随机密码</h1>
+	<form style="float: right">
+		<label for="password-length">密码长度（必填）：</label>
+		<input type="number" id="password-length" name="password-length" value="10" required min="1">
+		<br>
+		<label for="num-of-passwords">生成个数（默认10个）：</label>
+		<input type="number" id="num-of-passwords" name="num-of-passwords" value="10" min="1">
+		<br>
+		<label>字符集：</label>
+		<input type="checkbox" id="numbers" name="numbers" value="numbers" checked>
+		<label for="numbers">0-9</label>
+		<input type="checkbox" id="upper-case" name="upper-case" value="upper-case" checked>
+		<label for="upper-case">A-Z</label>
+		<input type="checkbox" id="lower-case" name="lower-case" value="lower-case" checked>
+		<label for="lower-case">a-z</label>
+		<input type="checkbox" id="special-chars" name="special-chars" value="special-chars" checked>
+		<label for="special-chars">特殊符号</label>
+		<br>
+		<button id="generatepass" type="button" onclick="generatePasswords()">生成</button>
+	</form>
+	<br>
+	<textarea id="password-list" rows="10"  readonly style="width: 100%;background-color: #758a99;color: aliceblue"></textarea>
     </div>
 </div>
 
-
-<div style="width:100%">
-    <div>
-        <input type="file"  id="upload-json-btn"  style="width: 100%"></input>
-    </div>
-    <div><button id="add-row" style="width:100%">新增网络直播源订阅</button></div>
-    <div><button id="step2" class="button" onclick="execute()" style="width: 100%">生成M3U超融合直播源订阅</button></div>
-    <div><button id="download-json-btn" class="button" style="width: 100%">导出M3U超融合备份</button></div>
-    <div style="display: flex;width: 100%;">
-        <div class="notice" style="display: flex;width: 80%;">订阅来源:M3U网络直播源订阅地址+直播源备注</div>
-        <div class="notice" style="display: flex;width: 20%;">操作</div>
-    </div>
-    <table id="input-table" style="width:100%">
-        <tbody style="width:100%">
-        </tbody>
-    </table>
-</div>
 
 <script>
     const addRowButton = document.getElementById('add-row');
@@ -130,6 +223,233 @@
     const fileInput = document.getElementById('upload-json-btn');
     const form = document.querySelector('form');
 
+    const switchbox = document.getElementById("switchbox");
+    const choice = document.getElementById("choice");
+    const pages = choice.children;
+    const m3ufileInput = document.getElementById('upload-m3u-btn');
+    const m3uTable = document.getElementById('input-m3u-table');
+
+    const downloadM3UBtn = document.getElementById('download-m3u-btn');
+    // 永久列表-导出永久列表
+    downloadM3UBtn.addEventListener('click', () => {
+        fetch('/download_m3u_file')
+            .then(response => response.blob())
+            .then(data => {
+                // 创建 a 元素
+                const a = document.createElement('a');
+                const url = window.URL.createObjectURL(new Blob([data]));
+                a.href = url;
+                a.download = 'temp_m3u.m3u';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            })
+            .catch(error => console.log(error));
+    });
+
+    // 超融合-删除全部网络直播源订阅配置文件
+    function removem3ulinks() {
+        // 获取按钮
+        const button = document.querySelector('button');
+        // 禁用按钮
+        button.disabled = true;
+        fetch('/removem3ulinks')
+            .then(response => response.text()) // 将响应转化为字符串
+            .then(data => {
+                if (data === 'success') {
+                    alert('本地永久直播源全部删除成功');
+                } else {
+                    alert('本地永久直播源全部删除失败');
+                }
+            });
+        // 恢复按钮
+        button.disabled = false;
+        location.reload();
+    }
+
+    // 永久列表-删除全部本地m3u文件
+    function removem3u() {
+        fetch('/removeallm3u')
+            .then(response => response.text()) // 将响应转化为字符串
+            .then(data => {
+                if (data === 'success') {
+                    alert('本地永久直播源全部删除成功');
+                    //var table = document.getElementById("input-m3u-table");
+                    //var rowCount = table.rows.length;
+                    //for (var i = rowCount - 1; i > 0; i--) {
+                      //  table.deleteRow(i);
+                    //}
+
+                } else {
+                    alert('本地永久直播源全部删除失败');
+                }
+            });
+        location.reload();
+    }
+
+    //永久列表-直播源列表增删按钮
+    m3uTable.addEventListener('click', (event) => {
+        if (event.target.classList.contains('save-m3u-button')) {
+            var x = event.target.parentElement.parentElement.querySelectorAll('input');
+            const urllink = x[0].value.trim();
+            if (urllink === null || urllink === "") {
+                // 空指针或者空字符串的情况
+                alert('直播源为空');
+                return;
+            }
+            const info = x[1].value;
+            savem3uInputValue(urllink, info);
+        }
+        if (event.target.classList.contains('delete-m3u-button')) {
+            const row = event.target.parentElement.parentElement;
+            var x = event.target.parentElement.parentElement.querySelectorAll('input');
+            const inputValue = x[1].value;
+            deleteM3uInputRow(row, inputValue);
+        }
+    });
+
+    //永久列表-上传m3u文件
+    m3ufileInput.addEventListener('change', async (e) => {
+        e.preventDefault();
+        const file = event.target.files[0];
+        var formData = new FormData();
+        formData.append('file', file);
+        const response = await fetch('/upload_m3u_file', {
+            method: 'POST',
+            body: formData
+        });
+        if (response.ok) {
+            alert('上传文件成功');
+            //reloadm3udata();
+        } else {
+            alert('上传文件失败');
+        }
+        document.getElementById('upload-m3u-btn').value = '';
+        location.reload();
+    });
+
+    //永久列表-合并粘贴板直播源
+    function savem3uarea() {
+        var text = document.getElementById("m3uarea").value;
+        if (text === null || text === "") {
+            // 空指针或者空字符串的情况
+            alert('直播源为空');
+        } else {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/savem3uarea');
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        //const response = JSON.parse(xhr.responseText);
+                        //alert('删除结果：' + response.deleteresult);
+                    } else {
+                        alert('合并粘贴板直播源失败：' + xhr.statusText);
+                    }
+                }
+            };
+            xhr.send(JSON.stringify({'m3utext': text}));
+            location.reload();
+        }
+    }
+
+    //永久列表-删除输入行
+    function deleteM3uInputRow(row, inputValue) {
+        if (inputValue === null || inputValue === "") {
+            row.remove();
+        } else {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/deletem3udata');
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        //const response = JSON.parse(xhr.responseText);
+                        //alert('删除结果：' + response.deleteresult);
+                    } else {
+                        alert('删除失败：' + xhr.statusText);
+                    }
+                }
+            };
+            xhr.send(JSON.stringify({'deletem3u': inputValue}));
+            row.remove();
+        }
+    }
+
+    //永久列表-保留输入行数据
+    function savem3uInputValue(url, info) {
+        // 其他情况
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/addm3udata');
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                if (xhr.status === 200) {
+                } else {
+                    alert('存储失败：' + xhr.statusText);
+                }
+            }
+        };
+        xhr.send(JSON.stringify({'addm3u': url, 'name': info}));
+    }
+
+    //永久列表-从数据库拉取全部直播源
+    function reloadm3udata() {
+        fetch('/getm3udata')
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(item => {
+                    //创建一个新的行
+                    const row = document.createElement('tr');
+                    const valueCell = document.createElement('td');
+                    const taeinput = document.createElement('input');
+                    taeinput.type = 'text';
+                    taeinput.classList.add('subm3uname');
+                    taeinput.value = item[1];
+                    valueCell.appendChild(taeinput);
+                    valueCell.append(document.createElement('br'))
+                    const valueInput = document.createElement('input');
+                    valueInput.type = 'text';
+                    valueInput.classList.add('subm3uUrl');
+                    valueInput.value = item[0];
+                    valueCell.appendChild(valueInput);
+                    valueCell.append(document.createElement('br'))
+
+                    const actionsCell = document.createElement('td');
+                    const saveButton = document.createElement('button');
+                    saveButton.textContent = '保存';
+                    saveButton.classList.add('save-m3u-button');
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = '删除';
+                    deleteButton.classList.add('delete-m3u-button');
+                    actionsCell.appendChild(saveButton);
+                    actionsCell.appendChild(deleteButton);
+                    row.appendChild(valueCell);
+                    row.appendChild(actionsCell);
+                    m3uTable.querySelector('tbody').appendChild(row);
+                    //行内填充元素
+                });
+            })
+            .catch(error => console.error(error));
+    }
+
+    // 切换页面
+    switchbox.addEventListener("change", () => {
+        // Get selected page
+        const selectedPage = document.querySelector('input[name="page"]:checked').id;
+
+        // Hide all pages except for the selected one
+        for (let i = 0; i < pages.length; i++) {
+            if (pages[i].id === selectedPage) {
+                pages[i].style.display = "block";
+            } else {
+                pages[i].style.display = "none";
+            }
+        }
+    });
+
+    // 超融合-工具-上传m3u文件-自动下载格式规整化的m3u文件
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const formData = new FormData(form);
@@ -154,6 +474,7 @@
         document.getElementById('upload-m3u').value = '';
     });
 
+    // 超融合-导出订阅json配置
     downloadBtn.addEventListener('click', () => {
         fetch('/download_json_file')
             .then(response => response.blob())
@@ -171,6 +492,7 @@
             .catch(error => console.log(error));
     });
 
+    //超融合-导入json配置
     fileInput.addEventListener('change', (event) => {
         const file = event.target.files[0];
         // 使用 FileReader 读取 JSON 文件内容
@@ -188,16 +510,15 @@
         };
         reader.readAsText(file);
         location.reload();
-        reload();
     });
 
-    //只添加一行列表，不存储数据
+    //超融合-只添加一行列表，不存储数据
     addRowButton.addEventListener('click', () => {
         const newRow = createInputRow();
         inputTable.querySelector('tbody').prepend(newRow);
     });
 
-    //新增输入框
+    //超融合-新增输入框
     function createInputRow() {
         const row = document.createElement('tr');
         const valueCell = document.createElement('td');
@@ -223,7 +544,7 @@
         return row;
     }
 
-    //从数据库拉取列表数据
+    //超融合-从数据库拉取订阅列表数据
     function reload() {
         fetch('/getall')
             .then(response => response.json())
@@ -235,12 +556,12 @@
                     const valueInput = document.createElement('input');
                     valueInput.type = 'text';
                     valueInput.classList.add('subUrl');
-                    valueInput.value= item[1];
+                    valueInput.value= item[0];
                     valueCell.appendChild(valueInput);
                     const taeinput = document.createElement('input');
                     taeinput.type = 'text';
                     taeinput.classList.add('subname');
-                    taeinput.value= item[2];
+                    taeinput.value= item[1];
                     valueCell.appendChild(taeinput);
                     const actionsCell = document.createElement('td');
                     const saveButton = document.createElement('button');
@@ -260,7 +581,7 @@
             .catch(error => console.error(error));
     }
 
-    //保留输入行数据进入数据库
+    //保留订阅-超融合
     function saveInputValue(inputValue, name) {
         // 其他情况
         const xhr = new XMLHttpRequest();
@@ -275,11 +596,9 @@
             }
         };
         xhr.send(JSON.stringify({'addurl': inputValue, 'name': name}));
-        location.reload();
-        reload();
     }
 
-    //删除输入行并且抹除数据库
+    //删除订阅-超融合
     function deleteInputRow(row, inputValue) {
         if (inputValue === null || inputValue === "") {
             row.remove();
@@ -302,6 +621,7 @@
         }
     }
 
+    //超融合-订阅列表里按钮监听
     inputTable.addEventListener('click', (event) => {
         if (event.target.classList.contains('save-button')) {
             var x = event.target.parentElement.parentElement.querySelectorAll('input');
@@ -339,6 +659,47 @@
             });
         // 恢复按钮
         button.disabled = false;
+    }
+
+        function generatePasswords() {
+        // 获取输入框的值
+        var passwordLength = document.getElementById("password-length").value;
+        var numOfPasswords = document.getElementById("num-of-passwords").value;
+        var selectedChars = "";
+        var passwordList = "";
+
+        // 获取选中的字符集
+        if (document.getElementById("numbers").checked) {
+            selectedChars += "0123456789";
+        }
+        if (document.getElementById("upper-case").checked) {
+            selectedChars += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        }
+        if (document.getElementById("lower-case").checked) {
+            selectedChars += "abcdefghijklmnopqrstuvwxyz";
+        }
+        if (document.getElementById("special-chars").checked) {
+            selectedChars += "!@#$%^&*()_+-=[]{}\\|;':\",./<>?";
+        }
+
+        // 如果没有选中任何字符集，弹出警告并返回
+        if (selectedChars === "") {
+            alert("请至少选择一个字符集！");
+            return;
+        }
+
+        // 生成密码
+        for (var i = 0; i < numOfPasswords; i++) {
+            var password = "";
+            for (var j = 0; j < passwordLength; j++) {
+                var randomIndex = Math.floor(Math.random() * selectedChars.length);
+                password += selectedChars.charAt(randomIndex);
+            }
+            passwordList += password + "\n";
+        }
+
+        // 将密码列表添加到文本区域中
+        document.getElementById("password-list").value = passwordList;
     }
 
 </script>
