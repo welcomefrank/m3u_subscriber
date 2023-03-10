@@ -5,6 +5,20 @@ m3u超融合
 
 ![image](https://github.com/liudaoguiguzi/m3u_subscriber/blob/main/%E5%9B%BE%E7%89%871.png?raw=true)
 
+安装步骤:
+
+默认arm64架构:
+
+docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80  jkld310/m3usubscriber:latest
+
+或者:
+
+docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80  jkld310/m3usubscriber:arm64v8
+
+adm64/x86_64架构:
+
+docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80  jkld310/m3usubscriber:x86_64    
+
 非常高兴能为您介绍本工具所实现的各项功能：
 
 1-您可以轻松保存来自互联网的直播源订阅链接；
@@ -28,10 +42,6 @@ m3u超融合
 ,编译后开启检测后前端无法感知检测，但是可以通过访问B.m3u文件了解检测正在进行，B.m3u文件和A.m3u文件地址类同
 
 9-设置了上传/下载的直播源文件最大限制为100M
-
-安装步骤:
-
-docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80  jkld310/m3usubscriber:latest
 
 接下来，您只需要按照以下步骤即可使用本工具：
 
