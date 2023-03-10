@@ -10,7 +10,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 import requests
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, jsonify, request, send_file, render_template
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -21,7 +21,7 @@ DATABASE = 'urls.db'
 # @app.route('/')
 # def index():
 #     return render_template('index.html')
-#
+
 
 def init_db():
     with sqlite3.connect(DATABASE) as conn:
@@ -233,7 +233,7 @@ def delete_item(url, table_name, key):
 def add_item(name, value, table_name):
     with sqlite3.connect(DATABASE) as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM table_name")
+        cursor.execute(f"SELECT * FROM {table_name}")
         existing_links = [item[0] for item in cursor.fetchall()]
         if name in existing_links:
             cursor.execute(f"UPDATE {table_name} SET value = ? WHERE name = ?", (value, name))
