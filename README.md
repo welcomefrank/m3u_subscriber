@@ -3,7 +3,9 @@ m3u超融合
 
 简单的做了一个网络直播源连接工具
 
-![image](https://github.com/liudaoguiguzi/m3u_subscriber/blob/main/%E5%9B%BE%E7%89%871.png?raw=true)
+![image](https://raw.githubusercontent.com/liudaoguiguzi/m3u_subscriber/main/%E5%9B%BE%E7%89%872.png)
+
+![image](https://raw.githubusercontent.com/liudaoguiguzi/m3u_subscriber/main/%E5%9B%BE%E7%89%871.png)
 
 安装步骤:
 
