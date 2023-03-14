@@ -25,7 +25,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # 暴露容器的端口
-EXPOSE 80
+EXPOSE 4395
 
 # 启动 Nginx 和 Python 应用程序
 CMD ["/bin/bash", "-c", "python3 /app/main.py & nginx -g 'daemon off;'"]

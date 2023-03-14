@@ -142,6 +142,7 @@ def threadwriteinsql(my_dict):
     # 等待所有任务执行完毕
     executor.shutdown(wait=True)
 
+
 # 手动上传m3u文件把直播源保存到数据库
 @app.route('/upload_m3u_file', methods=['POST'])
 def upload_m3u_file():
@@ -268,6 +269,7 @@ def insert_items(json_dict):
 def timer_func():
     while True:
         chaoronghe()
+        reloadwhitelist()
         time.sleep(3600)  # 等待1小时
 
 
@@ -385,6 +387,25 @@ def chaoronghe():
     # 异步缓慢检测出有效链接
     # asyncio.run(asynctask(my_dict))
     return "result"
+
+
+# 国外dns屏蔽中国域名，填写中国域名白名单订阅
+def reloadwhitelist():
+    links = [
+        "https://raw.githubusercontent.com/hezhijie0327/GFWList2AGH/main/gfwlist2domain/whitelist_full.txt",
+        "https://raw.githubusercontent.com/pluwen/china-domain-allowlist/main/allow-list.sorl",
+        "https://raw.githubusercontent.com/mawenjian/china-cdn-domain-whitelist/master/china-cdn-domain-whitelist.txt",
+        "https://raw.githubusercontent.com/mawenjian/china-cdn-domain-whitelist/master/china-top-website-whitelist.txt",
+
+    ]
+
+
+# 国内dns屏蔽外国域名，填写中国域名黑名单/外国域名白名单订阅
+def reloadwhitelist():
+    links = [
+        "https://raw.githubusercontent.com/hezhijie0327/GFWList2AGH/main/gfwlist2domain/blacklist_full.txt",
+        ""
+    ]
 
 
 # async def asynctask(dict):
