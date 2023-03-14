@@ -4,143 +4,86 @@ import math
 import os
 import queue
 import re
-import sqlite3
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
 import requests
+import redis
 from flask import Flask, jsonify, request, send_file, render_template
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
-DATABASE = 'urls.db'
+r = redis.Redis(host='localhost', port=6379)
 
 
-# @app.route('/')
-# def index():
-#     return render_template('index.html')
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 
-def init_db():
-    with sqlite3.connect(DATABASE) as conn:
-        cursor = conn.cursor()
-        # 直播源订阅表
-        cursor.execute('''CREATE TABLE IF NOT EXISTS items
-            (name TEXT PRIMARY KEY NOT NULL,
-            value TEXT DEFAULT '')''')
-        # 直播源地址表
-        cursor.execute('''CREATE TABLE IF NOT EXISTS m3us
-            (url TEXT PRIMARY KEY NOT NULL,
-            tag TEXT DEFAULT '')''')
-        conn.commit()
+# redis增加和修改
+def redis_add(key, value):
+    r.set(key, value)
 
 
-# 数据库删除表
-def purge_table(table_name):
-    with sqlite3.connect(DATABASE) as conn:
-        cursor = conn.cursor()
-        cursor.execute(f'DROP TABLE IF EXISTS {table_name};')
-        conn.commit()
+# redis查询
+def redis_get(key):
+    return r.get(key)
+
+
+# redis删除
+def redis_del(key):
+    if r.exists(key):
+        r.delete(key)
+
+
+# redis存储map字典，字典主键唯一，重复主键只会复写
+def redis_add_map(key, my_dict):
+    r.hmset(key, my_dict)
+
+
+# redis取出map字典
+def redis_get_map(key):
+    redis_dict = r.hgetall(key)
+    python_dict = {key.decode('utf-8'): value.decode('utf-8') for key, value in redis_dict.items()}
+    return python_dict
+
+
+# redis取出map字典key
+def redis_get_map_keys(key):
+    redis_dict = r.hgetall(key)
+    array = [key for key in redis_dict.keys()]
+    return array
+
+
+# redis删除map字典
+def redis_del_map(key):
+    r.delete(key)
 
 
 # 删除全部本地直播源
 @app.route('/removeallm3u', methods=['GET'])
 def removeallm3u():
-    items = select_from_table("m3us")
-    if len(items) == 0:
-        return 'empty'
-    purge_table("m3us")
-    with sqlite3.connect(DATABASE) as conn:
-        cursor = conn.cursor()
-        # 直播源地址表
-        cursor.execute('''CREATE TABLE IF NOT EXISTS m3us
-            (url TEXT PRIMARY KEY NOT NULL,
-            tag TEXT DEFAULT '')''')
-        conn.commit()
+    redis_del_map("localm3u")
     return "success"
 
 
 # 删除全部直播源订阅链接
 @app.route('/removem3ulinks', methods=['GET'])
 def removem3ulinks():
-    items = select_from_table("items")
-    if len(items) == 0:
-        return 'empty'
-    purge_table("items")
-    with sqlite3.connect(DATABASE) as conn:
-        cursor = conn.cursor()
-        # 直播源订阅表
-        cursor.execute('''CREATE TABLE IF NOT EXISTS items
-            (name TEXT PRIMARY KEY NOT NULL,
-            value TEXT DEFAULT '')''')
-        conn.commit()
+    redis_del_map("m3ulink")
     return "success"
-
-
-def findallm3uinsqldict(table_name):
-    dict = {}
-    with sqlite3.connect(DATABASE) as conn:
-        cursor = conn.cursor()
-        cursor.execute(f"SELECT * FROM {table_name}")
-        rows = cursor.fetchall()
-        for item in rows:
-            dict[item[0].rstrip()] = f"{item[1].rstrip()}\n"
-            # m3u_string += f"{item[1].rstrip()}\n{item[0].rstrip()}\n"
-    return dict
-
-
-def threadfetchurlsdict():
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        future = executor.submit(findallm3uinsqldict, 'm3us')
-        data = future.result()
-    return data
 
 
 # 导出本地永久直播源
 @app.route('/download_m3u_file', methods=['GET'])
 def download_m3u_file():
-    if os.path.exists("/app/temp_m3u.m3u"):
-        os.remove("/app/temp_m3u.m3u")
-    my_dict = threadfetchurlsdict()
+    my_dict = redis_get_map("localm3u")
     distribute_data(my_dict, "/app/temp_m3u.m3u", 100)
-    # 保存JSON数据到临时文件
-    # with open("/app/temp_m3u.m3u", 'w') as f:
-    #     f.write(file_content)
     # 发送JSON文件到前端
     return send_file("temp_m3u.m3u", as_attachment=True)
-
-
-def findallm3uinsql(table_name):
-    m3u_string = ""
-    with sqlite3.connect(DATABASE) as conn:
-        cursor = conn.cursor()
-        cursor.execute(f"SELECT * FROM {table_name}")
-        rows = cursor.fetchall()
-        for item in rows:
-            m3u_string += f"{item[1].rstrip()}\n{item[0].rstrip()}\n"
-    return m3u_string
-
-
-def threadfetchurls():
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        future = executor.submit(findallm3uinsql, 'm3us')
-        data = future.result()
-    return "".join(data)
-
-
-def threadwriteinsql(my_dict):
-    def write_to_database(key, value):
-        with sqlite3.connect(DATABASE) as conn:
-            cur = conn.cursor()
-            cur.execute('INSERT  INTO m3us VALUES (?, ?)', (key, value))
-            conn.commit()
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
-        [executor.submit(write_to_database, key, value) for key, value in my_dict.items()]
-    # 等待所有任务执行完毕
-    executor.shutdown(wait=True)
 
 
 # 手动上传m3u文件把直播源保存到数据库
@@ -150,10 +93,9 @@ def upload_m3u_file():
     # file_content = file.read().decode('utf-8')
     file_content = file.read()
     # file_content = read_file_with_encoding(file)
-    # file_content += threadfetchurls()
     my_dict = formatdata_multithread(file_content.splitlines(), 100)
     # my_dict = formattxt_multithread(file_content.splitlines(), 100)
-    threadwriteinsql(my_dict)
+    redis_add_map("localm3u", my_dict)
     return '文件已上传'
 
 
@@ -162,7 +104,7 @@ def upload_m3u_file():
 def deletem3udata():
     # 获取 HTML 页面发送的 POST 请求参数
     deleteurl = request.json.get('deletem3u')
-    delete_item(deleteurl, "m3us", "url")
+    r.hdel('localm3u', deleteurl)
     return jsonify({'deletem3udata': "delete success"})
 
 
@@ -172,30 +114,15 @@ def addm3udata():
     # 获取 HTML 页面发送的 POST 请求参数
     addurl = request.json.get('addm3u')
     name = request.json.get('name')
-    add_item(addurl, name, "m3us")
+    my_dict = {addurl: name}
+    redis_add_map("localm3u", my_dict)
     return jsonify({'addresult': "add success"})
-
-
-def findallm3uinsqlitem(table_name):
-    with sqlite3.connect(DATABASE) as conn:
-        cursor = conn.cursor()
-        cursor.execute(f"SELECT * FROM {table_name}")
-        rows = cursor.fetchall()
-    return rows
-
-
-def threadfetchurlsitem(tablename):
-    with ThreadPoolExecutor(max_workers=100) as executor:
-        future = executor.submit(findallm3uinsqlitem, tablename)
-        data = future.result()
-    return data
 
 
 # 拉取全部本地直播源
 @app.route('/getm3udata', methods=['GET'])
 def getm3udata():
-    items = threadfetchurlsitem("m3us")
-    return jsonify(items)
+    return jsonify(redis_get_map("localm3u"))
 
 
 # 添加直播源到本地
@@ -205,64 +132,8 @@ def savem3uarea():
     m3utext = request.json.get('m3utext')
     # 格式优化
     my_dict = formattxt_multithread(m3utext.split("\n"), 10)
-    savem3utosqlite(my_dict)
+    redis_add_map("localm3u", my_dict)
     return jsonify({'addresult': "add success"})
-
-
-def savem3utosqlite(my_dict):
-    with sqlite3.connect(DATABASE) as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM m3us")
-        existing_links = [item[0] for item in cursor.fetchall()]
-        insert_list = []
-        for url, value in my_dict.items():
-            if url not in existing_links:
-                insert_list.append((url, value))
-        cursor.executemany("INSERT INTO m3us (url, tag) VALUES (?, ?)", insert_list)
-        conn.commit()
-
-
-# 数据库删除数据
-def delete_item(url, table_name, key):
-    with sqlite3.connect(DATABASE) as conn:
-        cursor = conn.cursor()
-        cursor.execute(f"DELETE FROM {table_name} WHERE {key} = ?", (url,))
-        conn.commit()
-
-
-# 数据库增加数据
-def add_item(name, value, table_name):
-    with sqlite3.connect(DATABASE) as conn:
-        cursor = conn.cursor()
-        cursor.execute(f"SELECT * FROM {table_name}")
-        existing_links = [item[0] for item in cursor.fetchall()]
-        if name in existing_links:
-            cursor.execute(f"UPDATE {table_name} SET value = ? WHERE name = ?", (value, name))
-        else:
-            cursor.execute(f"INSERT INTO {table_name} (name, value) VALUES (?, ?)", (name, value))
-        conn.commit()
-
-
-def query_items(items):
-    with sqlite3.connect(DATABASE) as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM items")
-        items.extend(cursor.fetchall())
-
-
-def insert_items(json_dict):
-    with sqlite3.connect(DATABASE) as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM items")
-        existing_links = [item[0] for item in cursor.fetchall()]
-        insert_list = []
-        for jsondata in json_dict['data']:
-            link = jsondata.get('link')
-            if link not in existing_links:
-                tag = jsondata.get('tag')
-                insert_list.append((link, tag))
-        cursor.executemany("INSERT INTO items (name, value) VALUES (?, ?)", insert_list)
-        conn.commit()
 
 
 # 定时器每隔半小时自动刷新订阅列表
@@ -279,7 +150,8 @@ def addnewm3u():
     # 获取 HTML 页面发送的 POST 请求参数
     addurl = request.json.get('addurl')
     name = request.json.get('name')
-    add_item(addurl, name, "items")
+    my_dict = {addurl: name}
+    redis_add_map("m3ulink", my_dict)
     return jsonify({'addresult': "add success"})
 
 
@@ -288,22 +160,14 @@ def addnewm3u():
 def deletewm3u():
     # 获取 HTML 页面发送的 POST 请求参数
     deleteurl = request.json.get('deleteurl')
-    delete_item(deleteurl, "items", "name")
+    r.hdel('m3ulink', deleteurl)
     return jsonify({'deleteresult': "delete success"})
 
 
 # 拉取全部直播源订阅
 @app.route('/getall', methods=['GET'])
 def getall():
-    items = select_from_table("items")
-    return jsonify(items)
-
-
-def fetchalllinks(items):
-    my_array = []
-    for item in items:
-        my_array.append(item[0])
-    return my_array
+    return jsonify(redis_get_map("m3ulink"))
 
 
 def fetch_url(url):
@@ -334,56 +198,34 @@ def worker(queue, file):
         queue.task_done()
 
 
-def findallm3uinsql(table_name):
-    m3u_string = ""
-    with sqlite3.connect(DATABASE) as conn:
-        cursor = conn.cursor()
-        cursor.execute(f"SELECT * FROM {table_name}")
-        rows = cursor.fetchall()
-        for item in rows:
-            m3u_string += f"{item[1].rstrip()}\n{item[0].rstrip()}\n"
-    return m3u_string
-
-
-def threadfetchurls():
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        future = executor.submit(findallm3uinsql, 'm3us')
-        data = future.result()
-    return "".join(data)
-
-
 # len(urls)
 def download_files(urls):
-    with concurrent.futures.ThreadPoolExecutor(max_workers=len(urls)) as executor:
-        results = list(executor.map(fetch_url, urls))
-    # 等待所有任务执行完毕
-    executor.shutdown(wait=True)
-    # return results
-    return "".join(results)
-
-
-def select_from_table(table_name):
-    with sqlite3.connect(DATABASE) as conn:
-        cursor = conn.cursor()
-        cursor.execute(f"SELECT * FROM {table_name}")
-        rows = cursor.fetchall()
-        return rows
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(urls)) as executor:
+            results = list(executor.map(fetch_url, urls))
+        # 等待所有任务执行完毕
+        executor.shutdown(wait=True)
+        # return results
+        return "".join(results)
+    except:
+        return ""
 
 
 # 全部订阅链接超融合
 @app.route('/chaoronghe', methods=['GET'])
 def chaoronghe():
-    items = select_from_table("items")
-    if len(items) == 0:
-        return 'empty'
-    results = fetchalllinks(items)
+    results = redis_get_map_keys("m3ulink")
     result = download_files(results)
-    result += threadfetchurls()
     # 格式优化
     # my_dict = formattxt_multithread(result.split("\n"), 100)
     my_dict = formattxt_multithread(result.splitlines(), 100)
+    if len(my_dict) == 0:
+        return "empty"
+    old_dict = redis_get_map("localm3u")
+    my_dict.update(old_dict)
     # 同步方法写出全部配置
     distribute_data(my_dict, "/A.m3u", 100)
+    redis_add_map("localm3u", my_dict)
     # 异步缓慢检测出有效链接
     # asyncio.run(asynctask(my_dict))
     return "result"
@@ -504,9 +346,9 @@ def format_data(data, index, step, my_dict):
         if line.startswith("#EXTINF"):
             continue
         # 不是http开头，可能是直播源
-        if not line.startswith(("http", "rtsp", "rtmp")):
+        if not line.startswith(("http", "rtsp", "rtmp", "P2p")):
             # 匹配格式：频道,url
-            if re.match(r"^[^#].*,(http|rtsp|rtmp)", line):
+            if re.match(r"^[^#].*,(http|rtsp|rtmp|P2p)", line):
                 name, url = line.split(",", 1)
                 searchurl = url
                 if searchurl in my_dict.keys():
@@ -515,7 +357,7 @@ def format_data(data, index, step, my_dict):
                     my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
                 else:
                     my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
-            elif re.match(r"^[^#].*，(http|rtsp|rtmp)", line):
+            elif re.match(r"^[^#].*，(http|rtsp|rtmp|P2p)", line):
                 name, url = line.split("，", 1)
                 searchurl = url
                 if searchurl in my_dict.keys():
@@ -562,9 +404,9 @@ def process_data(data, index, step, my_dict):
         if line.encode().startswith(b"#EXTINF"):
             continue
         # 不是http开头，可能是直播源
-        if not line.encode().startswith((b"http", b"rtsp", b"rtmp")):
+        if not line.encode().startswith((b"http", b"rtsp", b"rtmp", b"P2p")):
             # 匹配格式：频道,url
-            if re.match(r"^[^#].*,(http|rtsp|rtmp)", line):
+            if re.match(r"^[^#].*,(http|rtsp|rtmp|P2p)", line):
                 name, url = line.split(",", 1)
                 searchurl = url
                 if searchurl in my_dict.keys():
@@ -573,7 +415,7 @@ def process_data(data, index, step, my_dict):
                     my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
                 else:
                     my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
-            elif re.match(r"^[^#].*，(http|rtsp|rtmp)", line):
+            elif re.match(r"^[^#].*，(http|rtsp|rtmp|P2p)", line):
                 name, url = line.split("，", 1)
                 searchurl = url
                 if searchurl in my_dict.keys():
@@ -607,39 +449,10 @@ def process_data(data, index, step, my_dict):
                 continue
 
 
-def fetch_items(conn, offset, limit):
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM items LIMIT ? OFFSET ?", (limit, offset))
-    return cursor.fetchall()
-
-
-def generate_json_string():
-    # 获取数据库中的数据总数
-    with sqlite3.connect(DATABASE) as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM items")
-        total_count = cursor.fetchone()[0]
-
-    # 分成4个线程并发获取数据
-    executor = ThreadPoolExecutor(max_workers=10)
-    futures = []
-    chunk_size = 1000
-    for offset in range(0, total_count, chunk_size):
-        future = executor.submit(lambda: fetch_items(sqlite3.connect(DATABASE), offset, chunk_size))
-        futures.append(future)
-
-    # 将查询结果转换为字典
-    json_dict = {"data": []}
-    for future in futures:
-        items = future.result()
-        for item in items:
-            json_dict['data'].append({
-                "link": item[0],
-                "tag": item[1],
-            })
-
+def generate_json_string(mapname):
+    m3ulink = redis_get_map(mapname)
     # 将字典转换为JSON字符串并返回
-    json_str = json.dumps(json_dict)
+    json_str = json.dumps(m3ulink)
     return json_str
 
 
@@ -647,7 +460,7 @@ def generate_json_string():
 @app.route('/download_json_file', methods=['GET'])
 def download_json_file():
     # 生成JSON文件数据
-    json_data = generate_json_string()
+    json_data = generate_json_string("m3ulink")
     if os.path.exists("/app/temp_json.json"):
         os.remove("/app/temp_json.json")
     # 保存JSON数据到临时文件
@@ -670,10 +483,7 @@ def upload_json_file():
             json.dump(json.loads(file_content_str), f)
         with open("/tmp_data.json", 'r') as f:
             json_dict = json.load(f)
-        # 插入新的数据到数据库中
-        insert_thread = threading.Thread(target=insert_items, args=(json_dict,))
-        insert_thread.start()
-        insert_thread.join()
+        redis_add_map("m3ulink", json_dict)
         os.remove("/tmp_data.json")
         return jsonify({'success': True})
     except Exception as e:
@@ -696,19 +506,6 @@ def formatdata_multithread(data, num_threads):
     return my_dict
 
 
-# def read_file_with_encoding(file):
-#     file_content = file.read()
-#     with ThreadPoolExecutor(max_workers=4) as executor:
-#         future_encoding = executor.submit(chardet.detect, file_content)
-#         file_encoding = future_encoding.result()['encoding']
-#     executor.shutdown(wait=True)
-#     if file_encoding:
-#         file_content = file_content.decode(file_encoding)
-#     else:
-#         file_content = file_content.decode('utf-8')
-#     return file_content
-
-
 # 手动上传m3u文件格式化统一转换
 @app.route('/process-file', methods=['POST'])
 def process_file():
@@ -720,11 +517,10 @@ def process_file():
     # my_dict = formattxt_multithread(file_content.splitlines(), 100)
     # my_dict = formatdata_multithread(file.readlines(), 100)
     distribute_data(my_dict, "/app/tmp.m3u", 100)
-    # threadwriteinsql(my_dict)
     return send_file("tmp.m3u", as_attachment=True)
 
 
-init_db()
+# init_db()
 
 if __name__ == '__main__':
     timer_thread = threading.Thread(target=timer_func)

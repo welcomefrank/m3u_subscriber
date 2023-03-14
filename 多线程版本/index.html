@@ -100,7 +100,7 @@
 
     </style>
 </head>
-<body onload="reloadm3udata();reload()">
+<body onload="handleScroll();reload()">
 <h1>M3U 超融合</h1>
 <div id="switchbox" style="font-size: x-large">
     <label>
@@ -160,7 +160,7 @@
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
             <table id="input-table" style="width:100%">
-                <tbody style="width:100%">
+                <tbody id="input-table-body" style="width:100%">
                 </tbody>
             </table>
         </div>
@@ -222,13 +222,15 @@
     const downloadBtn = document.getElementById('download-json-btn');
     const fileInput = document.getElementById('upload-json-btn');
     const form = document.querySelector('form');
-
     const switchbox = document.getElementById("switchbox");
     const choice = document.getElementById("choice");
     const pages = choice.children;
     const m3ufileInput = document.getElementById('upload-m3u-btn');
     const m3uTable = document.getElementById('input-m3u-table');
-
+    const tbody = m3uTable.querySelector('tbody');
+    const batchSize = 50;
+    let currentBatch = 0;
+    let currentBatchData = [];
     const downloadM3UBtn = document.getElementById('download-m3u-btn');
     // 永久列表-导出永久列表
     downloadM3UBtn.addEventListener('click', () => {
@@ -275,17 +277,11 @@
             .then(data => {
                 if (data === 'success') {
                     alert('本地永久直播源全部删除成功');
-                    //var table = document.getElementById("input-m3u-table");
-                    //var rowCount = table.rows.length;
-                    //for (var i = rowCount - 1; i > 0; i--) {
-                      //  table.deleteRow(i);
-                    //}
-
                 } else {
                     alert('本地永久直播源全部删除失败');
                 }
             });
-        location.reload();
+        handleScroll()
     }
 
     //永久列表-直播源列表增删按钮
@@ -321,12 +317,11 @@
         });
         if (response.ok) {
             alert('上传文件成功');
-            //reloadm3udata();
         } else {
             alert('上传文件失败');
         }
         document.getElementById('upload-m3u-btn').value = '';
-        location.reload();
+        handleScroll()
     });
 
     //永久列表-合并粘贴板直播源
@@ -350,7 +345,7 @@
                 }
             };
             xhr.send(JSON.stringify({'m3utext': text}));
-            location.reload();
+            handleScroll()
         }
     }
 
@@ -395,44 +390,71 @@
     }
 
     //永久列表-从数据库拉取全部直播源
-    function reloadm3udata() {
-        fetch('/getm3udata')
+    //获取数据
+    function getData() {
+        return fetch('/getm3udata')
             .then(response => response.json())
-            .then(data => {
-                data.forEach(item => {
-                    //创建一个新的行
-                    const row = document.createElement('tr');
-                    const valueCell = document.createElement('td');
-                    const taeinput = document.createElement('input');
-                    taeinput.type = 'text';
-                    taeinput.classList.add('subm3uname');
-                    taeinput.value = item[1];
-                    valueCell.appendChild(taeinput);
-                    valueCell.append(document.createElement('br'))
-                    const valueInput = document.createElement('input');
-                    valueInput.type = 'text';
-                    valueInput.classList.add('subm3uUrl');
-                    valueInput.value = item[0];
-                    valueCell.appendChild(valueInput);
-                    valueCell.append(document.createElement('br'))
-
-                    const actionsCell = document.createElement('td');
-                    const saveButton = document.createElement('button');
-                    saveButton.textContent = '保存';
-                    saveButton.classList.add('save-m3u-button');
-                    const deleteButton = document.createElement('button');
-                    deleteButton.textContent = '删除';
-                    deleteButton.classList.add('delete-m3u-button');
-                    actionsCell.appendChild(saveButton);
-                    actionsCell.appendChild(deleteButton);
-                    row.appendChild(valueCell);
-                    row.appendChild(actionsCell);
-                    m3uTable.querySelector('tbody').appendChild(row);
-                    //行内填充元素
-                });
-            })
+            .then(data => Object.entries(data))
             .catch(error => console.error(error));
     }
+
+    //渲染数据
+    function renderData(data) {
+        for (const [key, value] of data) {
+            const row = document.createElement('tr');
+            const valueCell = document.createElement('td');
+            const taeinput = document.createElement('input');
+            taeinput.type = 'text';
+            taeinput.classList.add('subm3uname');
+            taeinput.value = key;
+            valueCell.appendChild(taeinput);
+            valueCell.append(document.createElement('br'))
+            const valueInput = document.createElement('input');
+            valueInput.type = 'text';
+            valueInput.classList.add('subm3uUrl');
+            valueInput.value = value;
+            valueCell.appendChild(valueInput);
+            valueCell.append(document.createElement('br'))
+
+            const actionsCell = document.createElement('td');
+            const saveButton = document.createElement('button');
+            saveButton.textContent = '保存';
+            saveButton.classList.add('save-m3u-button');
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = '删除';
+            deleteButton.classList.add('delete-m3u-button');
+            actionsCell.appendChild(saveButton);
+            actionsCell.appendChild(deleteButton);
+            row.appendChild(valueCell);
+            row.appendChild(actionsCell);
+            currentBatchData.push(row);
+        }
+        currentBatch++;
+        if (currentBatchData.length > 0) {
+            if (currentBatch === 1) {
+                tbody.append(...currentBatchData);
+            } else {
+                currentBatchData.forEach(row => tbody.appendChild(row));
+            }
+            currentBatchData = [];
+        }
+    }
+
+    //滚动加载
+    function handleScroll() {
+        const {scrollTop, clientHeight, scrollHeight} = document.documentElement;
+        if (scrollTop + clientHeight >= scrollHeight - 5 && currentBatchData.length === 0) {
+            getData()
+                .then(data => {
+                    if (data.length > 0) {
+                        renderData(data.slice((currentBatch - 1) * batchSize, currentBatch * batchSize));
+                    }
+                });
+        }
+    }
+    //将 handleScroll 函数绑定到 window 的 scroll 事件上，以便在用户滚动窗口时触发
+    window.addEventListener('scroll', handleScroll);
+    //handleScroll();
 
     // 切换页面
     switchbox.addEventListener("change", () => {
@@ -549,19 +571,20 @@
         fetch('/getall')
             .then(response => response.json())
             .then(data => {
-                data.forEach(item => {
+                for (var key in data) {
+                    if (data.hasOwnProperty(key)) {
                     //创建一个新的行
                     const row = document.createElement('tr');
                     const valueCell = document.createElement('td');
                     const valueInput = document.createElement('input');
                     valueInput.type = 'text';
                     valueInput.classList.add('subUrl');
-                    valueInput.value= item[0];
+                    valueInput.value= key;
                     valueCell.appendChild(valueInput);
                     const taeinput = document.createElement('input');
                     taeinput.type = 'text';
                     taeinput.classList.add('subname');
-                    taeinput.value= item[1];
+                    taeinput.value= data[key];
                     valueCell.appendChild(taeinput);
                     const actionsCell = document.createElement('td');
                     const saveButton = document.createElement('button');
@@ -576,9 +599,10 @@
                     row.appendChild(actionsCell);
                     inputTable.querySelector('tbody').appendChild(row);
                     //行内填充元素
-                });
+                    }
+                }
             })
-            .catch(error => console.error(error));
+        .catch(error => console.error(error));
     }
 
     //保留订阅-超融合
