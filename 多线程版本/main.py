@@ -1,3 +1,4 @@
+import abc
 import concurrent
 import json
 import math
@@ -17,12 +18,28 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 r = redis.Redis(host='localhost', port=6379)
 
+##########################################################redis key#############################################
+REDIS_KEY_M3U_LINK = "m3ulink"
+REDIS_KEY_M3U_DATA = "localm3u"
+REDIS_KEY_WHITELIST_LINK = "whitelistlink"
+REDIS_KEY_WHITELIST_DATA = "whitelistdata"
+REDIS_KEY_BLACKLIST_LINK = "blacklistlink"
+REDIS_KEY_BLACKLIST_DATA = "blacklistdata"
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+# Adguardhome屏蔽前缀
+BLACKLIST_ADGUARDHOME_FORMATION = "0.0.0.0 "
+# 用于匹配纯粹域名的正则表达式
+domain_regex = r'^[a-zA-Z0-9]+([\-\.]{1}[a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$'
+# 用于匹配泛化匹配的域名规则的正则表达式
+wildcard_regex = r'^\*\.[a-zA-Z0-9]+([\-\.]{1}[a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$'
 
 
+# @app.route('/')
+# def index():
+#     return render_template('index.html')
+
+
+##########################################################redis数据库操作#############################################
 # redis增加和修改
 def redis_add(key, value):
     r.set(key, value)
@@ -63,111 +80,34 @@ def redis_del_map(key):
     r.delete(key)
 
 
-# 删除全部本地直播源
-@app.route('/removeallm3u', methods=['GET'])
-def removeallm3u():
-    redis_del_map("localm3u")
-    return "success"
-
-
-# 删除全部直播源订阅链接
-@app.route('/removem3ulinks', methods=['GET'])
-def removem3ulinks():
-    redis_del_map("m3ulink")
-    return "success"
-
-
-# 导出本地永久直播源
-@app.route('/download_m3u_file', methods=['GET'])
-def download_m3u_file():
-    my_dict = redis_get_map("localm3u")
-    distribute_data(my_dict, "/app/temp_m3u.m3u", 100)
-    # 发送JSON文件到前端
-    return send_file("temp_m3u.m3u", as_attachment=True)
-
-
-# 手动上传m3u文件把直播源保存到数据库
-@app.route('/upload_m3u_file', methods=['POST'])
-def upload_m3u_file():
-    file = request.files['file']
-    # file_content = file.read().decode('utf-8')
-    file_content = file.read()
-    # file_content = read_file_with_encoding(file)
-    my_dict = formatdata_multithread(file_content.splitlines(), 100)
-    # my_dict = formattxt_multithread(file_content.splitlines(), 100)
-    redis_add_map("localm3u", my_dict)
-    return '文件已上传'
-
-
-# 删除直播源
-@app.route('/deletem3udata', methods=['POST'])
-def deletem3udata():
-    # 获取 HTML 页面发送的 POST 请求参数
-    deleteurl = request.json.get('deletem3u')
-    r.hdel('localm3u', deleteurl)
-    return jsonify({'deletem3udata': "delete success"})
-
-
-# 添加直播源
-@app.route('/addm3udata', methods=['POST'])
-def addm3udata():
-    # 获取 HTML 页面发送的 POST 请求参数
-    addurl = request.json.get('addm3u')
-    name = request.json.get('name')
-    my_dict = {addurl: name}
-    redis_add_map("localm3u", my_dict)
-    return jsonify({'addresult': "add success"})
-
-
-# 拉取全部本地直播源
-@app.route('/getm3udata', methods=['GET'])
-def getm3udata():
-    return jsonify(redis_get_map("localm3u"))
-
-
-# 添加直播源到本地
-@app.route('/savem3uarea', methods=['POST'])
-def savem3uarea():
-    # 获取 HTML 页面发送的 POST 请求参数
-    m3utext = request.json.get('m3utext')
-    # 格式优化
-    my_dict = formattxt_multithread(m3utext.split("\n"), 10)
-    redis_add_map("localm3u", my_dict)
-    return jsonify({'addresult': "add success"})
+#########################################################通用工具区#################################################
+# 上传订阅配置
+def upload_json(request, rediskey, filename):
+    try:
+        # 获取POST请求中的JSON文件内容
+        file_content = request.get_data()
+        # 将字节对象解码为字符串
+        file_content_str = file_content.decode('utf-8')
+        # 将JSON字符串保存到临时文件
+        with open(filename, 'w') as f:
+            json.dump(json.loads(file_content_str), f)
+        with open(filename, 'r') as f:
+            json_dict = json.load(f)
+        redis_add_map(rediskey, json_dict)
+        os.remove(filename)
+        return jsonify({'success': True})
+    except Exception as e:
+        print("An error occurred: ", e)
+        return jsonify({'success': False})
 
 
 # 定时器每隔半小时自动刷新订阅列表
 def timer_func():
     while True:
         chaoronghe()
-        reloadwhitelist()
+        chaoronghe2()
+        chaoronghe3()
         time.sleep(3600)  # 等待1小时
-
-
-# 添加直播源订阅
-@app.route('/addnewm3u', methods=['POST'])
-def addnewm3u():
-    # 获取 HTML 页面发送的 POST 请求参数
-    addurl = request.json.get('addurl')
-    name = request.json.get('name')
-    my_dict = {addurl: name}
-    redis_add_map("m3ulink", my_dict)
-    return jsonify({'addresult': "add success"})
-
-
-# 删除直播源订阅
-@app.route('/deletewm3u', methods=['POST'])
-def deletewm3u():
-    # 获取 HTML 页面发送的 POST 请求参数
-    deleteurl = request.json.get('deleteurl')
-    r.hdel('m3ulink', deleteurl)
-    return jsonify({'deleteresult': "delete success"})
-
-
-# 拉取全部直播源订阅
-@app.route('/getall', methods=['GET'])
-def getall():
-    return jsonify(redis_get_map("m3ulink"))
 
 
 def fetch_url(url):
@@ -211,43 +151,14 @@ def download_files(urls):
         return ""
 
 
-# 全部订阅链接超融合
-@app.route('/chaoronghe', methods=['GET'])
-def chaoronghe():
-    results = redis_get_map_keys("m3ulink")
-    result = download_files(results)
-    # 格式优化
-    # my_dict = formattxt_multithread(result.split("\n"), 100)
-    my_dict = formattxt_multithread(result.splitlines(), 100)
-    if len(my_dict) == 0:
-        return "empty"
-    old_dict = redis_get_map("localm3u")
-    my_dict.update(old_dict)
-    # 同步方法写出全部配置
-    distribute_data(my_dict, "/A.m3u", 100)
-    redis_add_map("localm3u", my_dict)
-    # 异步缓慢检测出有效链接
-    # asyncio.run(asynctask(my_dict))
-    return "result"
-
-
-# 国外dns屏蔽中国域名，填写中国域名白名单订阅
-def reloadwhitelist():
-    links = [
-        "https://raw.githubusercontent.com/hezhijie0327/GFWList2AGH/main/gfwlist2domain/whitelist_full.txt",
-        "https://raw.githubusercontent.com/pluwen/china-domain-allowlist/main/allow-list.sorl",
-        "https://raw.githubusercontent.com/mawenjian/china-cdn-domain-whitelist/master/china-cdn-domain-whitelist.txt",
-        "https://raw.githubusercontent.com/mawenjian/china-cdn-domain-whitelist/master/china-top-website-whitelist.txt",
-
-    ]
-
-
-# 国内dns屏蔽外国域名，填写中国域名黑名单/外国域名白名单订阅
-def reloadwhitelist():
-    links = [
-        "https://raw.githubusercontent.com/hezhijie0327/GFWList2AGH/main/gfwlist2domain/blacklist_full.txt",
-        ""
-    ]
+# 添加一条数据进入字典
+def addlist(request, rediskey):
+    # 获取 HTML 页面发送的 POST 请求参数
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    my_dict = {addurl: name}
+    redis_add_map(rediskey, my_dict)
+    return jsonify({'addresult': "add success"})
 
 
 # async def asynctask(dict):
@@ -272,6 +183,26 @@ def reloadwhitelist():
 #             return False
 #     except:
 #         return False
+
+
+def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
+    results = redis_get_map_keys(redisKeyLink)
+    result = download_files(results)
+    # 格式优化
+    # my_dict = formattxt_multithread(result.split("\n"), 100)
+    my_dict = formattxt_multithread(result.splitlines(), 100, processDataMethodName)
+    # my_dict = formattxt_multithread(result.splitlines(), 100)
+    if len(my_dict) == 0:
+        return "empty"
+    old_dict = redis_get_map(redisKeyData)
+    my_dict.update(old_dict)
+    # 同步方法写出全部配置
+    distribute_data(my_dict, fileName, 100)
+    redis_add_map(redisKeyData, my_dict)
+    # 异步缓慢检测出有效链接
+    # asyncio.run(asynctask(my_dict))
+    return "result"
+
 
 # 多线程写入A.m3u
 def distribute_data(data, file, num_threads):
@@ -316,21 +247,6 @@ def distribute_data(data, file, num_threads):
 #     with ThreadPoolExecutor(max_workers=cpu_count) as executor:
 #         futures = [executor.submit(check_url, url) for url in mapdata.keys()]
 #     return {url: mapdata[url] for url, future in zip(mapdata.keys(), futures) if future.result()}
-
-
-def formattxt_multithread(data, num_threads):
-    my_dict = {}
-    # 计算每个线程处理的数据段大小
-    step = math.ceil(len(data) / num_threads)
-    # 创建线程池对象
-    with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-        # 提交任务到线程池中
-        for i in range(num_threads):
-            start_index = i * step
-            executor.submit(process_data, data, start_index, step, my_dict)
-    # 等待所有任务执行完毕
-    executor.shutdown(wait=True)
-    return my_dict
 
 
 # 上传文件bytes格式规整
@@ -391,7 +307,61 @@ def format_data(data, index, step, my_dict):
                 continue
 
 
-# 字符串内容处理
+# 抽象类，定义抽象方法process_data_abstract
+class MyAbstractClass(abc.ABC):
+    @abc.abstractmethod
+    def process_data_abstract(self, data, index, step, my_dict):
+        pass
+
+    @abc.abstractmethod
+    def process_data_abstract2(self, data, index, step, my_dict):
+        pass
+
+
+# 处理数据的实现类
+class MyConcreteClass(MyAbstractClass):
+    # 实现抽象方法
+    # 处理M3U数据的实现类
+    def process_data_abstract(self, data, index, step, my_dict):
+        process_data(data, index, step, my_dict)
+        # 实现代码
+        pass
+
+    # 处理域名名单转换Adguardhome的实现类
+    def process_data_abstract2(self, data, index, step, my_dict):
+        process_data_domain(data, index, step, my_dict)
+        # 实现代码
+        pass
+
+
+def formattxt_multithread(data, num_threads, method_name):
+    my_dict = {}
+    # 计算每个线程处理的数据段大小
+    step = math.ceil(len(data) / num_threads)
+    # 创建线程池对象
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+        # 提交任务到线程池中
+        for i in range(num_threads):
+            start_index = i * step
+            executor.submit(getattr(MyConcreteClass(), method_name), data, start_index, step, my_dict)
+    # 等待所有任务执行完毕
+    executor.shutdown(wait=True)
+    return my_dict
+
+
+# 字符串内容处理-域名转adguardhome屏蔽
+def process_data_domain(data, index, step, my_dict):
+    end_index = min(index + step, len(data))
+    for i in range(index, end_index):
+        line = data[i].strip()
+        if not line:
+            continue
+        # 判断是不是域名或者*.域名
+        if re.match(domain_regex, line) or re.match(wildcard_regex, line):
+            my_dict[BLACKLIST_ADGUARDHOME_FORMATION + line] = ""
+
+
+# 字符串内容处理-m3u
 def process_data(data, index, step, my_dict):
     defalutname = "佚名"
     end_index = min(index + step, len(data))
@@ -456,39 +426,23 @@ def generate_json_string(mapname):
     return json_str
 
 
-# 导出直播源订阅配置
-@app.route('/download_json_file', methods=['GET'])
-def download_json_file():
+def dellist(request, rediskey):
+    # 获取 HTML 页面发送的 POST 请求参数
+    deleteurl = request.json.get('deleteurl')
+    r.hdel(rediskey, deleteurl)
+    return jsonify({'deleteresult': "delete success"})
+
+
+def download_json_file_base(redislinkKey, filename, outname):
     # 生成JSON文件数据
-    json_data = generate_json_string("m3ulink")
-    if os.path.exists("/app/temp_json.json"):
-        os.remove("/app/temp_json.json")
+    json_data = generate_json_string(redislinkKey)
+    if os.path.exists(filename):
+        os.remove(filename)
     # 保存JSON数据到临时文件
-    with open("/app/temp_json.json", 'w') as f:
+    with open(filename, 'w') as f:
         f.write(json_data)
     # 发送JSON文件到前端
-    return send_file("temp_json.json", as_attachment=True)
-
-
-# 上传直播源订阅配置集合文件
-@app.route('/upload_json_file', methods=['POST'])
-def upload_json_file():
-    try:
-        # 获取POST请求中的JSON文件内容
-        file_content = request.get_data()
-        # 将字节对象解码为字符串
-        file_content_str = file_content.decode('utf-8')
-        # 将JSON字符串保存到临时文件
-        with open('/tmp_data.json', 'w') as f:
-            json.dump(json.loads(file_content_str), f)
-        with open("/tmp_data.json", 'r') as f:
-            json_dict = json.load(f)
-        redis_add_map("m3ulink", json_dict)
-        os.remove("/tmp_data.json")
-        return jsonify({'success': True})
-    except Exception as e:
-        print("An error occurred: ", e)
-        return jsonify({'success': False})
+    return send_file(outname, as_attachment=True)
 
 
 def formatdata_multithread(data, num_threads):
@@ -504,6 +458,214 @@ def formatdata_multithread(data, num_threads):
     # 等待所有任务执行完毕
     executor.shutdown(wait=True)
     return my_dict
+
+
+# my_dict = methodA(formatMultiThreadName, [result.splitlines(), 100, processDataMethodName])
+# 定义方法A，接受一个函数名参数和一个参数列表
+# def methodA(methodName, params):
+#     # 使用eval()函数来执行传递进来的方法名对应的函数，并传递参数列表
+#     result = eval(methodName + '(' + ', '.join(str(p) for p in params) + ')')
+#     return result
+
+
+############################################################协议区####################################################
+
+# 全部域名黑名单订阅链接超融合
+@app.route('/chaoronghe3', methods=['GET'])
+def chaoronghe3():
+    return chaorongheBase(REDIS_KEY_BLACKLIST_LINK, 'process_data_abstract2',
+                          REDIS_KEY_BLACKLIST_DATA, "/C.txt")
+
+
+# 删除全部白名单源订阅链接
+@app.route('/removem3ulinks3', methods=['GET'])
+def removem3ulinks3():
+    redis_del_map(REDIS_KEY_BLACKLIST_LINK)
+    return "success"
+
+
+# 导出域名黑名单订阅配置
+@app.route('/download_json_file3', methods=['GET'])
+def download_json_file3():
+    return download_json_file_base(REDIS_KEY_BLACKLIST_LINK, "/app/temp_blacklistlink.json", "temp_blacklistlink.json")
+
+
+# 删除黑名单订阅
+@app.route('/deletewm3u3', methods=['POST'])
+def deletewm3u3():
+    return dellist(request, REDIS_KEY_BLACKLIST_LINK)
+
+
+# 添加黑名单订阅
+@app.route('/addnewm3u3', methods=['POST'])
+def addnewm3u3():
+    return addlist(request, REDIS_KEY_BLACKLIST_LINK)
+
+
+# 拉取全部黑名单订阅
+@app.route('/getall3', methods=['GET'])
+def getall3():
+    return jsonify(redis_get_map(REDIS_KEY_BLACKLIST_LINK))
+
+
+# 上传黑名单订阅配置集合文件
+@app.route('/upload_json_file3', methods=['POST'])
+def upload_json_file3():
+    return upload_json(request, REDIS_KEY_BLACKLIST_LINK, "/tmp_data3.json")
+
+
+# 删除全部白名单源订阅链接
+@app.route('/removem3ulinks2', methods=['GET'])
+def removem3ulinks2():
+    redis_del_map(REDIS_KEY_WHITELIST_LINK)
+    return "success"
+
+
+# 导出域名白名单订阅配置
+@app.route('/download_json_file2', methods=['GET'])
+def download_json_file2():
+    return download_json_file_base(REDIS_KEY_WHITELIST_LINK, "/app/temp_whitelistlink.json", "temp_whitelistlink.json")
+
+
+# 全部域名白名单订阅链接超融合
+@app.route('/chaoronghe2', methods=['GET'])
+def chaoronghe2():
+    return chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract2',
+                          REDIS_KEY_WHITELIST_DATA, "/B.txt")
+
+
+# 拉取全部白名单订阅
+@app.route('/getall2', methods=['GET'])
+def getall2():
+    return jsonify(redis_get_map(REDIS_KEY_WHITELIST_LINK))
+
+
+# 添加白名单订阅
+@app.route('/addnewm3u2', methods=['POST'])
+def addnewm3u2():
+    return addlist(request, REDIS_KEY_WHITELIST_LINK)
+
+
+# 删除白名单订阅
+@app.route('/deletewm3u2', methods=['POST'])
+def deletewm3u2():
+    return dellist(request, REDIS_KEY_WHITELIST_LINK)
+
+
+# 上传白名单订阅配置集合文件
+@app.route('/upload_json_file2', methods=['POST'])
+def upload_json_file2():
+    return upload_json(request, REDIS_KEY_WHITELIST_LINK, "/tmp_data2.json")
+
+
+# 删除全部本地直播源
+@app.route('/removeallm3u', methods=['GET'])
+def removeallm3u():
+    redis_del_map(REDIS_KEY_M3U_DATA)
+    return "success"
+
+
+# 删除全部直播源订阅链接
+@app.route('/removem3ulinks', methods=['GET'])
+def removem3ulinks():
+    redis_del_map(REDIS_KEY_M3U_LINK)
+    return "success"
+
+
+# 导出本地永久直播源
+@app.route('/download_m3u_file', methods=['GET'])
+def download_m3u_file():
+    my_dict = redis_get_map(REDIS_KEY_M3U_DATA)
+    distribute_data(my_dict, "/app/temp_m3u.m3u", 100)
+    # 发送JSON文件到前端
+    return send_file("temp_m3u.m3u", as_attachment=True)
+
+
+# 手动上传m3u文件把直播源保存到数据库
+@app.route('/upload_m3u_file', methods=['POST'])
+def upload_m3u_file():
+    file = request.files['file']
+    # file_content = file.read().decode('utf-8')
+    file_content = file.read()
+    # file_content = read_file_with_encoding(file)
+    my_dict = formatdata_multithread(file_content.splitlines(), 100)
+    # my_dict = formattxt_multithread(file_content.splitlines(), 100)
+    redis_add_map(REDIS_KEY_M3U_DATA, my_dict)
+    return '文件已上传'
+
+
+# 删除直播源
+@app.route('/deletem3udata', methods=['POST'])
+def deletem3udata():
+    # 获取 HTML 页面发送的 POST 请求参数
+    deleteurl = request.json.get('deletem3u')
+    r.hdel('localm3u', deleteurl)
+    return jsonify({'deletem3udata': "delete success"})
+
+
+# 添加直播源
+@app.route('/addm3udata', methods=['POST'])
+def addm3udata():
+    # 获取 HTML 页面发送的 POST 请求参数
+    addurl = request.json.get('addm3u')
+    name = request.json.get('name')
+    my_dict = {addurl: name}
+    redis_add_map(REDIS_KEY_M3U_DATA, my_dict)
+    return jsonify({'addresult': "add success"})
+
+
+# 拉取全部本地直播源
+@app.route('/getm3udata', methods=['GET'])
+def getm3udata():
+    return jsonify(redis_get_map(REDIS_KEY_M3U_DATA))
+
+
+# 添加直播源到本地
+@app.route('/savem3uarea', methods=['POST'])
+def savem3uarea():
+    # 获取 HTML 页面发送的 POST 请求参数
+    m3utext = request.json.get('m3utext')
+    # 格式优化
+    my_dict = formattxt_multithread(m3utext.split("\n"), 10, 'process_data_abstract')
+    redis_add_map(REDIS_KEY_M3U_DATA, my_dict)
+    return jsonify({'addresult': "add success"})
+
+
+# 添加直播源订阅
+@app.route('/addnewm3u', methods=['POST'])
+def addnewm3u():
+    return addlist(request, REDIS_KEY_M3U_LINK)
+
+
+# 删除直播源订阅
+@app.route('/deletewm3u', methods=['POST'])
+def deletewm3u():
+    return dellist(request, REDIS_KEY_M3U_LINK)
+
+
+# 拉取全部直播源订阅
+@app.route('/getall', methods=['GET'])
+def getall():
+    return jsonify(redis_get_map(REDIS_KEY_M3U_LINK))
+
+
+# 全部订阅链接超融合
+@app.route('/chaoronghe', methods=['GET'])
+def chaoronghe():
+    return chaorongheBase(REDIS_KEY_M3U_LINK, 'process_data_abstract', REDIS_KEY_M3U_DATA,
+                          "/A.m3u")
+
+
+# 导出直播源订阅配置
+@app.route('/download_json_file', methods=['GET'])
+def download_json_file():
+    return download_json_file_base(REDIS_KEY_M3U_LINK, "/app/temp_m3ulink.json", "temp_m3ulink.json")
+
+
+# 上传直播源订阅配置集合文件
+@app.route('/upload_json_file', methods=['POST'])
+def upload_json_file():
+    return upload_json(request, REDIS_KEY_M3U_LINK, "/tmp_data.json")
 
 
 # 手动上传m3u文件格式化统一转换
