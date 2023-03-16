@@ -11,10 +11,10 @@
             color: aliceblue;
         }
 
-        .button, #add-row,#add-row2,#add-row3,#add-row4,#add-row5,
+        .button, #add-row,#add-row2,#add-row3,#add-row4,#add-row5,#add-row6,
         .save-button,.save-button2,.save-button3,.delete-button3,.delete-button4,.save-button4,
         .delete-button,.save-m3u-button,.delete-m3u-button,.delete-button2,
-        .delete-button5,.save-button5{
+        .delete-button5,.save-button5,#simply,.delete-button6,.save-button6{
             padding: 10px 20px;
             background-color: #4CAF50;
             color: white;
@@ -32,19 +32,19 @@
 
         .save-button,.save-button2,.delete-button3,.save-button3,.delete-button4,.save-button4,
         .delete-button,.save-m3u-button,.delete-m3u-button,.delete-button2
-        ,.delete-button5,.save-button5{
+        ,.delete-button5,.save-button5,#simply,.delete-button6,.save-button6{
             margin-right: 5px;
             width: 45%
         }
 
-        .subUrl,.subUrl2,.subUrl3,.subUrl4,.subUrl5 {
+        .subUrl,.subUrl2,.subUrl3,.subUrl4,.subUrl5,.subUrl6 {
             width: 70%;
             background-color: #758a99;
             color: aliceblue;
             font-size: x-large;
         }
 
-        .subname,.subname2,.subname3,.subname4,.subname5 {
+        .subname,.subname2,.subname3,.subname4,.subname5,.subname6 {
             width: 20%;
             background-color: #758a99;
             color: aliceblue;
@@ -60,20 +60,23 @@
 
         .subname,.subUrl,#step2,#add-row,.notice,.save-button,#download-json-btn,#upload-json-btn,#upload-m3u,
         .delete-button,#sub-m3u,#generatepass,#savem3uareas,.save-m3u-button,.delete-m3u-button,#upload-m3u-btn,
-        #download-m3u-btn,#remove-m3u-btn,#remove-m3u-btn,#removem3ulinks,#upload-m3u-btn,#sub-m3u-btn,
+        #download-m3u-btn,#remove-m3u-btn,#remove-m3u-btn,#removem3ulinks,#sub-m3u-btn,
         #upload-json-btn2,#add-row2,.subUrl2,.subname2,.save-button2,.delete-button2,
         #step22,#download-json-btn2,#removem3ulinks2,#upload-json-btn3,#add-row3,#step23,
         .subUrl3,.subname3,.save-button3,.delete-button3,#download-json-btn3,#removem3ulinks3,
         #upload-json-btn4,#add-row4,.subUrl4,.subname4,.save-button4,.delete-button4,#download-json-btn4,
         #step24,#removem3ulinks4,#upload-json-btn5,#add-row5,.subUrl5,.subname5,.save-button5,.delete-button5,
-        #step25,#download-json-btn5,#removem3ulinks5{
+        #step25,#download-json-btn5,#removem3ulinks5,#simply,#upload-json-btn6
+        ,#add-row6,.subUrl6,.subname6,.save-button6,.delete-button6,#removem3ulinks6,
+        #download-json-btn6,#download-json-btn7,#upload-json-btn7{
             font-size: x-large;
         }
 
         #upload-json-btn,#upload-m3u,#sub-m3u,#generatepass,#savem3uareas,#upload-m3u-btn,#download-m3u-btn
-        ,#remove-m3u-btn,#remove-m3u-btn,#removem3ulinks,#upload-m3u-btn,#sub-m3u-btn,#upload-json-btn2,
+        ,#remove-m3u-btn,#remove-m3u-btn,#removem3ulinks,#sub-m3u-btn,#upload-json-btn2,
         #removem3ulinks2,#upload-json-btn3,#removem3ulinks3,#upload-json-btn4,#removem3ulinks4,#upload-json-btn5
-        ,#removem3ulinks5{
+        ,#removem3ulinks5,#simply,#upload-json-btn6,#removem3ulinks6,#upload-json-btn7
+        {
             float: right;
             background-color: #4CAF50;
             color: white;
@@ -84,14 +87,20 @@
             margin-top: 5px;
         }
 
-        .delete-button,.delete-m3u-button,.delete-button2,.delete-button4,.delete-button3,.delete-button5{
+        .delete-button,.delete-m3u-button,.delete-button2,.delete-button4,.delete-button3,.delete-button5
+        ,.delete-button6{
             background-color: crimson;
         }
 
-        #remove-m3u-btn,#removem3ulinks,#removem3ulinks2,#removem3ulinks3,#removem3ulinks4,#removem3ulinks5{
+        #remove-m3u-btn,#removem3ulinks,#removem3ulinks2,#removem3ulinks3,#removem3ulinks4,#removem3ulinks5
+        ,#removem3ulinks6{
             background-color: crimson;
             float: left;
             width: 25%;
+        }
+
+        #input,#output{
+            width: 90%;background-color: #758a99;color: aliceblue
         }
 
 
@@ -99,7 +108,16 @@
     </style>
 </head>
 <body onload="init()">
-<h1>M3U 超融合</h1>
+<div style="width:100%;display:flex; justify-content:space-between;">
+    <h1 style="width: 20%">M3U 超融合</h1>
+    <button id="download-json-btn7" class="button" style="width: 30%">一键导出全部配置</button>
+    <div id="upload-json-btn7"
+         style="position: relative; width: 30%; display: flex; justify-content: center; align-items: center;">
+        <label for="file-upload">一键导入全部配置</label>
+        <input type="file" name="file-upload"
+               style="position: absolute; top: 0; left: 0; height: 100%; width: 100%; opacity: 0;"></input>
+    </div>
+</div>
 <div id="switchbox" style="font-size: x-large">
     <label>
         <input type="radio" name="page" id="page1" checked>
@@ -129,9 +147,13 @@
         <input type="radio" name="page" id="page7">
         <span>ipv4订阅</span>
     </label>
-        <label>
+    <label>
         <input type="radio" name="page" id="page8">
         <span>ipv6订阅</span>
+    </label>
+    <label>
+        <input type="radio" name="page" id="page9">
+        <span>文本行去重复</span>
     </label>
 </div>
 <div id="choice">
@@ -139,8 +161,8 @@
         <h1>公共网络直播源订阅:从网络下载直播源</h1>
         <div style="float: left;width: 70%">
             <h3>后台默认1小时自动执行生成操作</h3>
-            <h3>M3U超融合直播源订阅地址:</h3>
-            <h3>http://局域网docker所在主机ip:当前页面端口/url/A.m3u</h3>
+            <h3>M3U超融合直播源订阅地址:docker主机地址:端口/url/A.m3u</h3>
+            <h3>http://192.168.5.1:4395/url/A.m3u</h3>
             <h3>上传文件导入合并M3U超融合备份</h3>
         </div>
         <div style="float: right;width: 30%">
@@ -201,7 +223,29 @@
         </table>
     </div>
     <div id="page3" style="display: none;">
-        <h1>密码本</h1>
+        <h1>密码记录本</h1>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn6" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row6" style="width:100%">新增密码</button>
+            </div>
+            <div>
+                <button id="download-json-btn6" class="button" style="width: 100%">导出密码备份</button>
+            </div>
+            <button id="removem3ulinks6" class="button" onclick="removem3ulinks6()">删除全部密码
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:密码来源+密码内容
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table6" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
     </div>
     <div id="page4" style="display: none;">
         <h1>批量生成随机密码</h1>
@@ -232,10 +276,10 @@
         <h1>域名白名单订阅:从网络下载白名单</h1>
         <div style="float: left;width: 70%">
             <h3>后台默认1小时自动执行生成操作</h3>
-            <h3>超融合白名单订阅地址:</h3>
-            <h3>adguardhome:http://局域网docker所在主机ip:当前页面端口/url/B.txt</h3>
-            <h3>dnsmasq:http://局域网docker所在主机ip:当前页面端口/url/BDnsmasq.txt</h3>
-            <h3>domain:http://局域网docker所在主机ip:当前页面端口/url/WhiteDomain.txt</h3>
+            <h3>超融合白名单订阅地址:参考M3U格式</h3>
+            <h3>adguardhome:http://192.168.5.1:4395/url/B.txt</h3>
+            <h3>dnsmasq:http://192.168.5.1:4395/url/BDnsmasq.txt</h3>
+            <h3>domain:http://192.168.5.1:4395/url/WhiteDomain.txt</h3>
             <h3>上传文件导入合并白名单订阅</h3>
         </div>
         <div style="width:100%">
@@ -270,7 +314,7 @@
         <div style="float: left;width: 70%">
             <h3>后台默认1小时自动执行生成操作</h3>
             <h3>超融合Adguardhome黑名单订阅地址:</h3>
-            <h3>http://局域网docker所在主机ip:当前页面端口/url/C.txt</h3>
+            <h3>http://192.168.5.1:4395/url/C.txt</h3>
             <h3>上传文件导入合并黑名单订阅</h3>
         </div>
         <div style="width:100%">
@@ -304,8 +348,8 @@
         <h1>ipv4订阅:从网络下载ipv4</h1>
         <div style="float: left;width: 70%">
             <h3>后台默认1小时自动执行生成操作</h3>
-            <h3>超融合ipv4订阅地址:</h3>
-            <h3>http://局域网docker所在主机ip:当前页面端口/url/ipv4.txt</h3>
+            <h3>超融合ipv4订阅地址:参考m3u格式</h3>
+            <h3>http://192.168.5.1:4395/url/ipv4.txt</h3>
             <h3>上传文件导入合并ipv4订阅</h3>
         </div>
         <div style="width:100%">
@@ -335,12 +379,12 @@
             </table>
         </div>
     </div>
-        <div id="page8" style="display: none;">
+    <div id="page8" style="display: none;">
         <h1>ipv6订阅:从网络下载ipv6</h1>
         <div style="float: left;width: 70%">
             <h3>后台默认1小时自动执行生成操作</h3>
-            <h3>超融合ipv6订阅地址:</h3>
-            <h3>http://局域网docker所在主机ip:当前页面端口/url/ipv6.txt</h3>
+            <h3>超融合ipv6订阅地址:参考m3u格式</h3>
+            <h3>http://192.168.5.1:4395/url/ipv6.txt</h3>
             <h3>上传文件导入合并ipv6订阅</h3>
         </div>
         <div style="width:100%">
@@ -370,6 +414,21 @@
             </table>
         </div>
     </div>
+    <div id="page9" style="display: none;">
+        <h1>文本行去重复</h1>
+        <button id="simply" style="float: right;width: 100%" onclick="removeDuplicates()">去重复</button>
+        <div style="width:100%;display:flex; justify-content:space-between;">
+            <div style="width: 50%">
+                <p>在左边输入要去重复的文本，每行一个条目。</p>
+                <textarea id="input" rows="30" cols="50"></textarea>
+            </div>
+            <div style="width: 50%">
+                <p>去重复结果如下：</p>
+                <textarea id="output" rows="30" cols="50" readonly></textarea>
+                <br>
+            </div>
+        </div>
+    </div>
 </div>
 
 
@@ -378,7 +437,8 @@
     const inputTable = document.getElementById('input-table');
     const downloadBtn = document.getElementById('download-json-btn');
     const fileInput = document.getElementById('upload-json-btn');
-    const form = document.querySelector('form');
+    //const form = document.querySelector('form');
+    const forms = document.querySelectorAll('form');
     const switchbox = document.getElementById("switchbox");
     const choice = document.getElementById("choice");
     const pages = choice.children;
@@ -409,14 +469,14 @@
     const addRowButton5 = document.getElementById('add-row5');
     const inputTable5 = document.getElementById('input-table5');
     const downloadBtn5 = document.getElementById('download-json-btn5');
-    function init(){
-        reloadWhiteListLink()
-        reloadBlackListLink()
-        handleScroll()
-        reload()
-        reloadIpv4ListLink()
-        reloadIpv6ListLink()
-    }
+
+    const fileInput6 = document.getElementById('upload-json-btn6');
+    const addRowButton6 = document.getElementById('add-row6');
+    const inputTable6 = document.getElementById('input-table6');
+    const downloadBtn6 = document.getElementById('download-json-btn6');
+
+    const fileInput7 = document.getElementById('upload-json-btn7');
+    const downloadBtn7 = document.getElementById('download-json-btn7');
 
     //超融合M3U-从数据库拉取订阅列表数据
     function reload() {
@@ -426,6 +486,10 @@
     //超融合ipv6-从数据库拉取订阅列表数据
     function reloadIpv6ListLink() {
         reloadBase('/getall5','subUrl5','subname5','save-button5','delete-button5',inputTable5)
+    }
+    //密码本-从数据库拉取密码列表数据
+    function reloadPasswordList() {
+        reloadBase('/getall6','subUrl6','subname6','save-button6','delete-button6',inputTable6)
     }
     //超融合ipv4-从数据库拉取订阅列表数据
     function reloadIpv4ListLink() {
@@ -495,6 +559,10 @@
     function saveInputValue5(inputValue, name) {
         saveInputValuebase(inputValue,name,'/addnewm3u5')
     }
+    //保留密码
+    function saveInputValue6(inputValue, name) {
+        saveInputValuebase(inputValue,name,'/addnewm3u6')
+    }
     //永久列表-保留输入行数据
     function savem3uInputValue(url, info) {
         saveInputValuebase(url,info,'/addm3udata')
@@ -536,6 +604,10 @@
     function deleteInputRow5(row, inputValue) {
         deleteInputRowBase(row,inputValue,'/deletewm3u5')
     }
+    //删除密码
+    function deleteInputRow6(row, inputValue) {
+        deleteInputRowBase(row,inputValue,'/deletewm3u6')
+    }
     //永久列表-删除输入行
     function deleteM3uInputRow(row, inputValue) {
         deleteInputRowBase(row,inputValue,'/deletem3udata')
@@ -576,6 +648,8 @@
         return window[methodName].apply(null, params)
     }
 
+    //密码本-订阅列表里按钮监听
+    inputableAddEventListener(inputTable6,'save-button6','delete-button6','saveInputValue6','deleteInputRow6')
     //ipv6-订阅列表里按钮监听
     inputableAddEventListener(inputTable5,'save-button5','delete-button5','saveInputValue5','deleteInputRow5')
     //ipv4-订阅列表里按钮监听
@@ -611,6 +685,10 @@
     });
     }
 
+    //一键导入全部json配置
+    fileInputAddEventListenerBase(fileInput7,'/upload_json_file7')
+    //密码本-导入json配置
+    fileInputAddEventListenerBase(fileInput6,'/upload_json_file6')
     //中国ipv6-导入json配置
     fileInputAddEventListenerBase(fileInput5,'/upload_json_file5')
     //中国ipv4-导入json配置
@@ -639,7 +717,7 @@
                     .catch(error => console.log(error));
             };
             reader.readAsText(file);
-            location.reload();
+            location.reload()
         });
     }
 
@@ -660,6 +738,10 @@
     // 超融合ipv6-删除全部网络订阅配置文件
     function removem3ulinks5() {
         removelinksBase('/removem3ulinks5')
+    }
+    // 密码本-删除全部密码配置文件
+    function removem3ulinks6() {
+        removelinksBase('/removem3ulinks6')
     }
     // 超融合域名黑名单-删除全部网络订阅配置文件
     function removem3ulinks3() {
@@ -682,7 +764,7 @@
             });
         // 恢复按钮
         button.disabled = false;
-        location.reload();
+        location.reload()
     }
 
     // 永久列表-删除全部本地m3u文件
@@ -825,30 +907,45 @@
         }
     });
 
+    function init() {
+        reloadWhiteListLink()
+        reloadBlackListLink()
+        handleScroll()
+        reload()
+        reloadIpv4ListLink()
+        reloadIpv6ListLink()
+        reloadPasswordList()
+    }
+
     // 超融合-工具-上传m3u文件-自动下载格式规整化的m3u文件
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = new FormData(form);
-        const response = await fetch('/process-file', {
-            method: 'POST',
-            body: formData
+    formsAddEventListener(forms[0],'/process-file','tmp.m3u','upload-m3u')
+
+    // 上传文件处理后自动下载
+    function formsAddEventListener(formtarget, requestpath, filename, uploadbtnId) {
+        formtarget.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(formtarget);
+            const response = await fetch(requestpath, {
+                method: 'POST',
+                body: formData
+            });
+            if (response.ok) {
+                // 创建 a 元素
+                const a = document.createElement('a');
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            } else {
+                alert('上传文件失败');
+            }
+            document.getElementById(uploadbtnId).value = '';
         });
-        if (response.ok) {
-            // 创建 a 元素
-            const a = document.createElement('a');
-            const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            a.href = url;
-            a.download = 'tmp.m3u';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-        } else {
-            alert('上传文件失败');
-        }
-        document.getElementById('upload-m3u').value = '';
-    });
+    }
 
     // 超融合M3U-导出订阅json配置
     downloadBtnAddEventListenerBase(downloadBtn,'/download_json_file','temp_m3ulink.json')
@@ -860,6 +957,10 @@
     downloadBtnAddEventListenerBase(downloadBtn4,'/download_json_file4','temp_ipv4listlink.json')
     // 超融合IPV6-导出订阅json配置
     downloadBtnAddEventListenerBase(downloadBtn5,'/download_json_file5','temp_ipv6listlink.json')
+    // 密码本-导出json配置
+    downloadBtnAddEventListenerBase(downloadBtn6,'/download_json_file6','temp_passwordlist.json')
+    // 导出所有json配置
+    downloadBtnAddEventListenerBase(downloadBtn7,'/download_json_file7','allData.json')
     // 永久列表-导出永久列表
     downloadBtnAddEventListenerBase(downloadM3UBtn,'/download_m3u_file','temp_m3u.m3u')
 
@@ -882,6 +983,8 @@
         });
     }
 
+    //密码本-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton6,inputTable6,'subUrl6','subname6','save-button6','delete-button6')
     //中国ipv6-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton5,inputTable5,'subUrl5','subname5','save-button5','delete-button5')
     //中国ipv4-只添加一行列表，不存储数据
@@ -965,7 +1068,7 @@
         button.disabled = false;
     }
 
-        function generatePasswords() {
+    function generatePasswords() {
         // 获取输入框的值
         var passwordLength = document.getElementById("password-length").value;
         var numOfPasswords = document.getElementById("num-of-passwords").value;
@@ -1005,6 +1108,15 @@
         // 将密码列表添加到文本区域中
         document.getElementById("password-list").value = passwordList;
     }
+
+    function removeDuplicates() {
+        const inputTextArea = document.getElementById("input");
+        const outputTextArea = document.getElementById("output");
+        const inputLines = inputTextArea.value.split("\n");
+        const uniqueLines = new Set(inputLines);
+        outputTextArea.value = [...uniqueLines].join("\n");
+    }
+
 
 </script>
 </body>

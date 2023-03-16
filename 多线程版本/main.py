@@ -10,9 +10,9 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-import requests
 import redis
-from flask import Flask, jsonify, request, send_file, render_template
+import requests
+from flask import Flask, jsonify, request, send_file
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -44,6 +44,10 @@ REDIS_KEY_WHITELIST_IPV4_DATA = "whitelistipv4data"
 REDIS_KEY_WHITELIST_IPV6_LINK = "whitelistipv6link"
 # 白名单中国大陆IPV6下载数据
 REDIS_KEY_WHITELIST_IPV6_DATA = "whitelistipv6data"
+# 密码本下载链接
+REDIS_KEY_PASSWORD_LINK = "passwordlink"
+allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_LINK, REDIS_KEY_WHITELIST_IPV4_LINK,
+              REDIS_KEY_WHITELIST_IPV6_LINK, REDIS_KEY_PASSWORD_LINK]
 
 # Adguardhome屏蔽前缀
 BLACKLIST_ADGUARDHOME_FORMATION = "240.0.0.0 "
@@ -133,6 +137,7 @@ def timer_func():
         chaoronghe2()
         chaoronghe3()
         chaoronghe4()
+        chaoronghe5()
         time.sleep(3600)  # 等待1小时
 
 
@@ -387,13 +392,13 @@ class MyConcreteClass(MyAbstractClass):
         # 实现代码
         pass
 
-    # 处理域名合并ipv4的实现类
+    # 处理合并ipv4的实现类
     def process_data_abstract5(self, data, index, step, my_dict):
         process_data_ipv4_collect(data, index, step, my_dict)
         # 实现代码
         pass
 
-    # 处理域名合并ipv6的实现类
+    # 处理合并ipv6的实现类
     def process_data_abstract6(self, data, index, step, my_dict):
         process_data_ipv6_collect(data, index, step, my_dict)
         # 实现代码
@@ -564,6 +569,38 @@ def generate_json_string(mapname):
     return json_str
 
 
+# 一键导出全部json配置
+def generate_multi_json_string(mapnameArr):
+    finalDict = {}
+    for name in mapnameArr:
+        m3ulink = redis_get_map(name)
+        finalDict[name] = m3ulink
+    # 将字典转换为JSON字符串并返回
+    json_str = json.dumps(finalDict)
+    return json_str
+
+
+# 上传订阅配置
+def upload_oneKey_json(request, filename):
+    try:
+        # 获取POST请求中的JSON文件内容
+        file_content = request.get_data()
+        # 将字节对象解码为字符串
+        file_content_str = file_content.decode('utf-8')
+        # 将JSON字符串保存到临时文件
+        with open(filename, 'w') as f:
+            json.dump(json.loads(file_content_str), f)
+        with open(filename, 'r') as f:
+            json_dict = json.load(f)
+        for cachekey, valuedict in json_dict.items():
+            redis_add_map(cachekey, valuedict)
+        os.remove(filename)
+        return jsonify({'success': True})
+    except Exception as e:
+        print("An error occurred: ", e)
+        return jsonify({'success': False})
+
+
 def dellist(request, rediskey):
     # 获取 HTML 页面发送的 POST 请求参数
     deleteurl = request.json.get('deleteurl')
@@ -597,16 +634,74 @@ def formatdata_multithread(data, num_threads):
     executor.shutdown(wait=True)
     return my_dict
 
-
-# my_dict = methodA(formatMultiThreadName, [result.splitlines(), 100, processDataMethodName])
-# 定义方法A，接受一个函数名参数和一个参数列表
-# def methodA(methodName, params):
-#     # 使用eval()函数来执行传递进来的方法名对应的函数，并传递参数列表
-#     result = eval(methodName + '(' + ', '.join(str(p) for p in params) + ')')
-#     return result
+    # my_dict = methodA(formatMultiThreadName, [result.splitlines(), 100, processDataMethodName])
+    # 定义方法A，接受一个函数名参数和一个参数列表
+    # def methodA(methodName, params):
+    #     # 使用eval()函数来执行传递进来的方法名对应的函数，并传递参数列表
+    #     result = eval(methodName + '(' + ', '.join(str(p) for p in params) + ')')
+    #     return result
 
 
 ############################################################协议区####################################################
+
+
+# 一键上传全部配置集合文件
+@app.route('/upload_json_file7', methods=['POST'])
+def upload_json_file7():
+    return upload_oneKey_json(request, "/tmp_data7.json")
+
+
+# 一键导出全部配置
+@app.route('/download_json_file7', methods=['GET'])
+def download_json_file7():
+    # 生成JSON文件数据
+    json_data = generate_multi_json_string(allListArr)
+    if os.path.exists("/app/allData.json"):
+        os.remove("/app/allData.json")
+    # 保存JSON数据到临时文件
+    with open("/app/allData.json", 'w') as f:
+        f.write(json_data)
+    # 发送JSON文件到前端
+    return send_file("allData.json", as_attachment=True)
+
+
+# 删除密码
+@app.route('/deletewm3u6', methods=['POST'])
+def deletewm3u6():
+    return dellist(request, REDIS_KEY_PASSWORD_LINK)
+
+
+# 添加密码
+@app.route('/addnewm3u6', methods=['POST'])
+def addnewm3u6():
+    return addlist(request, REDIS_KEY_PASSWORD_LINK)
+
+
+# 导出密码配置
+@app.route('/download_json_file6', methods=['GET'])
+def download_json_file6():
+    return download_json_file_base(REDIS_KEY_PASSWORD_LINK, "/app/temp_passwordlist.json",
+                                   "temp_passwordlist.json")
+
+
+# 拉取全部密码
+@app.route('/getall6', methods=['GET'])
+def getall6():
+    return jsonify(redis_get_map(REDIS_KEY_PASSWORD_LINK))
+
+
+# 删除全部密码
+@app.route('/removem3ulinks6', methods=['GET'])
+def removem3ulinks6():
+    redis_del_map(REDIS_KEY_PASSWORD_LINK)
+    return "success"
+
+
+# 上传密码本配置集合文件
+@app.route('/upload_json_file6', methods=['POST'])
+def upload_json_file6():
+    return upload_json(request, REDIS_KEY_PASSWORD_LINK, "/tmp_data6.json")
+
 
 # 删除全部ipv6订阅链接
 @app.route('/removem3ulinks5', methods=['GET'])
