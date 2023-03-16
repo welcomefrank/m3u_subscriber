@@ -11,9 +11,10 @@
             color: aliceblue;
         }
 
-        .button, #add-row,#add-row2,#add-row3,
-        .save-button,.save-button2,.save-button3,.delete-button3,
-        .delete-button,.save-m3u-button,.delete-m3u-button,.delete-button2 {
+        .button, #add-row,#add-row2,#add-row3,#add-row4,#add-row5,
+        .save-button,.save-button2,.save-button3,.delete-button3,.delete-button4,.save-button4,
+        .delete-button,.save-m3u-button,.delete-m3u-button,.delete-button2,
+        .delete-button5,.save-button5{
             padding: 10px 20px;
             background-color: #4CAF50;
             color: white;
@@ -29,53 +30,50 @@
             background-color: #3e8e41;
         }
 
-        .save-button,.save-button2,.delete-button3,.save-button3,
-        .delete-button,.save-m3u-button,.delete-m3u-button,.delete-button2 {
+        .save-button,.save-button2,.delete-button3,.save-button3,.delete-button4,.save-button4,
+        .delete-button,.save-m3u-button,.delete-m3u-button,.delete-button2
+        ,.delete-button5,.save-button5{
             margin-right: 5px;
             width: 45%
         }
 
-        .subUrl,.subUrl2,.subUrl3 {
+        .subUrl,.subUrl2,.subUrl3,.subUrl4,.subUrl5 {
             width: 70%;
             background-color: #758a99;
             color: aliceblue;
             font-size: x-large;
         }
 
-        .subname,.subname2,.subname3 {
+        .subname,.subname2,.subname3,.subname4,.subname5 {
             width: 20%;
             background-color: #758a99;
             color: aliceblue;
             font-size: x-large;
         }
 
-        .subm3uUrl {
+        .subm3uUrl,.subm3uname {
             width: 100%;
             background-color: #758a99;
             color: aliceblue;
             font-size: x-large;
         }
-
-        .subm3uname {
-            width: 100%;
-            background-color: #758a99;
-            color: aliceblue;
-            font-size: x-large;
-        }
-
 
         .subname,.subUrl,#step2,#add-row,.notice,.save-button,#download-json-btn,#upload-json-btn,#upload-m3u,
         .delete-button,#sub-m3u,#generatepass,#savem3uareas,.save-m3u-button,.delete-m3u-button,#upload-m3u-btn,
         #download-m3u-btn,#remove-m3u-btn,#remove-m3u-btn,#removem3ulinks,#upload-m3u-btn,#sub-m3u-btn,
         #upload-json-btn2,#add-row2,.subUrl2,.subname2,.save-button2,.delete-button2,
         #step22,#download-json-btn2,#removem3ulinks2,#upload-json-btn3,#add-row3,#step23,
-        .subUrl3,.subname3,.save-button3,.delete-button3,#download-json-btn3,#removem3ulinks3{
+        .subUrl3,.subname3,.save-button3,.delete-button3,#download-json-btn3,#removem3ulinks3,
+        #upload-json-btn4,#add-row4,.subUrl4,.subname4,.save-button4,.delete-button4,#download-json-btn4,
+        #step24,#removem3ulinks4,#upload-json-btn5,#add-row5,.subUrl5,.subname5,.save-button5,.delete-button5,
+        #step25,#download-json-btn5,#removem3ulinks5{
             font-size: x-large;
         }
 
         #upload-json-btn,#upload-m3u,#sub-m3u,#generatepass,#savem3uareas,#upload-m3u-btn,#download-m3u-btn
         ,#remove-m3u-btn,#remove-m3u-btn,#removem3ulinks,#upload-m3u-btn,#sub-m3u-btn,#upload-json-btn2,
-        #removem3ulinks2,#upload-json-btn3,#removem3ulinks3{
+        #removem3ulinks2,#upload-json-btn3,#removem3ulinks3,#upload-json-btn4,#removem3ulinks4,#upload-json-btn5
+        ,#removem3ulinks5{
             float: right;
             background-color: #4CAF50;
             color: white;
@@ -86,11 +84,11 @@
             margin-top: 5px;
         }
 
-        .delete-button,.delete-m3u-button,.delete-button2{
+        .delete-button,.delete-m3u-button,.delete-button2,.delete-button4,.delete-button3,.delete-button5{
             background-color: crimson;
         }
 
-        #remove-m3u-btn,#removem3ulinks,#removem3ulinks2,#removem3ulinks3{
+        #remove-m3u-btn,#removem3ulinks,#removem3ulinks2,#removem3ulinks3,#removem3ulinks4,#removem3ulinks5{
             background-color: crimson;
             float: left;
             width: 25%;
@@ -109,11 +107,11 @@
     </label>
     <label>
         <input type="radio" name="page" id="page2">
-        <span>直播源粘贴板</span>
+        <span>直播源数据管理</span>
     </label>
     <label>
         <input type="radio" name="page" id="page3">
-        <span>密码本</span>
+        <span>密码记录账本</span>
     </label>
     <label>
         <input type="radio" name="page" id="page4">
@@ -121,11 +119,19 @@
     </label>
     <label>
         <input type="radio" name="page" id="page5">
-        <span>大陆域名白名单订阅</span>
+        <span>域名白名单订阅</span>
     </label>
     <label>
         <input type="radio" name="page" id="page6">
-        <span>外国域名黑名单订阅</span>
+        <span>域名黑名单订阅</span>
+    </label>
+    <label>
+        <input type="radio" name="page" id="page7">
+        <span>ipv4订阅</span>
+    </label>
+        <label>
+        <input type="radio" name="page" id="page8">
+        <span>ipv6订阅</span>
     </label>
 </div>
 <div id="choice">
@@ -223,11 +229,13 @@
                   style="width: 100%;background-color: #758a99;color: aliceblue"></textarea>
     </div>
     <div id="page5" style="display: none;">
-        <h1>大陆域名白名单订阅:从网络下载白名单</h1>
+        <h1>域名白名单订阅:从网络下载白名单</h1>
         <div style="float: left;width: 70%">
             <h3>后台默认1小时自动执行生成操作</h3>
-            <h3>超融合Adguardhome白名单订阅地址:</h3>
-            <h3>http://局域网docker所在主机ip:当前页面端口/url/B.txt</h3>
+            <h3>超融合白名单订阅地址:</h3>
+            <h3>adguardhome:http://局域网docker所在主机ip:当前页面端口/url/B.txt</h3>
+            <h3>dnsmasq:http://局域网docker所在主机ip:当前页面端口/url/BDnsmasq.txt</h3>
+            <h3>domain:http://局域网docker所在主机ip:当前页面端口/url/WhiteDomain.txt</h3>
             <h3>上传文件导入合并白名单订阅</h3>
         </div>
         <div style="width:100%">
@@ -235,7 +243,7 @@
                 <input type="file" id="upload-json-btn2" style="width: 100%"></input>
             </div>
             <div>
-                <button id="add-row2" style="width:100%">新增大陆白名单域名订阅</button>
+                <button id="add-row2" style="width:100%">新增白名单域名订阅</button>
             </div>
             <div>
                 <button id="step22" class="button" onclick="execute2()" style="width: 100%">生成白名单超融合订阅
@@ -257,8 +265,8 @@
             </table>
         </div>
     </div>
-        <div id="page6" style="display: none;">
-        <h1>外国域名黑名单订阅:从网络下载黑名单</h1>
+    <div id="page6" style="display: none;">
+        <h1>域名黑名单订阅:从网络下载黑名单</h1>
         <div style="float: left;width: 70%">
             <h3>后台默认1小时自动执行生成操作</h3>
             <h3>超融合Adguardhome黑名单订阅地址:</h3>
@@ -270,7 +278,7 @@
                 <input type="file" id="upload-json-btn3" style="width: 100%"></input>
             </div>
             <div>
-                <button id="add-row3" style="width:100%">新增外国黑名单域名订阅</button>
+                <button id="add-row3" style="width:100%">新增黑名单域名订阅</button>
             </div>
             <div>
                 <button id="step23" class="button" onclick="execute3()" style="width: 100%">生成黑名单超融合订阅
@@ -287,6 +295,76 @@
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
             <table id="input-table3" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="page7" style="display: none;">
+        <h1>ipv4订阅:从网络下载ipv4</h1>
+        <div style="float: left;width: 70%">
+            <h3>后台默认1小时自动执行生成操作</h3>
+            <h3>超融合ipv4订阅地址:</h3>
+            <h3>http://局域网docker所在主机ip:当前页面端口/url/ipv4.txt</h3>
+            <h3>上传文件导入合并ipv4订阅</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn4" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row4" style="width:100%">新增ipv4订阅</button>
+            </div>
+            <div>
+                <button id="step24" class="button" onclick="execute4()" style="width: 100%">生成ipv4超融合订阅
+                </button>
+            </div>
+            <div>
+                <button id="download-json-btn4" class="button" style="width: 100%">导出ipv4超融合备份</button>
+            </div>
+            <button id="removem3ulinks4" class="button" onclick="removem3ulinks4()">删除全部订阅
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:ipv4订阅地址+备注
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table4" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
+        <div id="page8" style="display: none;">
+        <h1>ipv6订阅:从网络下载ipv6</h1>
+        <div style="float: left;width: 70%">
+            <h3>后台默认1小时自动执行生成操作</h3>
+            <h3>超融合ipv6订阅地址:</h3>
+            <h3>http://局域网docker所在主机ip:当前页面端口/url/ipv6.txt</h3>
+            <h3>上传文件导入合并ipv6订阅</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn5" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row5" style="width:100%">新增ipv6订阅</button>
+            </div>
+            <div>
+                <button id="step25" class="button" onclick="execute5()" style="width: 100%">生成ipv6超融合订阅
+                </button>
+            </div>
+            <div>
+                <button id="download-json-btn5" class="button" style="width: 100%">导出ipv6超融合备份</button>
+            </div>
+            <button id="removem3ulinks5" class="button" onclick="removem3ulinks5()">删除全部订阅
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:ipv6订阅地址+备注
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table5" style="width:100%">
                 <tbody style="width:100%">
                 </tbody>
             </table>
@@ -322,11 +400,22 @@
     const inputTable3 = document.getElementById('input-table3');
     const downloadBtn3 = document.getElementById('download-json-btn3');
 
+    const fileInput4 = document.getElementById('upload-json-btn4');
+    const addRowButton4 = document.getElementById('add-row4');
+    const inputTable4 = document.getElementById('input-table4');
+    const downloadBtn4 = document.getElementById('download-json-btn4');
+
+    const fileInput5 = document.getElementById('upload-json-btn5');
+    const addRowButton5 = document.getElementById('add-row5');
+    const inputTable5 = document.getElementById('input-table5');
+    const downloadBtn5 = document.getElementById('download-json-btn5');
     function init(){
         reloadWhiteListLink()
         reloadBlackListLink()
         handleScroll()
         reload()
+        reloadIpv4ListLink()
+        reloadIpv6ListLink()
     }
 
     //超融合M3U-从数据库拉取订阅列表数据
@@ -334,6 +423,14 @@
         reloadBase('/getall','subUrl','subname','save-button','delete-button',inputTable)
     }
 
+    //超融合ipv6-从数据库拉取订阅列表数据
+    function reloadIpv6ListLink() {
+        reloadBase('/getall5','subUrl5','subname5','save-button5','delete-button5',inputTable5)
+    }
+    //超融合ipv4-从数据库拉取订阅列表数据
+    function reloadIpv4ListLink() {
+        reloadBase('/getall4','subUrl4','subname4','save-button4','delete-button4',inputTable4)
+    }
     //超融合白名单-从数据库拉取订阅列表数据
     function reloadWhiteListLink() {
         reloadBase('/getall2','subUrl2','subname2','save-button2','delete-button2',inputTable2)
@@ -390,6 +487,14 @@
     function saveInputValue3(inputValue, name) {
         saveInputValuebase(inputValue,name,'/addnewm3u3')
     }
+    //保留订阅-ipv4
+    function saveInputValue4(inputValue, name) {
+        saveInputValuebase(inputValue,name,'/addnewm3u4')
+    }
+    //保留订阅-ipv6
+    function saveInputValue5(inputValue, name) {
+        saveInputValuebase(inputValue,name,'/addnewm3u5')
+    }
     //永久列表-保留输入行数据
     function savem3uInputValue(url, info) {
         saveInputValuebase(url,info,'/addm3udata')
@@ -422,6 +527,14 @@
     //删除订阅-黑名单
     function deleteInputRow3(row, inputValue) {
         deleteInputRowBase(row,inputValue,'/deletewm3u3')
+    }
+    //删除订阅-ipv4
+    function deleteInputRow4(row, inputValue) {
+        deleteInputRowBase(row,inputValue,'/deletewm3u4')
+    }
+    //删除订阅-ipv6
+    function deleteInputRow5(row, inputValue) {
+        deleteInputRowBase(row,inputValue,'/deletewm3u5')
     }
     //永久列表-删除输入行
     function deleteM3uInputRow(row, inputValue) {
@@ -463,6 +576,10 @@
         return window[methodName].apply(null, params)
     }
 
+    //ipv6-订阅列表里按钮监听
+    inputableAddEventListener(inputTable5,'save-button5','delete-button5','saveInputValue5','deleteInputRow5')
+    //ipv4-订阅列表里按钮监听
+    inputableAddEventListener(inputTable4,'save-button4','delete-button4','saveInputValue4','deleteInputRow4')
     //白名单-订阅列表里按钮监听
     inputableAddEventListener(inputTable2,'save-button2','delete-button2','saveInputValue2','deleteInputRow2')
     //黑名单-订阅列表里按钮监听
@@ -494,6 +611,10 @@
     });
     }
 
+    //中国ipv6-导入json配置
+    fileInputAddEventListenerBase(fileInput5,'/upload_json_file5')
+    //中国ipv4-导入json配置
+    fileInputAddEventListenerBase(fileInput4,'/upload_json_file4')
     //白名单-导入json配置
     fileInputAddEventListenerBase(fileInput2,'/upload_json_file2')
     //黑名单-导入json配置
@@ -531,6 +652,14 @@
     // 超融合域名白名单-删除全部网络订阅配置文件
     function removem3ulinks2() {
         removelinksBase('/removem3ulinks2')
+    }
+    // 超融合ipv4-删除全部网络订阅配置文件
+    function removem3ulinks4() {
+        removelinksBase('/removem3ulinks4')
+    }
+    // 超融合ipv6-删除全部网络订阅配置文件
+    function removem3ulinks5() {
+        removelinksBase('/removem3ulinks5')
     }
     // 超融合域名黑名单-删除全部网络订阅配置文件
     function removem3ulinks3() {
@@ -727,6 +856,10 @@
     downloadBtnAddEventListenerBase(downloadBtn2,'/download_json_file2','temp_whitelistlink.json')
     // 超融合域名黑名单-导出订阅json配置
     downloadBtnAddEventListenerBase(downloadBtn3,'/download_json_file3','temp_blacklistlink.json')
+    // 超融合IPV4-导出订阅json配置
+    downloadBtnAddEventListenerBase(downloadBtn4,'/download_json_file4','temp_ipv4listlink.json')
+    // 超融合IPV6-导出订阅json配置
+    downloadBtnAddEventListenerBase(downloadBtn5,'/download_json_file5','temp_ipv6listlink.json')
     // 永久列表-导出永久列表
     downloadBtnAddEventListenerBase(downloadM3UBtn,'/download_m3u_file','temp_m3u.m3u')
 
@@ -749,7 +882,10 @@
         });
     }
 
-
+    //中国ipv6-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton5,inputTable5,'subUrl5','subname5','save-button5','delete-button5')
+    //中国ipv4-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton4,inputTable4,'subUrl4','subname4','save-button4','delete-button4')
     //白名单-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton2,inputTable2,'subUrl2','subname2','save-button2','delete-button2')
     //黑名单-只添加一行列表，不存储数据
@@ -801,6 +937,14 @@
     //超融合-域名黑名单
     function execute3() {
         executeBase('/chaoronghe3')
+    }
+    //超融合-ipv4
+    function execute4() {
+        executeBase('/chaoronghe4')
+    }
+    //超融合-ipv6
+    function execute5() {
+        executeBase('/chaoronghe5')
     }
 
     function executeBase(requestPath) {

@@ -1,5 +1,6 @@
 import abc
 import concurrent
+import ipaddress
 import json
 import math
 import os
@@ -21,17 +22,41 @@ r = redis.Redis(host='localhost', port=6379)
 ##########################################################redis key#############################################
 REDIS_KEY_M3U_LINK = "m3ulink"
 REDIS_KEY_M3U_DATA = "localm3u"
+# 白名单下载链接
 REDIS_KEY_WHITELIST_LINK = "whitelistlink"
+# 白名单adguardhome
 REDIS_KEY_WHITELIST_DATA = "whitelistdata"
+# 白名单dnsmasq
+REDIS_KEY_WHITELIST_DATA_DNSMASQ = "whitelistdatadnsmasq"
+# 白名单whitedomain
+REDIS_KEY_DOMAIN_DATA = "whitedomain"
+# 黑名单下载链接
 REDIS_KEY_BLACKLIST_LINK = "blacklistlink"
+# 黑名单adguardhome
 REDIS_KEY_BLACKLIST_DATA = "blacklistdata"
+# 黑名单blackdomain
+REDIS_KEY_BLACKLIST_DOMAIN_DATA = "blackdomain"
+# 白名单中国大陆IPV4下载链接
+REDIS_KEY_WHITELIST_IPV4_LINK = "whitelistipv4link"
+# 白名单中国大陆IPV4下载数据
+REDIS_KEY_WHITELIST_IPV4_DATA = "whitelistipv4data"
+# 白名单中国大陆IPV6下载链接
+REDIS_KEY_WHITELIST_IPV6_LINK = "whitelistipv6link"
+# 白名单中国大陆IPV6下载数据
+REDIS_KEY_WHITELIST_IPV6_DATA = "whitelistipv6data"
 
 # Adguardhome屏蔽前缀
-BLACKLIST_ADGUARDHOME_FORMATION = "0.0.0.0 "
+BLACKLIST_ADGUARDHOME_FORMATION = "240.0.0.0 "
+# dnsmasq白名单前缀
+BLACKLIST_DNSMASQ_FORMATION_LEFT = "server=/"
+# dnsmasq白名单后缀
+BLACKLIST_DNSMASQ_FORMATION_right = "/114.114.114.114"
 # 用于匹配纯粹域名的正则表达式
 domain_regex = r'^[a-zA-Z0-9]+([\-\.]{1}[a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$'
 # 用于匹配泛化匹配的域名规则的正则表达式
 wildcard_regex = r'^\*\.[a-zA-Z0-9]+([\-\.]{1}[a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$'
+# 用于匹配dnsmasq白名单格式
+pattern = r'^server=\/[a-zA-Z0-9.-]+\/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|[a-zA-Z0-9.-]+)$'
 
 
 # @app.route('/')
@@ -107,6 +132,7 @@ def timer_func():
         chaoronghe()
         chaoronghe2()
         chaoronghe3()
+        chaoronghe4()
         time.sleep(3600)  # 等待1小时
 
 
@@ -317,6 +343,22 @@ class MyAbstractClass(abc.ABC):
     def process_data_abstract2(self, data, index, step, my_dict):
         pass
 
+    @abc.abstractmethod
+    def process_data_abstract3(self, data, index, step, my_dict):
+        pass
+
+    @abc.abstractmethod
+    def process_data_abstract4(self, data, index, step, my_dict):
+        pass
+
+    @abc.abstractmethod
+    def process_data_abstract5(self, data, index, step, my_dict):
+        pass
+
+    @abc.abstractmethod
+    def process_data_abstract6(self, data, index, step, my_dict):
+        pass
+
 
 # 处理数据的实现类
 class MyConcreteClass(MyAbstractClass):
@@ -330,6 +372,30 @@ class MyConcreteClass(MyAbstractClass):
     # 处理域名名单转换Adguardhome的实现类
     def process_data_abstract2(self, data, index, step, my_dict):
         process_data_domain(data, index, step, my_dict)
+        # 实现代码
+        pass
+
+    # 处理域名名单转换dnsmasq的实现类
+    def process_data_abstract3(self, data, index, step, my_dict):
+        process_data_domain_dnsmasq(data, index, step, my_dict)
+        # 实现代码
+        pass
+
+    # 处理域名合并的实现类
+    def process_data_abstract4(self, data, index, step, my_dict):
+        process_data_domain_collect(data, index, step, my_dict)
+        # 实现代码
+        pass
+
+    # 处理域名合并ipv4的实现类
+    def process_data_abstract5(self, data, index, step, my_dict):
+        process_data_ipv4_collect(data, index, step, my_dict)
+        # 实现代码
+        pass
+
+    # 处理域名合并ipv6的实现类
+    def process_data_abstract6(self, data, index, step, my_dict):
+        process_data_ipv6_collect(data, index, step, my_dict)
         # 实现代码
         pass
 
@@ -358,7 +424,79 @@ def process_data_domain(data, index, step, my_dict):
             continue
         # 判断是不是域名或者*.域名
         if re.match(domain_regex, line) or re.match(wildcard_regex, line):
-            my_dict[BLACKLIST_ADGUARDHOME_FORMATION + line] = ""
+            my_dict["||" + line + "^"] = ""
+            if not line.encode().startswith((b"www", b".", b"*")):
+                my_dict["||" + "*." + line + "^"] = ""
+            if line.encode().startswith(b"."):
+                my_dict["||" + "*" + line + "^"] = ""
+
+
+def is_ipv4_network(ipv4_str):
+    try:
+        network = ipaddress.IPv4Network(ipv4_str)
+        return True
+    except ValueError:
+        return False
+
+
+def is_ipv6_network(ipv6_str):
+    try:
+        network = ipaddress.IPv6Network(ipv6_str)
+        return True
+    except ValueError:
+        return False
+
+
+# 字符串内容处理-ipv4合并
+def process_data_ipv4_collect(data, index, step, my_dict):
+    end_index = min(index + step, len(data))
+    for i in range(index, end_index):
+        line = data[i].strip()
+        if not line:
+            continue
+        # 判断是不是域名或者*.域名
+        if is_ipv4_network(line):
+            my_dict[line] = ""
+
+
+# 字符串内容处理-ipv6合并
+def process_data_ipv6_collect(data, index, step, my_dict):
+    end_index = min(index + step, len(data))
+    for i in range(index, end_index):
+        line = data[i].strip()
+        if not line:
+            continue
+        # 判断是不是域名或者*.域名
+        if is_ipv6_network(line):
+            my_dict[line] = ""
+
+
+# 字符串内容处理-域名合并
+def process_data_domain_collect(data, index, step, my_dict):
+    end_index = min(index + step, len(data))
+    for i in range(index, end_index):
+        line = data[i].strip()
+        if not line:
+            continue
+        # 判断是不是域名或者*.域名
+        if re.match(domain_regex, line) or re.match(wildcard_regex, line):
+            my_dict[line] = ""
+
+
+# 字符串内容处理-域名转dnsmasq白名单
+def process_data_domain_dnsmasq(data, index, step, my_dict):
+    end_index = min(index + step, len(data))
+    for i in range(index, end_index):
+        line = data[i].strip()
+        if not line:
+            continue
+        # 判断是不是域名或者*.域名
+        if re.match(domain_regex, line) or re.match(wildcard_regex, line):
+            my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
+            if not line.encode().startswith((b"www", b".", b"*")):
+                my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + "*." + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
+            if line.encode().startswith(b"."):
+                my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + "*" + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
 
 
 # 字符串内容处理-m3u
@@ -470,6 +608,96 @@ def formatdata_multithread(data, num_threads):
 
 ############################################################协议区####################################################
 
+# 删除全部ipv6订阅链接
+@app.route('/removem3ulinks5', methods=['GET'])
+def removem3ulinks5():
+    redis_del_map(REDIS_KEY_WHITELIST_IPV6_LINK)
+    return "success"
+
+
+# 全部ipv6订阅链接超融合
+@app.route('/chaoronghe5', methods=['GET'])
+def chaoronghe5():
+    return chaorongheBase(REDIS_KEY_WHITELIST_IPV6_LINK, 'process_data_abstract6',
+                          REDIS_KEY_WHITELIST_IPV6_DATA, "/ipv6.txt")
+
+
+# 导出ipv6订阅配置
+@app.route('/download_json_file5', methods=['GET'])
+def download_json_file5():
+    return download_json_file_base(REDIS_KEY_WHITELIST_IPV6_LINK, "/app/temp_ipv6listlink.json",
+                                   "temp_ipv6listlink.json")
+
+
+# 拉取全部ipv6订阅
+@app.route('/getall5', methods=['GET'])
+def getall5():
+    return jsonify(redis_get_map(REDIS_KEY_WHITELIST_IPV6_LINK))
+
+
+# 删除ipv6订阅
+@app.route('/deletewm3u5', methods=['POST'])
+def deletewm3u5():
+    return dellist(request, REDIS_KEY_WHITELIST_IPV6_LINK)
+
+
+# 添加ipv6订阅
+@app.route('/addnewm3u5', methods=['POST'])
+def addnewm3u5():
+    return addlist(request, REDIS_KEY_WHITELIST_IPV6_LINK)
+
+
+# 上传中国ipv6订阅配置集合文件
+@app.route('/upload_json_file5', methods=['POST'])
+def upload_json_file5():
+    return upload_json(request, REDIS_KEY_WHITELIST_IPV6_LINK, "/tmp_data5.json")
+
+
+# 删除ipv4订阅
+@app.route('/deletewm3u4', methods=['POST'])
+def deletewm3u4():
+    return dellist(request, REDIS_KEY_WHITELIST_IPV4_LINK)
+
+
+# 添加ipv4订阅
+@app.route('/addnewm3u4', methods=['POST'])
+def addnewm3u4():
+    return addlist(request, REDIS_KEY_WHITELIST_IPV4_LINK)
+
+
+# 删除全部ipv4订阅链接
+@app.route('/removem3ulinks4', methods=['GET'])
+def removem3ulinks4():
+    redis_del_map(REDIS_KEY_WHITELIST_IPV4_LINK)
+    return "success"
+
+
+# 全部ipv4订阅链接超融合
+@app.route('/chaoronghe4', methods=['GET'])
+def chaoronghe4():
+    return chaorongheBase(REDIS_KEY_WHITELIST_IPV4_LINK, 'process_data_abstract5',
+                          REDIS_KEY_WHITELIST_IPV4_DATA, "/ipv4.txt")
+
+
+# 导出ipv4订阅配置
+@app.route('/download_json_file4', methods=['GET'])
+def download_json_file4():
+    return download_json_file_base(REDIS_KEY_WHITELIST_IPV4_LINK, "/app/temp_ipv4listlink.json",
+                                   "temp_ipv4listlink.json")
+
+
+# 拉取全部ipv4订阅
+@app.route('/getall4', methods=['GET'])
+def getall4():
+    return jsonify(redis_get_map(REDIS_KEY_WHITELIST_IPV4_LINK))
+
+
+# 上传中国ipv4订阅配置集合文件
+@app.route('/upload_json_file4', methods=['POST'])
+def upload_json_file4():
+    return upload_json(request, REDIS_KEY_WHITELIST_IPV4_LINK, "/tmp_data4.json")
+
+
 # 全部域名黑名单订阅链接超融合
 @app.route('/chaoronghe3', methods=['GET'])
 def chaoronghe3():
@@ -530,6 +758,10 @@ def download_json_file2():
 # 全部域名白名单订阅链接超融合
 @app.route('/chaoronghe2', methods=['GET'])
 def chaoronghe2():
+    chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract4',
+                   REDIS_KEY_DOMAIN_DATA, "/WhiteDomain.txt")
+    chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract3',
+                   REDIS_KEY_WHITELIST_DATA_DNSMASQ, "/BDnsmasq.txt")
     return chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract2',
                           REDIS_KEY_WHITELIST_DATA, "/B.txt")
 
