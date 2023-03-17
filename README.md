@@ -17,11 +17,11 @@
 
 或者:
 
-docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80  jkld310/m3usubscriber:arm64v8
+docker run -d --name m3usubscriber --restart unless-stopped -p 4395:4395  jkld310/m3usubscriber:arm64v8
 
 adm64/x86_64架构:
 
-docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80  jkld310/m3usubscriber:x86_64   
+docker run -d --name m3usubscriber --restart unless-stopped -p 4395:4395  jkld310/m3usubscriber:x86_64   
 
 #### 二、host模式:已经合并进主镜像
 
