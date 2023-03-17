@@ -1,5 +1,5 @@
 # m3usubscriber
-m3u超融合
+## m3u超融合
 
 简单的做了一个网络直播源连接工具
 
@@ -7,13 +7,13 @@ m3u超融合
 
 ![image](https://raw.githubusercontent.com/liudaoguiguzi/m3u_subscriber/main/%E5%9B%BE%E7%89%871.png)
 
-安装步骤:
+### 安装步骤:
 
-一、bridge模式:
+#### 一、bridge模式:
 
 默认arm64架构:
 
-docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80  jkld310/m3usubscriber:latest
+##### 这个保留最原始的镜像，防止跑不动redis的情况 docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80  jkld310/m3usubscriber:latest  
 
 或者:
 
@@ -23,7 +23,7 @@ adm64/x86_64架构:
 
 docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80  jkld310/m3usubscriber:x86_64   
 
-二、host模式:
+#### 二、host模式:已经合并进主镜像
 
 arm64:
 
@@ -33,7 +33,7 @@ x86/amd64:
 
 docker run -d --name m3usubscriber-4395 --restart unless-stopped --net=host -d jkld310/m3usubscriber:x86_64-host-4395
 
-三、redis-host版本:数据库换成了redis，对，就是内置了一个redis服务器，你可以通过6379端口访问。前端解决了大数据列表展示卡崩浏览器的问题
+#### 三、redis-host版本:数据库换成了redis，对，就是内置了一个redis服务器，你可以通过6379端口访问。前端解决了大数据列表展示卡崩浏览器的问题(已经合并进主镜像)
 
 arm64:
 
@@ -43,7 +43,7 @@ x86/amd64:
 
 docker run -d --name m3usubscriber-4395 --restart unless-stopped --net=host -d jkld310/m3usubscriber:x86_64-redis-host-4395
 
-非常高兴能为您介绍本工具所实现的各项功能：
+### 非常高兴能为您介绍本工具所实现的各项功能：
 
 1-您可以轻松保存来自互联网的直播源订阅链接；
 
@@ -73,7 +73,7 @@ docker run -d --name m3usubscriber-4395 --restart unless-stopped --net=host -d j
 
 12-添加了白名单、黑名单、ipv4\ipv6订阅
 
-接下来，您只需要按照以下步骤即可使用本工具：
+### 接下来，您只需要按照以下步骤即可使用本工具：
 
 1-新增网络直播源订阅或上传文件导入合并M3U超融合备份；
 
@@ -89,13 +89,13 @@ http://局域网docker所在主机ip:当前页面端口/url/A.m3u
 
 http://192.168.5.1:4395/url/A.m3u
 
-本人也必须坦诚地告诉您，本工具也存在一些缺点，包括：
+### 本人也必须坦诚地告诉您，本工具也存在一些缺点，包括：
 
 1-暂时没有做直播源有效性检测，有些代码要优化，这个功能在将来一定会上线
 
 2-镜像有点大，因为这是本人第一次自己构建镜像，针对镜像的大小后期会尝试优化减少
 
-此外，本人也希望借此机会进行一些吐槽：
+### 此外，本人也希望借此机会进行一些吐槽：
 
 1-制作本工具纯属出于兴趣和爱好
 
