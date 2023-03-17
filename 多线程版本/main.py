@@ -34,6 +34,8 @@ REDIS_KEY_DOMAIN_DATA = "whitedomain"
 REDIS_KEY_BLACKLIST_LINK = "blacklistlink"
 # 黑名单adguardhome
 REDIS_KEY_BLACKLIST_DATA = "blacklistdata"
+# 黑名单openclash-fallback-filter-domain
+REDIS_KEY_BLACKLIST_OPENCLASH_FALLBACK_FILTER_DOMAIN_DATA = "blacklistopfallbackfilterdomaindata"
 # 黑名单blackdomain
 REDIS_KEY_BLACKLIST_DOMAIN_DATA = "blackdomain"
 # 白名单中国大陆IPV4下载链接
@@ -59,9 +61,10 @@ BLACKLIST_DNSMASQ_FORMATION_right = "/114.114.114.114"
 domain_regex = r'^[a-zA-Z0-9]+([\-\.]{1}[a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$'
 # 用于匹配泛化匹配的域名规则的正则表达式
 wildcard_regex = r'^\*\.[a-zA-Z0-9]+([\-\.]{1}[a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$'
+# 用于匹配泛化匹配的域名规则的正则表达式
+wildcard_regex2 = r'^\+\.[a-zA-Z0-9]+([\-\.]{1}[a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$'
 # 用于匹配dnsmasq白名单格式
 pattern = r'^server=\/[a-zA-Z0-9.-]+\/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|[a-zA-Z0-9.-]+)$'
-
 
 # @app.route('/')
 # def index():
@@ -293,9 +296,9 @@ def format_data(data, index, step, my_dict):
         if line.startswith("#EXTINF"):
             continue
         # 不是http开头，可能是直播源
-        if not line.startswith(("http", "rtsp", "rtmp", "P2p")):
+        if not line.startswith(("http", "rtsp", "rtmp")):
             # 匹配格式：频道,url
-            if re.match(r"^[^#].*,(http|rtsp|rtmp|P2p)", line):
+            if re.match(r"^[^#].*,(http|rtsp|rtmp)", line):
                 name, url = line.split(",", 1)
                 searchurl = url
                 if searchurl in my_dict.keys():
@@ -304,7 +307,7 @@ def format_data(data, index, step, my_dict):
                     my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
                 else:
                     my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
-            elif re.match(r"^[^#].*，(http|rtsp|rtmp|P2p)", line):
+            elif re.match(r"^[^#].*，(http|rtsp|rtmp)", line):
                 name, url = line.split("，", 1)
                 searchurl = url
                 if searchurl in my_dict.keys():
@@ -364,6 +367,10 @@ class MyAbstractClass(abc.ABC):
     def process_data_abstract6(self, data, index, step, my_dict):
         pass
 
+    @abc.abstractmethod
+    def process_data_abstract7(self, data, index, step, my_dict):
+        pass
+
 
 # 处理数据的实现类
 class MyConcreteClass(MyAbstractClass):
@@ -404,6 +411,12 @@ class MyConcreteClass(MyAbstractClass):
         # 实现代码
         pass
 
+    # 黑名单转换成openclash-fallbackfilter-domain
+    def process_data_abstract7(self, data, index, step, my_dict):
+        process_data_domain_openclash_fallbackfilter(data, index, step, my_dict)
+        # 实现代码
+        pass
+
 
 def formattxt_multithread(data, num_threads, method_name):
     my_dict = {}
@@ -418,6 +431,29 @@ def formattxt_multithread(data, num_threads, method_name):
     # 等待所有任务执行完毕
     executor.shutdown(wait=True)
     return my_dict
+
+
+# 字符串内容处理-域名转openclash-fallbackfilter-domain
+def process_data_domain_openclash_fallbackfilter(data, index, step, my_dict):
+    end_index = min(index + step, len(data))
+    for i in range(index, end_index):
+        line = data[i].strip()
+        if not line:
+            continue
+        # 判断是不是+.域名
+        if re.match(wildcard_regex2, line):
+            my_dict[line] = ""
+        # 判断是不是域名
+        elif re.match(domain_regex, line):
+            my_dict[line] = ""
+            if not line.encode().startswith(b"www"):
+                my_dict["+." + line] = ""
+        # 判断是不是*.域名
+        elif re.match(wildcard_regex, line):
+            my_dict[line[2:]] = ""
+            my_dict["+."+line[2:]] = ""
+        elif line.encode().startswith(b"."):
+            my_dict["+" + line] = ""
 
 
 # 字符串内容处理-域名转adguardhome屏蔽
@@ -517,9 +553,9 @@ def process_data(data, index, step, my_dict):
         if line.encode().startswith(b"#EXTINF"):
             continue
         # 不是http开头，可能是直播源
-        if not line.encode().startswith((b"http", b"rtsp", b"rtmp", b"P2p")):
+        if not line.encode().startswith((b"http", b"rtsp", b"rtmp")):
             # 匹配格式：频道,url
-            if re.match(r"^[^#].*,(http|rtsp|rtmp|P2p)", line):
+            if re.match(r"^[^#].*,(http|rtsp|rtmp)", line):
                 name, url = line.split(",", 1)
                 searchurl = url
                 if searchurl in my_dict.keys():
@@ -528,7 +564,7 @@ def process_data(data, index, step, my_dict):
                     my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
                 else:
                     my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
-            elif re.match(r"^[^#].*，(http|rtsp|rtmp|P2p)", line):
+            elif re.match(r"^[^#].*，(http|rtsp|rtmp)", line):
                 name, url = line.split("，", 1)
                 searchurl = url
                 if searchurl in my_dict.keys():
@@ -796,6 +832,8 @@ def upload_json_file4():
 # 全部域名黑名单订阅链接超融合
 @app.route('/chaoronghe3', methods=['GET'])
 def chaoronghe3():
+    chaorongheBase(REDIS_KEY_BLACKLIST_LINK, 'process_data_abstract7',
+                   REDIS_KEY_BLACKLIST_OPENCLASH_FALLBACK_FILTER_DOMAIN_DATA, "/openclash-fallback-filter-domain.txt")
     return chaorongheBase(REDIS_KEY_BLACKLIST_LINK, 'process_data_abstract2',
                           REDIS_KEY_BLACKLIST_DATA, "/C.txt")
 
