@@ -65,6 +65,9 @@ wildcard_regex = r'^\*\.[a-zA-Z0-9]+([\-\.]{1}[a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$'
 wildcard_regex2 = r'^\+\.[a-zA-Z0-9]+([\-\.]{1}[a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$'
 # 用于匹配dnsmasq白名单格式
 pattern = r'^server=\/[a-zA-Z0-9.-]+\/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|[a-zA-Z0-9.-]+)$'
+OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT = "    - \""
+OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT = "\""
+
 
 # @app.route('/')
 # def index():
@@ -442,18 +445,20 @@ def process_data_domain_openclash_fallbackfilter(data, index, step, my_dict):
             continue
         # 判断是不是+.域名
         if re.match(wildcard_regex2, line):
-            my_dict[line] = ""
+            my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
         # 判断是不是域名
         elif re.match(domain_regex, line):
-            my_dict[line] = ""
+            my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
             if not line.encode().startswith(b"www"):
-                my_dict["+." + line] = ""
+                my_dict[
+                    OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "+." + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
         # 判断是不是*.域名
         elif re.match(wildcard_regex, line):
-            my_dict[line[2:]] = ""
-            my_dict["+."+line[2:]] = ""
+            my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line[2:] + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+            my_dict[
+                OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "+." + line[2:] + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
         elif line.encode().startswith(b"."):
-            my_dict["+" + line] = ""
+            my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "+" + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
 
 
 # 字符串内容处理-域名转adguardhome屏蔽
