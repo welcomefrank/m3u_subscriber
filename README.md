@@ -13,7 +13,7 @@
 
 默认arm64架构:
 
-##### 这个保留最原始的镜像，防止跑不动redis的情况 docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80  jkld310/m3usubscriber:latest  
+docker run -d --name m3usubscriber --restart unless-stopped -p 4395:4395  jkld310/m3usubscriber:latest  
 
 或者:
 
@@ -23,25 +23,17 @@ adm64/x86_64架构:
 
 docker run -d --name m3usubscriber --restart unless-stopped -p 4395:4395  jkld310/m3usubscriber:x86_64   
 
-#### 二、host模式:已经合并进主镜像
+#### 二、host模式:
 
 arm64:
 
-docker run -d --name m3usubscriber-4395 --restart unless-stopped --net=host -d jkld310/m3usubscriber:arm64v8-host-4395
+docker run -d --name m3usubscriber-4395 --restart unless-stopped -p --net=host  jkld310/m3usubscriber:latest  
+
+docker run -d --name m3usubscriber-4395 --restart unless-stopped --net=host -d jkld310/m3usubscriber:arm64v8
 
 x86/amd64:
 
-docker run -d --name m3usubscriber-4395 --restart unless-stopped --net=host -d jkld310/m3usubscriber:x86_64-host-4395
-
-#### 三、redis-host版本:数据库换成了redis，对，就是内置了一个redis服务器，你可以通过6379端口访问。前端解决了大数据列表展示卡崩浏览器的问题(已经合并进主镜像)
-
-arm64:
-
-docker run -d --name m3usubscriber-4395 --restart unless-stopped --net=host -d jkld310/m3usubscriber:arm64v8-redis-host-4395
-
-x86/amd64:
-
-docker run -d --name m3usubscriber-4395 --restart unless-stopped --net=host -d jkld310/m3usubscriber:x86_64-redis-host-4395
+docker run -d --name m3usubscriber-4395 --restart unless-stopped --net=host -d jkld310/m3usubscriber:x86_64   
 
 ### 非常高兴能为您介绍本工具所实现的各项功能：
 
