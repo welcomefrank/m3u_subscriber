@@ -103,7 +103,7 @@ http://192.168.5.1:4395/url/A.m3u
     
      sudo docker build -t m3usubscriber .     
     
-     docker run -d --name m3usubscriber --restart unless-stopped -p 4395:80 -d m3usubscriber:latest
+     docker run -d --name m3usubscriber --restart unless-stopped -p 4395:4395 -d m3usubscriber:latest
      
 5-直播源检测的逻辑感觉比较迷茫，有谁有什么思路可以分享一下
 
