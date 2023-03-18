@@ -1,4 +1,5 @@
 import abc
+import asyncio
 import concurrent
 import ipaddress
 import json
@@ -10,9 +11,10 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+import aiohttp
 import redis
 import requests
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, jsonify, request, send_file, render_template
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -69,9 +71,9 @@ OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT = "    - \""
 OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT = "\""
 
 
-# @app.route('/')
-# def index():
-#     return render_template('index.html')
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 
 ##########################################################redis数据库操作#############################################
@@ -147,6 +149,32 @@ def timer_func():
         time.sleep(3600)  # 等待1小时
 
 
+def check_file(m3u_dict):
+    try:
+        """
+            检查A.m3u文件是否存在且没有被占用
+            """
+        if len(m3u_dict) == 0:
+            return
+        if os.path.exists("/alive.m3u"):
+            os.remove("/alive.m3u")
+            # 异步缓慢检测出有效链接
+        asyncio.run(asynctask(m3u_dict))
+    except:
+        pass
+
+
+def check_url(url):
+    try:
+        resp = requests.get(url, timeout=5)
+        if resp.status_code == 200:
+            return True
+        else:
+            return False
+    except:
+        return False
+
+
 def fetch_url(url):
     try:
         response = requests.get(url, timeout=5)
@@ -198,28 +226,17 @@ def addlist(request, rediskey):
     return jsonify({'addresult': "add success"})
 
 
-# async def asynctask(dict):
-#     async with aiohttp.ClientSession() as session:
-#         for url, value in dict.items():
-#             try:
-#                 async with session.get(url) as resp:
-#                     if resp.status == 200:
-#                         # 如果url有效，将它和值写入m3u文件
-#                         with open('/B.m3u', 'a') as f:
-#                             f.write(f'{value},{url}\n')
-#             except:
-#                 pass
-
-
-# def check_url(url):
-#     try:
-#         resp = requests.get(url, timeout=5)
-#         if resp.status_code == 200:
-#             return True
-#         else:
-#             return False
-#     except:
-#         return False
+async def asynctask(dict):
+    async with aiohttp.ClientSession() as session:
+        for url, value in dict.items():
+            try:
+                async with session.get(url) as resp:
+                    if resp.status == 200:
+                        # 如果url有效，将它和值写入m3u文件
+                        with open('/alive.m3u', 'a') as f:
+                            f.write(f'{value}{url}\n')
+            except:
+                pass
 
 
 def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
@@ -238,6 +255,9 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
     redis_add_map(redisKeyData, my_dict)
     # 异步缓慢检测出有效链接
     # asyncio.run(asynctask(my_dict))
+    if fileName == "/A.m3u":
+        thread = threading.Thread(target=check_file, args=(my_dict,))
+        thread.start()
     return "result"
 
 
@@ -552,12 +572,13 @@ def process_data(data, index, step, my_dict):
     for i in range(index, end_index):
         # print(type(data[i]))
         line = data[i].strip()
+        # 空行
         if not line:
             continue
-        # 假定直播名字和直播源不在同一行
+        # 假定直播名字和直播源不在同一行，跳过频道名字
         if line.encode().startswith(b"#EXTINF"):
             continue
-        # 不是http开头，可能是直播源
+        # 不是http开头，也可能是直播源
         if not line.encode().startswith((b"http", b"rtsp", b"rtmp")):
             # 匹配格式：频道,url
             if re.match(r"^[^#].*,(http|rtsp|rtmp)", line):
@@ -569,6 +590,7 @@ def process_data(data, index, step, my_dict):
                     my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
                 else:
                     my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
+            # 匹配格式：频道，url
             elif re.match(r"^[^#].*，(http|rtsp|rtmp)", line):
                 name, url = line.split("，", 1)
                 searchurl = url
@@ -578,8 +600,8 @@ def process_data(data, index, step, my_dict):
                     my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
                 else:
                     my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
-        # http开始
-        else:
+        # http|rtsp|rtmp开始，跳过P2p
+        elif not line.encode().startswith(b"P2p"):
             searchurl = line
             if searchurl in my_dict.keys():
                 continue
@@ -754,8 +776,11 @@ def removem3ulinks5():
 # 全部ipv6订阅链接超融合
 @app.route('/chaoronghe5', methods=['GET'])
 def chaoronghe5():
-    return chaorongheBase(REDIS_KEY_WHITELIST_IPV6_LINK, 'process_data_abstract6',
-                          REDIS_KEY_WHITELIST_IPV6_DATA, "/ipv6.txt")
+    try:
+        return chaorongheBase(REDIS_KEY_WHITELIST_IPV6_LINK, 'process_data_abstract6',
+                              REDIS_KEY_WHITELIST_IPV6_DATA, "/ipv6.txt")
+    except:
+        pass
 
 
 # 导出ipv6订阅配置
@@ -811,8 +836,11 @@ def removem3ulinks4():
 # 全部ipv4订阅链接超融合
 @app.route('/chaoronghe4', methods=['GET'])
 def chaoronghe4():
-    return chaorongheBase(REDIS_KEY_WHITELIST_IPV4_LINK, 'process_data_abstract5',
-                          REDIS_KEY_WHITELIST_IPV4_DATA, "/ipv4.txt")
+    try:
+        return chaorongheBase(REDIS_KEY_WHITELIST_IPV4_LINK, 'process_data_abstract5',
+                              REDIS_KEY_WHITELIST_IPV4_DATA, "/ipv4.txt")
+    except:
+        pass
 
 
 # 导出ipv4订阅配置
@@ -837,10 +865,14 @@ def upload_json_file4():
 # 全部域名黑名单订阅链接超融合
 @app.route('/chaoronghe3', methods=['GET'])
 def chaoronghe3():
-    chaorongheBase(REDIS_KEY_BLACKLIST_LINK, 'process_data_abstract7',
-                   REDIS_KEY_BLACKLIST_OPENCLASH_FALLBACK_FILTER_DOMAIN_DATA, "/openclash-fallback-filter-domain.txt")
-    return chaorongheBase(REDIS_KEY_BLACKLIST_LINK, 'process_data_abstract2',
-                          REDIS_KEY_BLACKLIST_DATA, "/C.txt")
+    try:
+        return chaorongheBase(REDIS_KEY_BLACKLIST_LINK, 'process_data_abstract7',
+                              REDIS_KEY_BLACKLIST_OPENCLASH_FALLBACK_FILTER_DOMAIN_DATA,
+                              "/openclash-fallback-filter-domain.txt")
+        # return chaorongheBase(REDIS_KEY_BLACKLIST_LINK, 'process_data_abstract2',
+        #                       REDIS_KEY_BLACKLIST_DATA, "/C.txt")
+    except:
+        pass
 
 
 # 删除全部白名单源订阅链接
@@ -896,12 +928,15 @@ def download_json_file2():
 # 全部域名白名单订阅链接超融合
 @app.route('/chaoronghe2', methods=['GET'])
 def chaoronghe2():
-    chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract4',
-                   REDIS_KEY_DOMAIN_DATA, "/WhiteDomain.txt")
-    chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract3',
-                   REDIS_KEY_WHITELIST_DATA_DNSMASQ, "/BDnsmasq.txt")
-    return chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract2',
-                          REDIS_KEY_WHITELIST_DATA, "/B.txt")
+    try:
+        # chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract4',
+        #                REDIS_KEY_DOMAIN_DATA, "/WhiteDomain.txt")
+        return chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract3',
+                              REDIS_KEY_WHITELIST_DATA_DNSMASQ, "/BDnsmasq.txt")
+        # return chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract2',
+        #                       REDIS_KEY_WHITELIST_DATA, "/B.txt")
+    except:
+        pass
 
 
 # 拉取全部白名单订阅
@@ -1022,8 +1057,11 @@ def getall():
 # 全部订阅链接超融合
 @app.route('/chaoronghe', methods=['GET'])
 def chaoronghe():
-    return chaorongheBase(REDIS_KEY_M3U_LINK, 'process_data_abstract', REDIS_KEY_M3U_DATA,
-                          "/A.m3u")
+    try:
+        return chaorongheBase(REDIS_KEY_M3U_LINK, 'process_data_abstract', REDIS_KEY_M3U_DATA,
+                              "/A.m3u")
+    except:
+        pass
 
 
 # 导出直播源订阅配置

@@ -1,4 +1,4 @@
-FROM nginx:1.21.1
+FROM nginx
 
 # 将当前目录下的 python 脚本复制到容器中的 /app 目录
 COPY main.py /app/main.py
@@ -10,10 +10,10 @@ COPY index.html /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/nginx.conf
 
 # 将Python依赖包复制到容器中
-COPY requirements.txt /app/requirements.txt
+#COPY requirements.txt /app/requirements.txt
 RUN apt-get update && \
     apt-get install -y python3-pip redis-server && \
-    pip3 install --no-cache-dir -r /app/requirements.txt && \
+    pip3 install --no-cache-dir flask redis requests aiohttp && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
