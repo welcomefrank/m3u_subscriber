@@ -11,9 +11,10 @@
             color: aliceblue;
         }
 
-        .button, #add-row,
-        .save-button,
-        .delete-button {
+        .button, #add-row,#add-row2,#add-row3,#add-row4,#add-row5,#add-row6,
+        .save-button,.save-button2,.save-button3,.delete-button3,.delete-button4,.save-button4,
+        .delete-button,.save-m3u-button,.delete-m3u-button,.delete-button2,
+        .delete-button5,.save-button5,#simply,.delete-button6,.save-button6{
             padding: 10px 20px;
             background-color: #4CAF50;
             color: white;
@@ -29,48 +30,53 @@
             background-color: #3e8e41;
         }
 
-        #tag {
-
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-bottom: 5px;
-            margin-top: 5px;
-            float: right;
-            width: 100%
-        }
-
-        .save-button,
-        .delete-button {
+        .save-button,.save-button2,.delete-button3,.save-button3,.delete-button4,.save-button4,
+        .delete-button,.save-m3u-button,.delete-m3u-button,.delete-button2
+        ,.delete-button5,.save-button5,#simply,.delete-button6,.save-button6{
             margin-right: 5px;
-        }
-
-        .save-button,
-        .delete-button {
             width: 45%
         }
 
-        .subUrl {
+        .subUrl,.subUrl2,.subUrl3,.subUrl4,.subUrl5,.subUrl6 {
             width: 70%;
             background-color: #758a99;
             color: aliceblue;
             font-size: x-large;
         }
 
-        .subname {
+        .subname,.subname2,.subname3,.subname4,.subname5,.subname6 {
             width: 20%;
             background-color: #758a99;
             color: aliceblue;
             font-size: x-large;
         }
 
-        .subname,.subUrl,#step2,#add-row,.notice,#tag,.save-button,#download-json-btn,#upload-json-btn,#upload-m3u,
-        .delete-button,#tag2,#sub-m3u{
+        .subm3uUrl,.subm3uname {
+            width: 100%;
+            background-color: #758a99;
+            color: aliceblue;
             font-size: x-large;
         }
 
-        #upload-json-btn,#upload-m3u,sub-m3u{
+        .subname,.subUrl,#step2,#add-row,.notice,.save-button,#download-json-btn,#upload-json-btn,#upload-m3u,
+        .delete-button,#sub-m3u,#generatepass,#savem3uareas,.save-m3u-button,.delete-m3u-button,#upload-m3u-btn,
+        #download-m3u-btn,#remove-m3u-btn,#remove-m3u-btn,#removem3ulinks,#sub-m3u-btn,
+        #upload-json-btn2,#add-row2,.subUrl2,.subname2,.save-button2,.delete-button2,
+        #step22,#download-json-btn2,#removem3ulinks2,#upload-json-btn3,#add-row3,#step23,
+        .subUrl3,.subname3,.save-button3,.delete-button3,#download-json-btn3,#removem3ulinks3,
+        #upload-json-btn4,#add-row4,.subUrl4,.subname4,.save-button4,.delete-button4,#download-json-btn4,
+        #step24,#removem3ulinks4,#upload-json-btn5,#add-row5,.subUrl5,.subname5,.save-button5,.delete-button5,
+        #step25,#download-json-btn5,#removem3ulinks5,#simply,#upload-json-btn6
+        ,#add-row6,.subUrl6,.subname6,.save-button6,.delete-button6,#removem3ulinks6,
+        #download-json-btn6,#download-json-btn7,#upload-json-btn7{
+            font-size: x-large;
+        }
+
+        #upload-json-btn,#upload-m3u,#sub-m3u,#generatepass,#savem3uareas,#upload-m3u-btn,#download-m3u-btn
+        ,#remove-m3u-btn,#remove-m3u-btn,#removem3ulinks,#sub-m3u-btn,#upload-json-btn2,
+        #removem3ulinks2,#upload-json-btn3,#removem3ulinks3,#upload-json-btn4,#removem3ulinks4,#upload-json-btn5
+        ,#removem3ulinks5,#simply,#upload-json-btn6,#removem3ulinks6,#upload-json-btn7
+        {
             float: right;
             background-color: #4CAF50;
             color: white;
@@ -81,188 +87,497 @@
             margin-top: 5px;
         }
 
+        .delete-button,.delete-m3u-button,.delete-button2,.delete-button4,.delete-button3,.delete-button5
+        ,.delete-button6{
+            background-color: crimson;
+        }
+
+        #remove-m3u-btn,#removem3ulinks,#removem3ulinks2,#removem3ulinks3,#removem3ulinks4,#removem3ulinks5
+        ,#removem3ulinks6{
+            background-color: crimson;
+            float: left;
+            width: 25%;
+        }
+
+        #input,#output{
+            width: 90%;background-color: #758a99;color: aliceblue
+        }
+
+
+
     </style>
 </head>
-<body onload="reload()">
-<h1>M3U 超融合</h1>
-<div>
-    <div style="float: left;width: 70%">
-        <h3>后台默认半小时自动执行生成操作</h3>
-        <h3>M3U超融合直播源订阅地址:</h3>
-        <h3>http://局域网docker所在主机ip:当前页面端口/url/A.m3u</h3>
-        <h3>上传文件导入合并M3U超融合备份</h3>
+<body onload="init()">
+<div style="width:100%;display:flex; justify-content:space-between;">
+    <h1 style="width: 20%">M3U 超融合</h1>
+    <button id="download-json-btn7" class="button" style="width: 30%">一键导出全部配置</button>
+    <div id="upload-json-btn7"
+         style="position: relative; width: 30%; display: flex; justify-content: center; align-items: center;">
+        <label for="file-upload">一键导入全部配置</label>
+        <input type="file" name="file-upload"
+               style="position: absolute; top: 0; left: 0; height: 100%; width: 100%; opacity: 0;"></input>
     </div>
-    <div style="float: right;width: 30%">
-        <h2>m3u文件标准格式转换</h2>
-        <form enctype="multipart/form-data" method="post" >
-            <input id="upload-m3u" type="file" name="file" style="float: left;width: 80%">
+</div>
+<div id="switchbox" style="font-size: x-large">
+    <label>
+        <input type="radio" name="page" id="page1" checked>
+        <span>公共网络直播源订阅</span>
+    </label>
+    <label>
+        <input type="radio" name="page" id="page2">
+        <span>直播源数据管理</span>
+    </label>
+    <label>
+        <input type="radio" name="page" id="page3">
+        <span>密码记录账本</span>
+    </label>
+    <label>
+        <input type="radio" name="page" id="page4">
+        <span>批量生成随机密码</span>
+    </label>
+    <label>
+        <input type="radio" name="page" id="page5">
+        <span>域名白名单订阅</span>
+    </label>
+    <label>
+        <input type="radio" name="page" id="page6">
+        <span>域名黑名单订阅</span>
+    </label>
+    <label>
+        <input type="radio" name="page" id="page7">
+        <span>ipv4订阅</span>
+    </label>
+    <label>
+        <input type="radio" name="page" id="page8">
+        <span>ipv6订阅</span>
+    </label>
+    <label>
+        <input type="radio" name="page" id="page9">
+        <span>文本行去重复</span>
+    </label>
+</div>
+<div id="choice">
+    <div id="page1" style="display: block;">
+        <h1>公共网络直播源订阅:从网络下载直播源</h1>
+        <div style="float: left;width: 70%">
+            <h3>后台默认12小时自动执行生成操作,同时触发有效直播源在后台缓慢检测</h3>
+            <h3>M3U超融合直播源订阅地址:docker主机地址:端口/url/A.m3u</h3>
+            <h3>全部直播源: http://192.168.5.1:4395/url/A.m3u</h3>
+            <h3>有效直播源: http://192.168.5.1:4395/url/alive.m3u</h3>
+            <h3>上传文件导入合并M3U超融合备份</h3>
+        </div>
+        <div style="float: right;width: 30%">
+            <h2>m3u文件标准格式转换</h2>
+            <form enctype="multipart/form-data" method="post">
+                <input id="upload-m3u" type="file" name="file" style="float: left;width: 80%">
+                <br>
+                <input id="sub-m3u" type="submit" value="上传你的m3u文件" style="float: left">
+            </form>
             <br>
-            <input id="sub-m3u" type="submit" value="上传你的m3u文件" style="float: left">
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row" style="width:100%">新增网络直播源订阅</button>
+            </div>
+            <div>
+                <button id="step2" class="button" onclick="execute()" style="width: 100%">生成M3U超融合直播源订阅
+                </button>
+            </div>
+            <div>
+                <button id="download-json-btn" class="button" style="width: 100%">导出M3U超融合备份</button>
+            </div>
+            <button id="removem3ulinks"  class="button" onclick="removem3ulinks()">删除全部订阅
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:M3U网络直播源订阅地址+直播源备注
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table" style="width:100%">
+                <tbody  style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="page2" style="display: none;">
+        <h1>直播源粘贴板:永久保存直播源到本地</h1>
+        <h3>点击超融合链接，则会合并这里的直播源到A.m3u</h3>
+        <h3>这部分的直播源只能通过手动删除</h3>
+        <h3>上传m3u文件自动/复制直播源到文本框手动合并直播源</h3>
+        <input type="file" id="upload-m3u-btn" style="width: 100%"></input>
+        <textarea id="m3uarea" rows="10"  style="width: 100%;background-color: #758a99;color: aliceblue"></textarea>
+        <br>
+		<button id="savem3uareas" style="width: 100%" class="button" type="button" onclick="savem3uarea()">合并文本框直播源</button>
+        <button id="download-m3u-btn" class="button" style="width: 100%">导出全部本地直播源</button>
+        <button id="remove-m3u-btn" onclick="removem3u()" class="button" style="width: 25%;float: left">删除全部本地直播源</button>
+        <div style="display: flex;width: 100%;">
+            <div class="notice" style="display: flex;width: 80%;">备注+直播源地址
+            </div>
+            <div class="notice" style="display: flex;width: 20%;">操作</div>
+        </div>
+        <table id="input-m3u-table" style="width:100%">
+            <tbody style="width:100%">
+            </tbody>
+        </table>
+    </div>
+    <div id="page3" style="display: none;">
+        <h1>密码记录本</h1>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn6" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row6" style="width:100%">新增密码</button>
+            </div>
+            <div>
+                <button id="download-json-btn6" class="button" style="width: 100%">导出密码备份</button>
+            </div>
+            <button id="removem3ulinks6" class="button" onclick="removem3ulinks6()">删除全部密码
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:密码来源+密码内容
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table6" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="page4" style="display: none;">
+        <h1>批量生成随机密码</h1>
+        <form style="float: right">
+            <label for="password-length">密码长度（必填）：</label>
+            <input type="number" id="password-length" name="password-length" value="10" required min="1">
+            <br>
+            <label for="num-of-passwords">生成个数（默认10个）：</label>
+            <input type="number" id="num-of-passwords" name="num-of-passwords" value="10" min="1">
+            <br>
+            <label>字符集：</label>
+            <input type="checkbox" id="numbers" name="numbers" value="numbers" checked>
+            <label for="numbers">0-9</label>
+            <input type="checkbox" id="upper-case" name="upper-case" value="upper-case" checked>
+            <label for="upper-case">A-Z</label>
+            <input type="checkbox" id="lower-case" name="lower-case" value="lower-case" checked>
+            <label for="lower-case">a-z</label>
+            <input type="checkbox" id="special-chars" name="special-chars" value="special-chars" checked>
+            <label for="special-chars">特殊符号</label>
+            <br>
+            <button id="generatepass" type="button" onclick="generatePasswords()">生成</button>
         </form>
         <br>
+        <textarea id="password-list" rows="10" readonly
+                  style="width: 100%;background-color: #758a99;color: aliceblue"></textarea>
+    </div>
+    <div id="page5" style="display: none;">
+        <h1>域名白名单订阅:从网络下载白名单</h1>
+        <div style="float: left;width: 70%">
+            <h3>后台默认12小时自动执行生成操作</h3>
+            <h3>超融合白名单订阅地址:参考M3U格式</h3>
+            <h3>停止生成adguardhome:http://192.168.5.1:4395/url/B.txt</h3>
+            <h3>dnsmasq:http://192.168.5.1:4395/url/BDnsmasq.txt</h3>
+            <h3>停止生成domain:http://192.168.5.1:4395/url/WhiteDomain.txt</h3>
+            <h3>上传文件导入合并白名单订阅</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn2" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row2" style="width:100%">新增白名单域名订阅</button>
+            </div>
+            <div>
+                <button id="step22" class="button" onclick="execute2()" style="width: 100%">生成白名单超融合订阅
+                </button>
+            </div>
+            <div>
+                <button id="download-json-btn2" class="button" style="width: 100%">导出白名单超融合备份</button>
+            </div>
+            <button id="removem3ulinks2" class="button" onclick="removem3ulinks2()">删除全部订阅
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:白名单订阅地址+备注
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table2" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="page6" style="display: none;">
+        <h1>域名黑名单订阅:从网络下载黑名单</h1>
+        <div style="float: left;width: 70%">
+            <h3>后台默认12小时自动执行生成操作</h3>
+            <h3>超融合Adguardhome黑名单订阅地址:</h3>
+            <h3>停止生成http://192.168.5.1:4395/url/C.txt</h3>
+            <h3>http://192.168.5.1:4395/url/openclash-fallback-filter-domain.txt</h3>
+            <h3>上传文件导入合并黑名单订阅</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn3" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row3" style="width:100%">新增黑名单域名订阅</button>
+            </div>
+            <div>
+                <button id="step23" class="button" onclick="execute3()" style="width: 100%">生成黑名单超融合订阅
+                </button>
+            </div>
+            <div>
+                <button id="download-json-btn3" class="button" style="width: 100%">导出黑名单超融合备份</button>
+            </div>
+            <button id="removem3ulinks3" class="button" onclick="removem3ulinks3()">删除全部订阅
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:黑名单订阅地址+备注
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table3" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="page7" style="display: none;">
+        <h1>ipv4订阅:从网络下载ipv4</h1>
+        <div style="float: left;width: 70%">
+            <h3>后台默认12小时自动执行生成操作</h3>
+            <h3>超融合ipv4订阅地址:参考m3u格式</h3>
+            <h3>http://192.168.5.1:4395/url/ipv4.txt</h3>
+            <h3>上传文件导入合并ipv4订阅</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn4" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row4" style="width:100%">新增ipv4订阅</button>
+            </div>
+            <div>
+                <button id="step24" class="button" onclick="execute4()" style="width: 100%">生成ipv4超融合订阅
+                </button>
+            </div>
+            <div>
+                <button id="download-json-btn4" class="button" style="width: 100%">导出ipv4超融合备份</button>
+            </div>
+            <button id="removem3ulinks4" class="button" onclick="removem3ulinks4()">删除全部订阅
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:ipv4订阅地址+备注
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table4" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="page8" style="display: none;">
+        <h1>ipv6订阅:从网络下载ipv6</h1>
+        <div style="float: left;width: 70%">
+            <h3>后台默认12小时自动执行生成操作</h3>
+            <h3>超融合ipv6订阅地址:参考m3u格式</h3>
+            <h3>http://192.168.5.1:4395/url/ipv6.txt</h3>
+            <h3>上传文件导入合并ipv6订阅</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn5" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row5" style="width:100%">新增ipv6订阅</button>
+            </div>
+            <div>
+                <button id="step25" class="button" onclick="execute5()" style="width: 100%">生成ipv6超融合订阅
+                </button>
+            </div>
+            <div>
+                <button id="download-json-btn5" class="button" style="width: 100%">导出ipv6超融合备份</button>
+            </div>
+            <button id="removem3ulinks5" class="button" onclick="removem3ulinks5()">删除全部订阅
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:ipv6订阅地址+备注
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table5" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="page9" style="display: none;">
+        <h1>文本行去重复</h1>
+        <button id="simply" style="float: right;width: 100%" onclick="removeDuplicates()">去重复</button>
+        <div style="width:100%;display:flex; justify-content:space-between;">
+            <div style="width: 50%">
+                <p>在左边输入要去重复的文本，每行一个条目。</p>
+                <textarea id="input" rows="30" cols="50"></textarea>
+            </div>
+            <div style="width: 50%">
+                <p>去重复结果如下：</p>
+                <textarea id="output" rows="30" cols="50" readonly></textarea>
+                <br>
+            </div>
+        </div>
     </div>
 </div>
 
-
-<div style="width:100%">
-    <div>
-        <input type="file"  id="upload-json-btn"  style="width: 100%"></input>
-    </div>
-    <div><button id="add-row" style="width:100%">新增网络直播源订阅</button></div>
-    <div><button id="step2" class="button" onclick="execute()" style="width: 100%">生成M3U超融合直播源订阅</button></div>
-    <div><button id="download-json-btn" class="button" style="width: 100%">导出M3U超融合备份</button></div>
-    <div style="display: flex;width: 100%;">
-        <div class="notice" style="display: flex;width: 80%;">订阅来源:M3U网络直播源订阅地址+直播源备注</div>
-        <div class="notice" style="display: flex;width: 20%;">操作</div>
-    </div>
-    <table id="input-table" style="width:100%">
-        <tbody style="width:100%">
-        </tbody>
-    </table>
-</div>
 
 <script>
     const addRowButton = document.getElementById('add-row');
     const inputTable = document.getElementById('input-table');
     const downloadBtn = document.getElementById('download-json-btn');
     const fileInput = document.getElementById('upload-json-btn');
-    const form = document.querySelector('form');
+    //const form = document.querySelector('form');
+    const forms = document.querySelectorAll('form');
+    const switchbox = document.getElementById("switchbox");
+    const choice = document.getElementById("choice");
+    const pages = choice.children;
+    const m3ufileInput = document.getElementById('upload-m3u-btn');
+    const m3uTable = document.getElementById('input-m3u-table');
+    const tbody = m3uTable.querySelector('tbody');
+    const batchSize = 50;
+    let currentBatch = 0;
+    let currentBatchData = [];
+    const downloadM3UBtn = document.getElementById('download-m3u-btn');
 
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = new FormData(form);
-        const response = await fetch('/process-file', {
-            method: 'POST',
-            body: formData
-        });
-        if (response.ok) {
-            // 创建 a 元素
-            const a = document.createElement('a');
-            const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            a.href = url;
-            a.download = 'tmp.m3u';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-        } else {
-            alert('上传文件失败');
-        }
-        document.getElementById('upload-m3u').value = '';
-    });
+    const fileInput2 = document.getElementById('upload-json-btn2');
+    const addRowButton2 = document.getElementById('add-row2');
+    const inputTable2 = document.getElementById('input-table2');
+    const downloadBtn2 = document.getElementById('download-json-btn2');
 
-    downloadBtn.addEventListener('click', () => {
-        fetch('/download_json_file')
-            .then(response => response.blob())
-            .then(data => {
-                // 创建 a 元素
-                const a = document.createElement('a');
-                const url = window.URL.createObjectURL(new Blob([data]));
-                a.href = url;
-                a.download = 'temp_json.json';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-            })
-            .catch(error => console.log(error));
-    });
+    const fileInput3 = document.getElementById('upload-json-btn3');
+    const addRowButton3 = document.getElementById('add-row3');
+    const inputTable3 = document.getElementById('input-table3');
+    const downloadBtn3 = document.getElementById('download-json-btn3');
 
-    fileInput.addEventListener('change', (event) => {
-        const file = event.target.files[0];
-        // 使用 FileReader 读取 JSON 文件内容
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const fileContent = event.target.result;
-            // 将 JSON 文件上传至 Flask 后端
-            fetch('/upload_json_file', {
-                method: 'POST',
-                body: fileContent
-            })
-                .then(response => response.json())
-                .then(data => console.log(data))
-                .catch(error => console.log(error));
-        };
-        reader.readAsText(file);
-        location.reload();
-        reload();
-    });
+    const fileInput4 = document.getElementById('upload-json-btn4');
+    const addRowButton4 = document.getElementById('add-row4');
+    const inputTable4 = document.getElementById('input-table4');
+    const downloadBtn4 = document.getElementById('download-json-btn4');
 
-    //只添加一行列表，不存储数据
-    addRowButton.addEventListener('click', () => {
-        const newRow = createInputRow();
-        inputTable.querySelector('tbody').prepend(newRow);
-    });
+    const fileInput5 = document.getElementById('upload-json-btn5');
+    const addRowButton5 = document.getElementById('add-row5');
+    const inputTable5 = document.getElementById('input-table5');
+    const downloadBtn5 = document.getElementById('download-json-btn5');
 
-    //新增输入框
-    function createInputRow() {
-        const row = document.createElement('tr');
-        const valueCell = document.createElement('td');
-        const valueInput = document.createElement('input');
-        valueInput.type = 'text';
-        valueInput.classList.add('subUrl');
-        valueCell.appendChild(valueInput);
-        const taeinput = document.createElement('input');
-        taeinput.type = 'text';
-        taeinput.classList.add('subname');
-        valueCell.appendChild(taeinput);
-        const actionsCell = document.createElement('td');
-        const saveButton = document.createElement('button');
-        saveButton.textContent = '保存';
-        saveButton.classList.add('save-button');
-        const deleteButton = document.createElement('button');
-        deleteButton.textContent = '删除';
-        deleteButton.classList.add('delete-button');
-        actionsCell.appendChild(saveButton);
-        actionsCell.appendChild(deleteButton);
-        row.appendChild(valueCell);
-        row.appendChild(actionsCell);
-        return row;
+    const fileInput6 = document.getElementById('upload-json-btn6');
+    const addRowButton6 = document.getElementById('add-row6');
+    const inputTable6 = document.getElementById('input-table6');
+    const downloadBtn6 = document.getElementById('download-json-btn6');
+
+    const fileInput7 = document.getElementById('upload-json-btn7');
+    const downloadBtn7 = document.getElementById('download-json-btn7');
+
+    //超融合M3U-从数据库拉取订阅列表数据
+    function reload() {
+        reloadBase('/getall','subUrl','subname','save-button','delete-button',inputTable)
     }
 
-    //从数据库拉取列表数据
-    function reload() {
-        fetch('/getall')
+    //超融合ipv6-从数据库拉取订阅列表数据
+    function reloadIpv6ListLink() {
+        reloadBase('/getall5','subUrl5','subname5','save-button5','delete-button5',inputTable5)
+    }
+    //密码本-从数据库拉取密码列表数据
+    function reloadPasswordList() {
+        reloadBase('/getall6','subUrl6','subname6','save-button6','delete-button6',inputTable6)
+    }
+    //超融合ipv4-从数据库拉取订阅列表数据
+    function reloadIpv4ListLink() {
+        reloadBase('/getall4','subUrl4','subname4','save-button4','delete-button4',inputTable4)
+    }
+    //超融合白名单-从数据库拉取订阅列表数据
+    function reloadWhiteListLink() {
+        reloadBase('/getall2','subUrl2','subname2','save-button2','delete-button2',inputTable2)
+    }
+    //超融合黑名单-从数据库拉取订阅列表数据
+    function reloadBlackListLink() {
+        reloadBase('/getall3','subUrl3','subname3','save-button3','delete-button3',inputTable3)
+    }
+
+        //从数据库拉取订阅列表数据
+    function reloadBase(requestpath, suburlclassname, subnameclassname, savebuttonname, delbuttonname, inputTableElement) {
+        fetch(requestpath)
             .then(response => response.json())
             .then(data => {
-                data.forEach(item => {
-                    //创建一个新的行
-                    const row = document.createElement('tr');
-                    const valueCell = document.createElement('td');
-                    const valueInput = document.createElement('input');
-                    valueInput.type = 'text';
-                    valueInput.classList.add('subUrl');
-                    valueInput.value= item[1];
-                    valueCell.appendChild(valueInput);
-                    const taeinput = document.createElement('input');
-                    taeinput.type = 'text';
-                    taeinput.classList.add('subname');
-                    taeinput.value= item[2];
-                    valueCell.appendChild(taeinput);
-                    const actionsCell = document.createElement('td');
-                    const saveButton = document.createElement('button');
-                    saveButton.textContent = '保存';
-                    saveButton.classList.add('save-button');
-                    const deleteButton = document.createElement('button');
-                    deleteButton.textContent = '删除';
-                    deleteButton.classList.add('delete-button');
-                    actionsCell.appendChild(saveButton);
-                    actionsCell.appendChild(deleteButton);
-                    row.appendChild(valueCell);
-                    row.appendChild(actionsCell);
-                    inputTable.querySelector('tbody').appendChild(row);
-                    //行内填充元素
-                });
+                for (var key in data) {
+                    if (data.hasOwnProperty(key)) {
+                        //创建一个新的行
+                        const row = document.createElement('tr');
+                        const valueCell = document.createElement('td');
+                        const valueInput = document.createElement('input');
+                        valueInput.type = 'text';
+                        valueInput.classList.add(suburlclassname);
+                        valueInput.value = key;
+                        valueCell.appendChild(valueInput);
+                        const taeinput = document.createElement('input');
+                        taeinput.type = 'text';
+                        taeinput.classList.add(subnameclassname);
+                        taeinput.value = data[key];
+                        valueCell.appendChild(taeinput);
+                        const actionsCell = document.createElement('td');
+                        const saveButton = document.createElement('button');
+                        saveButton.textContent = '保存';
+                        saveButton.classList.add(savebuttonname);
+                        const deleteButton = document.createElement('button');
+                        deleteButton.textContent = '删除';
+                        deleteButton.classList.add(delbuttonname);
+                        actionsCell.appendChild(saveButton);
+                        actionsCell.appendChild(deleteButton);
+                        row.appendChild(valueCell);
+                        row.appendChild(actionsCell);
+                        inputTableElement.querySelector('tbody').appendChild(row);
+                        //行内填充元素
+                    }
+                }
             })
             .catch(error => console.error(error));
     }
 
-    //保留输入行数据进入数据库
+    //保留订阅-白名单
+    function saveInputValue2(inputValue, name) {
+        saveInputValuebase(inputValue,name,'/addnewm3u2')
+    }
+    //保留订阅-黑名单
+    function saveInputValue3(inputValue, name) {
+        saveInputValuebase(inputValue,name,'/addnewm3u3')
+    }
+    //保留订阅-ipv4
+    function saveInputValue4(inputValue, name) {
+        saveInputValuebase(inputValue,name,'/addnewm3u4')
+    }
+    //保留订阅-ipv6
+    function saveInputValue5(inputValue, name) {
+        saveInputValuebase(inputValue,name,'/addnewm3u5')
+    }
+    //保留密码
+    function saveInputValue6(inputValue, name) {
+        saveInputValuebase(inputValue,name,'/addnewm3u6')
+    }
+    //永久列表-保留输入行数据
+    function savem3uInputValue(url, info) {
+        saveInputValuebase(url,info,'/addm3udata')
+    }
+    //保留订阅-超融合
     function saveInputValue(inputValue, name) {
+        saveInputValuebase(inputValue,name,'/addnewm3u')
+    }
+
+    function saveInputValuebase(inputValue, name, requestpath) {
         // 其他情况
         const xhr = new XMLHttpRequest();
-        xhr.open('POST', '/addnewm3u');
+        xhr.open('POST', requestpath);
         xhr.setRequestHeader('Content-Type', 'application/json');
         xhr.onreadystatechange = function () {
             if (xhr.readyState === XMLHttpRequest.DONE) {
@@ -273,23 +588,46 @@
             }
         };
         xhr.send(JSON.stringify({'addurl': inputValue, 'name': name}));
-        location.reload();
-        reload();
     }
 
-    //删除输入行并且抹除数据库
+    //删除订阅-白名单
+    function deleteInputRow2(row, inputValue) {
+        deleteInputRowBase(row,inputValue,'/deletewm3u2')
+    }
+    //删除订阅-黑名单
+    function deleteInputRow3(row, inputValue) {
+        deleteInputRowBase(row,inputValue,'/deletewm3u3')
+    }
+    //删除订阅-ipv4
+    function deleteInputRow4(row, inputValue) {
+        deleteInputRowBase(row,inputValue,'/deletewm3u4')
+    }
+    //删除订阅-ipv6
+    function deleteInputRow5(row, inputValue) {
+        deleteInputRowBase(row,inputValue,'/deletewm3u5')
+    }
+    //删除密码
+    function deleteInputRow6(row, inputValue) {
+        deleteInputRowBase(row,inputValue,'/deletewm3u6')
+    }
+    //永久列表-删除输入行
+    function deleteM3uInputRow(row, inputValue) {
+        deleteInputRowBase(row,inputValue,'/deletem3udata')
+    }
+    //删除订阅-M3U
     function deleteInputRow(row, inputValue) {
+        deleteInputRowBase(row,inputValue,'/deletewm3u')
+    }
+    function deleteInputRowBase(row, inputValue, requestpath) {
         if (inputValue === null || inputValue === "") {
             row.remove();
         } else {
             const xhr = new XMLHttpRequest();
-            xhr.open('POST', '/deletewm3u');
+            xhr.open('POST', requestpath);
             xhr.setRequestHeader('Content-Type', 'application/json');
             xhr.onreadystatechange = function () {
                 if (xhr.readyState === XMLHttpRequest.DONE) {
                     if (xhr.status === 200) {
-                        //const response = JSON.parse(xhr.responseText);
-                        //alert('删除结果：' + response.deleteresult);
                     } else {
                         alert('删除失败：' + xhr.statusText);
                     }
@@ -300,33 +638,426 @@
         }
     }
 
-    inputTable.addEventListener('click', (event) => {
-        if (event.target.classList.contains('save-button')) {
+    // 定义方法A，接受一个函数名参数和一个参数数组
+    function methodA(methodName, params) {
+        // 使用apply()函数来执行传递进来的方法名对应的函数，并传递参数数组
+        window[methodName].apply(null, params);
+    }
+
+    // 定义方法C，接受一个函数名参数和一个参数数组,有返回值
+    function methodC(methodName, params) {
+        // 使用apply()函数来执行传递进来的方法名对应的函数，并传递参数数组
+        return window[methodName].apply(null, params)
+    }
+
+    //密码本-订阅列表里按钮监听
+    inputableAddEventListener(inputTable6,'save-button6','delete-button6','saveInputValue6','deleteInputRow6')
+    //ipv6-订阅列表里按钮监听
+    inputableAddEventListener(inputTable5,'save-button5','delete-button5','saveInputValue5','deleteInputRow5')
+    //ipv4-订阅列表里按钮监听
+    inputableAddEventListener(inputTable4,'save-button4','delete-button4','saveInputValue4','deleteInputRow4')
+    //白名单-订阅列表里按钮监听
+    inputableAddEventListener(inputTable2,'save-button2','delete-button2','saveInputValue2','deleteInputRow2')
+    //黑名单-订阅列表里按钮监听
+    inputableAddEventListener(inputTable3,'save-button3','delete-button3','saveInputValue3','deleteInputRow3')
+    //超融合-订阅列表里按钮监听
+    inputableAddEventListener(inputTable,'save-button','delete-button','saveInputValue','deleteInputRow')
+    //永久列表-直播源列表增删按钮
+    inputableAddEventListener(m3uTable,'save-m3u-button','delete-m3u-button','savem3uInputValue','deleteM3uInputRow')
+
+    function inputableAddEventListener(inputTableTarget,saveButtonClassName,deleteButtonClassName,saveInputValueBaseName,deleteInputRowBaseName){
+            inputTableTarget.addEventListener('click', (event) => {
+        if (event.target.classList.contains(saveButtonClassName)) {
             var x = event.target.parentElement.parentElement.querySelectorAll('input');
             const inputValue = x[0].value.trim();
             if (inputValue === null || inputValue === "") {
                 // 空指针或者空字符串的情况
-                alert('请输入M3U订阅地址');
+                alert('请输入订阅地址');
                 return;
             }
             const tagnameval = x[1].value;
-            saveInputValue(inputValue, tagnameval);
+            methodA(saveInputValueBaseName, [inputValue, tagnameval]);
         }
-        if (event.target.classList.contains('delete-button')) {
+        if (event.target.classList.contains(deleteButtonClassName)) {
             const row = event.target.parentElement.parentElement;
             var x = event.target.parentElement.parentElement.querySelectorAll('input');
             const inputValue = x[0].value;
-            deleteInputRow(row, inputValue);
+            methodA(deleteInputRowBaseName, [row, inputValue]);
         }
     });
+    }
 
-    //超融合
-    function execute() {
+    //一键导入全部json配置
+    fileInputAddEventListenerBase(fileInput7,'/upload_json_file7')
+    //密码本-导入json配置
+    fileInputAddEventListenerBase(fileInput6,'/upload_json_file6')
+    //中国ipv6-导入json配置
+    fileInputAddEventListenerBase(fileInput5,'/upload_json_file5')
+    //中国ipv4-导入json配置
+    fileInputAddEventListenerBase(fileInput4,'/upload_json_file4')
+    //白名单-导入json配置
+    fileInputAddEventListenerBase(fileInput2,'/upload_json_file2')
+    //黑名单-导入json配置
+    fileInputAddEventListenerBase(fileInput3,'/upload_json_file3')
+    //超融合-导入json配置
+    fileInputAddEventListenerBase(fileInput,'/upload_json_file')
+
+    function fileInputAddEventListenerBase(fileInputBase,requestPath) {
+        fileInputBase.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            // 使用 FileReader 读取 JSON 文件内容
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const fileContent = event.target.result;
+                // 将 JSON 文件上传至 Flask 后端
+                fetch(requestPath, {
+                    method: 'POST',
+                    body: fileContent
+                })
+                    .then(response => response.json())
+                    .then(data => console.log(data))
+                    .catch(error => console.log(error));
+            };
+            reader.readAsText(file);
+            location.reload()
+        });
+    }
+
+
+
+    // 超融合m3u-删除全部网络直播源订阅配置文件
+    function removem3ulinks() {
+        removelinksBase('/removem3ulinks')
+    }
+    // 超融合域名白名单-删除全部网络订阅配置文件
+    function removem3ulinks2() {
+        removelinksBase('/removem3ulinks2')
+    }
+    // 超融合ipv4-删除全部网络订阅配置文件
+    function removem3ulinks4() {
+        removelinksBase('/removem3ulinks4')
+    }
+    // 超融合ipv6-删除全部网络订阅配置文件
+    function removem3ulinks5() {
+        removelinksBase('/removem3ulinks5')
+    }
+    // 密码本-删除全部密码配置文件
+    function removem3ulinks6() {
+        removelinksBase('/removem3ulinks6')
+    }
+    // 超融合域名黑名单-删除全部网络订阅配置文件
+    function removem3ulinks3() {
+        removelinksBase('/removem3ulinks3')
+    }
+
+    function removelinksBase(requestPath) {
         // 获取按钮
         const button = document.querySelector('button');
         // 禁用按钮
         button.disabled = true;
-        fetch('/chaoronghe')
+        fetch(requestPath)
+            .then(response => response.text()) // 将响应转化为字符串
+            .then(data => {
+                if (data === 'success') {
+                    alert('本地订阅全部删除成功');
+                } else {
+                    alert('本地订阅全部删除失败');
+                }
+            });
+        // 恢复按钮
+        button.disabled = false;
+        location.reload()
+    }
+
+    // 永久列表-删除全部本地m3u文件
+    function removem3u() {
+        fetch('/removeallm3u')
+            .then(response => response.text()) // 将响应转化为字符串
+            .then(data => {
+                if (data === 'success') {
+                    alert('本地永久直播源全部删除成功');
+                } else {
+                    alert('本地永久直播源全部删除失败');
+                }
+            });
+        handleScroll()
+    }
+
+    //永久列表-上传m3u文件
+    m3ufileInput.addEventListener('change', async (e) => {
+        e.preventDefault();
+        const file = event.target.files[0];
+        var formData = new FormData();
+        formData.append('file', file);
+        const response = await fetch('/upload_m3u_file', {
+            method: 'POST',
+            body: formData
+        });
+        if (response.ok) {
+            alert('上传文件成功');
+        } else {
+            alert('上传文件失败');
+        }
+        document.getElementById('upload-m3u-btn').value = '';
+        handleScroll()
+    });
+
+    //永久列表-合并粘贴板直播源
+    function savem3uarea() {
+        var text = document.getElementById("m3uarea").value;
+        if (text === null || text === "") {
+            // 空指针或者空字符串的情况
+            alert('直播源为空');
+        } else {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/savem3uarea');
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        //const response = JSON.parse(xhr.responseText);
+                        //alert('删除结果：' + response.deleteresult);
+                    } else {
+                        alert('合并粘贴板直播源失败：' + xhr.statusText);
+                    }
+                }
+            };
+            xhr.send(JSON.stringify({'m3utext': text}));
+            handleScroll()
+        }
+    }
+
+    //永久列表-从数据库拉取全部直播源
+    //获取数据
+    function getData() {
+        return fetch('/getm3udata')
+            .then(response => response.json())
+            .then(data => Object.entries(data))
+            .catch(error => console.error(error));
+    }
+
+    //渲染数据
+    function renderData(data) {
+        for (const [key, value] of data) {
+            const row = document.createElement('tr');
+            const valueCell = document.createElement('td');
+            const taeinput = document.createElement('input');
+            taeinput.type = 'text';
+            taeinput.classList.add('subm3uname');
+            taeinput.value = key;
+            valueCell.appendChild(taeinput);
+            valueCell.append(document.createElement('br'))
+            const valueInput = document.createElement('input');
+            valueInput.type = 'text';
+            valueInput.classList.add('subm3uUrl');
+            valueInput.value = value;
+            valueCell.appendChild(valueInput);
+            valueCell.append(document.createElement('br'))
+
+            const actionsCell = document.createElement('td');
+            const saveButton = document.createElement('button');
+            saveButton.textContent = '保存';
+            saveButton.classList.add('save-m3u-button');
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = '删除';
+            deleteButton.classList.add('delete-m3u-button');
+            actionsCell.appendChild(saveButton);
+            actionsCell.appendChild(deleteButton);
+            row.appendChild(valueCell);
+            row.appendChild(actionsCell);
+            currentBatchData.push(row);
+        }
+        currentBatch++;
+        if (currentBatchData.length > 0) {
+            if (currentBatch === 1) {
+                tbody.append(...currentBatchData);
+            } else {
+                currentBatchData.forEach(row => tbody.appendChild(row));
+            }
+            currentBatchData = [];
+        }
+    }
+
+    //滚动加载
+    function handleScroll() {
+        const {scrollTop, clientHeight, scrollHeight} = document.documentElement;
+        if (scrollTop + clientHeight >= scrollHeight - 5 && currentBatchData.length === 0) {
+            getData()
+                .then(data => {
+                    if (data.length > 0) {
+                        renderData(data.slice((currentBatch - 1) * batchSize, currentBatch * batchSize));
+                    }
+                });
+        }
+    }
+    //将 handleScroll 函数绑定到 window 的 scroll 事件上，以便在用户滚动窗口时触发
+    window.addEventListener('scroll', handleScroll);
+    //handleScroll();
+
+    // 切换页面
+    switchbox.addEventListener("change", () => {
+        // Get selected page
+        const selectedPage = document.querySelector('input[name="page"]:checked').id;
+
+        // Hide all pages except for the selected one
+        for (let i = 0; i < pages.length; i++) {
+            if (pages[i].id === selectedPage) {
+                pages[i].style.display = "block";
+            } else {
+                pages[i].style.display = "none";
+            }
+        }
+    });
+
+    function init() {
+        reloadWhiteListLink()
+        reloadBlackListLink()
+        handleScroll()
+        reload()
+        reloadIpv4ListLink()
+        reloadIpv6ListLink()
+        reloadPasswordList()
+    }
+
+    // 超融合-工具-上传m3u文件-自动下载格式规整化的m3u文件
+    formsAddEventListener(forms[0],'/process-file','tmp.m3u','upload-m3u')
+
+    // 上传文件处理后自动下载
+    function formsAddEventListener(formtarget, requestpath, filename, uploadbtnId) {
+        formtarget.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(formtarget);
+            const response = await fetch(requestpath, {
+                method: 'POST',
+                body: formData
+            });
+            if (response.ok) {
+                // 创建 a 元素
+                const a = document.createElement('a');
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            } else {
+                alert('上传文件失败');
+            }
+            document.getElementById(uploadbtnId).value = '';
+        });
+    }
+
+    // 超融合M3U-导出订阅json配置
+    downloadBtnAddEventListenerBase(downloadBtn,'/download_json_file','temp_m3ulink.json')
+    // 超融合域名白名单-导出订阅json配置
+    downloadBtnAddEventListenerBase(downloadBtn2,'/download_json_file2','temp_whitelistlink.json')
+    // 超融合域名黑名单-导出订阅json配置
+    downloadBtnAddEventListenerBase(downloadBtn3,'/download_json_file3','temp_blacklistlink.json')
+    // 超融合IPV4-导出订阅json配置
+    downloadBtnAddEventListenerBase(downloadBtn4,'/download_json_file4','temp_ipv4listlink.json')
+    // 超融合IPV6-导出订阅json配置
+    downloadBtnAddEventListenerBase(downloadBtn5,'/download_json_file5','temp_ipv6listlink.json')
+    // 密码本-导出json配置
+    downloadBtnAddEventListenerBase(downloadBtn6,'/download_json_file6','temp_passwordlist.json')
+    // 导出所有json配置
+    downloadBtnAddEventListenerBase(downloadBtn7,'/download_json_file7','allData.json')
+    // 永久列表-导出永久列表
+    downloadBtnAddEventListenerBase(downloadM3UBtn,'/download_m3u_file','temp_m3u.m3u')
+
+    function downloadBtnAddEventListenerBase(downloadBtnBase,requestPath,jsonName) {
+        downloadBtnBase.addEventListener('click', () => {
+            fetch(requestPath)
+                .then(response => response.blob())
+                .then(data => {
+                    // 创建 a 元素
+                    const a = document.createElement('a');
+                    const url = window.URL.createObjectURL(new Blob([data]));
+                    a.href = url;
+                    a.download = jsonName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                })
+                .catch(error => console.log(error));
+        });
+    }
+
+    //密码本-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton6,inputTable6,'subUrl6','subname6','save-button6','delete-button6')
+    //中国ipv6-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton5,inputTable5,'subUrl5','subname5','save-button5','delete-button5')
+    //中国ipv4-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton4,inputTable4,'subUrl4','subname4','save-button4','delete-button4')
+    //白名单-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton2,inputTable2,'subUrl2','subname2','save-button2','delete-button2')
+    //黑名单-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton3,inputTable3,'subUrl3','subname3','save-button3','delete-button3')
+    //超融合-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton,inputTable,'subUrl','subname','save-button','delete-button')
+
+    function addRowButtonAddEventListener(addRowButtonBase, inputTableBase,subUrlClassName,subnameClassName,savebuttonClassName,deletebuttonClassName) {
+        addRowButtonBase.addEventListener('click', () => {
+            const newRow = methodC('createInputRow', [subUrlClassName,subnameClassName,savebuttonClassName,deletebuttonClassName]);
+            inputTableBase.querySelector('tbody').prepend(newRow);
+        });
+    }
+
+    //超融合-新增输入框
+    function createInputRow(subUrlClassName,subnameClassName,savebuttonClassName,deletebuttonClassName) {
+        const row = document.createElement('tr');
+        const valueCell = document.createElement('td');
+        const valueInput = document.createElement('input');
+        valueInput.type = 'text';
+        valueInput.classList.add(subUrlClassName);
+        valueCell.appendChild(valueInput);
+        const taeinput = document.createElement('input');
+        taeinput.type = 'text';
+        taeinput.classList.add(subnameClassName);
+        valueCell.appendChild(taeinput);
+        const actionsCell = document.createElement('td');
+        const saveButton = document.createElement('button');
+        saveButton.textContent = '保存';
+        saveButton.classList.add(savebuttonClassName);
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = '删除';
+        deleteButton.classList.add(deletebuttonClassName);
+        actionsCell.appendChild(saveButton);
+        actionsCell.appendChild(deleteButton);
+        row.appendChild(valueCell);
+        row.appendChild(actionsCell);
+        return row;
+    }
+
+    //超融合-m3u
+    function execute() {
+        executeBase('/chaoronghe')
+    }
+    //超融合-域名白名单
+    function execute2() {
+        executeBase('/chaoronghe2')
+    }
+    //超融合-域名黑名单
+    function execute3() {
+        executeBase('/chaoronghe3')
+    }
+    //超融合-ipv4
+    function execute4() {
+        executeBase('/chaoronghe4')
+    }
+    //超融合-ipv6
+    function execute5() {
+        executeBase('/chaoronghe5')
+    }
+
+    function executeBase(requestPath) {
+        // 获取按钮
+        const button = document.querySelector('button');
+        // 禁用按钮
+        button.disabled = true;
+        fetch(requestPath)
             .then(response => response.text()) // 将响应转化为字符串
             .then(data => {
                 if (data === 'empty') {
@@ -338,6 +1069,56 @@
         // 恢复按钮
         button.disabled = false;
     }
+
+    function generatePasswords() {
+        // 获取输入框的值
+        var passwordLength = document.getElementById("password-length").value;
+        var numOfPasswords = document.getElementById("num-of-passwords").value;
+        var selectedChars = "";
+        var passwordList = "";
+
+        // 获取选中的字符集
+        if (document.getElementById("numbers").checked) {
+            selectedChars += "0123456789";
+        }
+        if (document.getElementById("upper-case").checked) {
+            selectedChars += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        }
+        if (document.getElementById("lower-case").checked) {
+            selectedChars += "abcdefghijklmnopqrstuvwxyz";
+        }
+        if (document.getElementById("special-chars").checked) {
+            selectedChars += "!@#$%^&*()_+-=[]{}\\|;':\",./<>?";
+        }
+
+        // 如果没有选中任何字符集，弹出警告并返回
+        if (selectedChars === "") {
+            alert("请至少选择一个字符集！");
+            return;
+        }
+
+        // 生成密码
+        for (var i = 0; i < numOfPasswords; i++) {
+            var password = "";
+            for (var j = 0; j < passwordLength; j++) {
+                var randomIndex = Math.floor(Math.random() * selectedChars.length);
+                password += selectedChars.charAt(randomIndex);
+            }
+            passwordList += password + "\n";
+        }
+
+        // 将密码列表添加到文本区域中
+        document.getElementById("password-list").value = passwordList;
+    }
+
+    function removeDuplicates() {
+        const inputTextArea = document.getElementById("input");
+        const outputTextArea = document.getElementById("output");
+        const inputLines = inputTextArea.value.split("\n");
+        const uniqueLines = new Set(inputLines);
+        outputTextArea.value = [...uniqueLines].join("\n");
+    }
+
 
 </script>
 </body>
