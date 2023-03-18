@@ -146,7 +146,7 @@ def timer_func():
         chaoronghe3()
         chaoronghe4()
         chaoronghe5()
-        time.sleep(3600)  # 等待1小时
+        time.sleep(43200)  # 等待12小时
 
 
 def check_file(m3u_dict):
