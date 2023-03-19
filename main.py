@@ -24,6 +24,8 @@ r = redis.Redis(host='localhost', port=6379)
 ##########################################################redis key#############################################
 REDIS_KEY_M3U_LINK = "m3ulink"
 REDIS_KEY_M3U_DATA = "localm3u"
+REDIS_KEY_M3U_EPG_LOGO = "m3uepglogo"
+REDIS_KEY_M3U_EPG_GROUP = "m3uepggroup"
 # 白名单下载链接
 REDIS_KEY_WHITELIST_LINK = "whitelistlink"
 # 白名单adguardhome
@@ -69,6 +71,12 @@ wildcard_regex2 = r'^\+\.[a-zA-Z0-9]+([\-\.]{1}[a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$'
 pattern = r'^server=\/[a-zA-Z0-9.-]+\/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|[a-zA-Z0-9.-]+)$'
 OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT = "    - \""
 OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT = "\""
+
+# name,logo
+CHANNEL_LOGO = {}
+# name,group
+CHANNEL_GROUP = {}
+defalutname = "佚名"
 
 
 @app.route('/')
@@ -146,7 +154,7 @@ def timer_func():
         chaoronghe3()
         chaoronghe4()
         chaoronghe5()
-        time.sleep(43200)  # 等待12小时
+        time.sleep(86400)  # 等待24小时
 
 
 def check_file(m3u_dict):
@@ -256,9 +264,22 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
     # 异步缓慢检测出有效链接
     # asyncio.run(asynctask(my_dict))
     if fileName == "/A.m3u":
+        redis_add_map(REDIS_KEY_M3U_EPG_LOGO, CHANNEL_LOGO)
+        redis_add_map(REDIS_KEY_M3U_EPG_GROUP, CHANNEL_GROUP)
         thread = threading.Thread(target=check_file, args=(my_dict,))
         thread.start()
     return "result"
+
+
+def init_db():
+    try:
+        CHANNEL_LOGO.update(redis_get_map(REDIS_KEY_M3U_EPG_LOGO))
+    except:
+        pass
+    try:
+        CHANNEL_GROUP.update(redis_get_map(REDIS_KEY_M3U_EPG_GROUP))
+    except:
+        pass
 
 
 # 多线程写入A.m3u
@@ -567,7 +588,6 @@ def process_data_domain_dnsmasq(data, index, step, my_dict):
 
 # 字符串内容处理-m3u
 def process_data(data, index, step, my_dict):
-    defalutname = "佚名"
     end_index = min(index + step, len(data))
     for i in range(index, end_index):
         # print(type(data[i]))
@@ -587,7 +607,8 @@ def process_data(data, index, step, my_dict):
                 if searchurl in my_dict.keys():
                     continue
                 if name:
-                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
+                    my_dict[searchurl] = update_epg_by_name(name)
+                    # my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
                 else:
                     my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
             # 匹配格式：频道，url
@@ -597,7 +618,8 @@ def process_data(data, index, step, my_dict):
                 if searchurl in my_dict.keys():
                     continue
                 if name:
-                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
+                    my_dict[searchurl] = update_epg_by_name(name)
+                    # my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
                 else:
                     my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
         # http|rtsp|rtmp开始，跳过P2p
@@ -621,8 +643,56 @@ def process_data(data, index, step, my_dict):
             # 有裸名字或者#EXTINF开始但是没有tvg-name\tvg-id\group-title
             else:
                 # if not any(substring in line for substring in ["tvg-name", "tvg-id", "group-title"]):
-                my_dict[searchurl] = f'{preline}\n'
+                # my_dict[searchurl] = f'{preline}\n'
+                my_dict[searchurl] = update_epg(preline)
                 continue
+
+
+def update_epg_by_name(tvg_name):
+    newStr = "#EXTINF:-1 "
+    tvg_logo = CHANNEL_LOGO.get(tvg_name)
+    if tvg_logo is not None and tvg_logo != "":
+        newStr += f'tvg-logo="{tvg_logo}" '
+    group_title = CHANNEL_GROUP.get(tvg_name)
+    if group_title is not None and group_title != "":
+        newStr += f'group-title="{group_title}"  '
+    newStr += f'tvg-name="{tvg_name}"\n'
+    return newStr
+
+
+def update_epg(s):
+    tvg_name = re.search(r'tvg-name="([^"]+)"', s)
+    if tvg_name:
+        tvg_name = tvg_name.group(1)
+    else:
+        last_comma_index = s.rfind(",")
+        tvg_name = s[last_comma_index + 1:].strip()
+    if tvg_name != "":
+        newStr = "#EXTINF:-1 "
+        tvg_id = re.search(r'tvg-id="([^"]+)"', s)
+        tvg_id = tvg_id.group(1) if tvg_id else ''
+        if tvg_id != "":
+            newStr += f'tvg-id="{tvg_id}" '
+        tvg_logo = re.search(r'tvg-logo="([^"]+)"', s)
+        tvg_logo = tvg_logo.group(1) if tvg_logo else ''
+        if tvg_logo == "":
+            tvg_logo = CHANNEL_LOGO.get(tvg_name)
+        if tvg_logo is not None and tvg_logo != "":
+            newStr += f'tvg-logo="{tvg_logo}" '
+            if tvg_name not in CHANNEL_LOGO:
+                CHANNEL_LOGO[tvg_name] = tvg_logo
+        group_title = re.search(r'group-title="([^"]+)"', s)
+        group_title = group_title.group(1) if group_title else ''
+        if group_title == "":
+            group_title = CHANNEL_GROUP.get(tvg_name)
+        if group_title is not None and group_title != "":
+            newStr += f'group-title="{group_title}"  '
+            if tvg_name not in CHANNEL_GROUP:
+                CHANNEL_GROUP[tvg_name] = group_title
+        newStr += f'tvg-name="{tvg_name}"\n'
+        return newStr
+    else:
+        return s
 
 
 def generate_json_string(mapname):
@@ -1003,7 +1073,7 @@ def upload_m3u_file():
 @app.route('/deletem3udata', methods=['POST'])
 def deletem3udata():
     # 获取 HTML 页面发送的 POST 请求参数
-    deleteurl = request.json.get('deletem3u')
+    deleteurl = request.json.get('deleteurl')
     r.hdel('localm3u', deleteurl)
     return jsonify({'deletem3udata': "delete success"})
 
@@ -1012,7 +1082,7 @@ def deletem3udata():
 @app.route('/addm3udata', methods=['POST'])
 def addm3udata():
     # 获取 HTML 页面发送的 POST 请求参数
-    addurl = request.json.get('addm3u')
+    addurl = request.json.get('addurl')
     name = request.json.get('name')
     my_dict = {addurl: name}
     redis_add_map(REDIS_KEY_M3U_DATA, my_dict)
@@ -1090,7 +1160,7 @@ def process_file():
     return send_file("tmp.m3u", as_attachment=True)
 
 
-# init_db()
+init_db()
 
 if __name__ == '__main__':
     timer_thread = threading.Thread(target=timer_func)
