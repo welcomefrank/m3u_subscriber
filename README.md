@@ -64,7 +64,7 @@ docker run -d --name m3usubscriber-4395 --restart unless-stopped --net=host -d j
 
 12-添加了白名单、黑名单、ipv4\ipv6订阅
 
-13-添加了类似acl4ssr的功能，测试效果比较弱鸡
+13-添加了类似acl4ssr的功能，测试效果比较弱鸡,需要拉取arm64v8-2或者x86_64-2的镜像获取这个更新
 
 ### 接下来，您只需要按照以下步骤即可使用本工具：
 
