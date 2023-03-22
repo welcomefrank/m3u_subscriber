@@ -8,12 +8,15 @@ import os
 import queue
 import re
 import threading
-import time
 from concurrent.futures import ThreadPoolExecutor
 
 import aiohttp
 import redis
 import requests
+# import base64
+import time
+# from urllib.parse import urlparse, unquote
+# import yaml
 from flask import Flask, jsonify, request, send_file, render_template
 
 app = Flask(__name__)
@@ -52,8 +55,23 @@ REDIS_KEY_WHITELIST_IPV6_LINK = "whitelistipv6link"
 REDIS_KEY_WHITELIST_IPV6_DATA = "whitelistipv6data"
 # 密码本下载链接
 REDIS_KEY_PASSWORD_LINK = "passwordlink"
+# 节点下载链接
+REDIS_KEY_PROXIES_LINK = "proxieslink"
+# 代理类型
+REDIS_KEY_PROXIES_TYPE = "proxiestype"
+# 代理转换配置模板(本地组+网络组):url,name
+REDIS_KEY_PROXIES_MODEL = "proxiesmodel"
+# 代理转换配置选择的模板:name
+REDIS_KEY_PROXIES_MODEL_CHOSEN = "proxiesmodelchosen"
+# 代理转换服务器订阅:url,name
+REDIS_KEY_PROXIES_SERVER = "proxiesserver"
+# 代理转换选择的服务器订阅:url,name
+REDIS_KEY_PROXIES_SERVER_CHOSEN = "proxiesserverchosen"
+
 allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_LINK, REDIS_KEY_WHITELIST_IPV4_LINK,
-              REDIS_KEY_WHITELIST_IPV6_LINK, REDIS_KEY_PASSWORD_LINK]
+              REDIS_KEY_WHITELIST_IPV6_LINK, REDIS_KEY_PASSWORD_LINK, REDIS_KEY_PROXIES_LINK, REDIS_KEY_PROXIES_TYPE,
+              REDIS_KEY_PROXIES_MODEL, REDIS_KEY_PROXIES_MODEL_CHOSEN, REDIS_KEY_PROXIES_SERVER,
+              REDIS_KEY_PROXIES_SERVER_CHOSEN]
 
 # Adguardhome屏蔽前缀
 BLACKLIST_ADGUARDHOME_FORMATION = "240.0.0.0 "
@@ -77,6 +95,9 @@ CHANNEL_LOGO = {}
 # name,group
 CHANNEL_GROUP = {}
 defalutname = "佚名"
+
+# 订阅模板转换服务器地址API
+URL = "http://192.168.5.1:25500/sub"
 
 
 @app.route('/')
@@ -154,6 +175,7 @@ def timer_func():
         chaoronghe3()
         chaoronghe4()
         chaoronghe5()
+        chaoronghe6()
         time.sleep(86400)  # 等待24小时
 
 
@@ -208,6 +230,21 @@ def worker(queue, file):
         if data is None:
             break
         write_to_file(data, file)
+        queue.task_done()
+
+
+def write_to_file2(data, file):
+    with open(file, 'a', encoding='utf-8') as f:
+        for line in data:
+            f.write(f'{line}\n')
+
+
+def worker2(queue, file):
+    while True:
+        data = queue.get()
+        if data is None:
+            break
+        write_to_file2(data, file)
         queue.task_done()
 
 
@@ -273,13 +310,86 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
 
 def init_db():
     try:
+        # 把数据库直播源logo数据导入内存
         CHANNEL_LOGO.update(redis_get_map(REDIS_KEY_M3U_EPG_LOGO))
     except:
-        pass
+        print("no logo in redis")
     try:
+        # 把直播源分组数据导入内存
         CHANNEL_GROUP.update(redis_get_map(REDIS_KEY_M3U_EPG_GROUP))
     except:
-        pass
+        print("no group in redis")
+    initProxyModel()
+    initProxyServer()
+
+
+# 初始化节点后端服务器
+def initProxyServer():
+    # 开服时判断是不是初次挂载容器，是的话添加默认配置文件
+    models = redis_get_map(REDIS_KEY_PROXIES_SERVER)
+    if models and len(models.items()) > 0:
+        return
+    else:
+        try:
+            update_dict = {
+                "http://127.0.0.1:25500/sub": "本地服务器",
+                "http://192.168.5.1:25500/sub": "本地服务器2"}
+            redis_add_map(REDIS_KEY_PROXIES_SERVER, update_dict)
+            # 设定默认选择的模板
+            redis_add(REDIS_KEY_PROXIES_SERVER_CHOSEN, "本地服务器")
+        except:
+            pass
+
+
+# 初始化节点模板
+def initProxyModel():
+    # 开服时判断是不是初次挂载容器，是的话添加默认配置文件
+    models = redis_get_map(REDIS_KEY_PROXIES_MODEL)
+    if models and len(models.items()) > 0:
+        return
+    else:
+        try:
+            update_dict = {
+                "http://127.0.0.1:4395/url/ACL4SSR_Online.ini": "ACL4SSR_Online 默认版 分组比较全(本地离线模板)",
+                "http://127.0.0.1:4395/url/ACL4SSR_Online_AdblockPlus.ini": "ACL4SSR_Online_AdblockPlus 更多去广告(本地离线模板)",
+                "http://127.0.0.1:4395/url/ACL4SSR_Online_Full_Google.ini": "ACL4SSR_Online_Full_Google 全分组 重度用户使用 谷歌细分(本地离线模板)",
+                "http://127.0.0.1:4395/url/ACL4SSR_Online_Full.ini": "ACL4SSR_Online_Full 全分组 重度用户使用(本地离线模板)",
+                "http://127.0.0.1:4395/url/ACL4SSR_Online_Full_MultiMode.ini": "ACL4SSR_Online_Full_MultiMode.ini 全分组 多模式 重度用户使用(本地离线模板)",
+                "http://127.0.0.1:4395/url/ACL4SSR_Online_Full_Netflix.ini": "ACL4SSR_Online_Full_Netflix 全分组 重度用户使用 奈飞全量(本地离线模板)",
+                "http://127.0.0.1:4395/url/ACL4SSR_Online_Full_NoAuto.ini": "ACL4SSR_Online_Full_NoAuto.ini 全分组 无自动测速 重度用户使用(本地离线模板)",
+                "http://127.0.0.1:4395/url/ACL4SSR_Online_Mini.ini": "ACL4SSR_Online_Mini 精简版(本地离线模板)",
+                "http://127.0.0.1:4395/url/ACL4SSR_Online_Mini_AdblockPlus.ini": "ACL4SSR_Online_Mini_AdblockPlus.ini 精简版 更多去广告(本地离线模板)",
+                "http://127.0.0.1:4395/url/ACL4SSR_Online_Mini_Fallback.ini": "ACL4SSR_Online_Mini_Fallback.ini 精简版 带故障转移(本地离线模板)",
+                "http://127.0.0.1:4395/url/ACL4SSR_Online_Mini_MultiCountry.ini": "ACL4SSR_Online_Mini_MultiCountry.ini 精简版 带港美日国家(本地离线模板)",
+                "http://127.0.0.1:4395/url/ACL4SSR_Online_Mini_MultiMode.ini": "ACL4SSR_Online_Mini_MultiMode.ini 精简版 自动测速、故障转移、负载均衡(本地离线模板)",
+                "http://127.0.0.1:4395/url/ACL4SSR_Online_Mini_NoAuto.ini": "ACL4SSR_Online_Mini_NoAuto.ini 精简版 不带自动测速(本地离线模板)",
+                "http://127.0.0.1:4395/url/ACL4SSR_Online_MultiCountry.ini": "ACL4SSR_Online_MultiCountry 多国分组(本地离线模板)",
+                "http://127.0.0.1:4395/url/ACL4SSR_Online_NoAuto.ini": "ACL4SSR_Online_NoAuto 无自动测速(本地离线模板)",
+                "http://127.0.0.1:4395/url/ACL4SSR_Online_NoReject.ini": "ACL4SSR_Online_NoReject 无广告拦截规则(本地离线模板)",
+                "http://127.0.0.1:4395/url/ACL4SSR_Online_Full_AdblockPlus.ini": "ACL4SSR_Online_Full_AdblockPlus 全分组 重度用户使用 更多去广告(本地离线模板)",
+                "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online.ini": "ACL4SSR_Online 默认版 分组比较全(与Github同步)",
+                "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_AdblockPlus.ini": "ACL4SSR_Online_AdblockPlus 更多去广告(与Github同步)",
+                "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_MultiCountry.ini": "ACL4SSR_Online_MultiCountry 多国分组(与Github同步)",
+                "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_NoAuto.ini": "ACL4SSR_Online_NoAuto 无自动测速(与Github同步)",
+                "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_NoReject.ini": "ACL4SSR_Online_NoReject 无广告拦截规则(与Github同步)",
+                "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini.ini": "ACL4SSR_Online_Mini 精简版(与Github同步)",
+                "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini_AdblockPlus.ini": "ACL4SSR_Online_Mini_AdblockPlus.ini 精简版 更多去广告(与Github同步)",
+                "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini_NoAuto.ini": "ACL4SSR_Online_Mini_NoAuto.ini 精简版 不带自动测速(与Github同步)",
+                "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini_Fallback.ini": "ACL4SSR_Online_Mini_Fallback.ini 精简版 带故障转移(与Github同步)",
+                "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini_MultiMode.ini": "ACL4SSR_Online_Mini_MultiMode.ini 精简版 自动测速、故障转移、负载均衡(与Github同步)",
+                "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini_MultiCountry.ini": "ACL4SSR_Online_Mini_MultiCountry.ini 精简版 带港美日国家(与Github同步)",
+                "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full.ini": "ACL4SSR_Online_Full 全分组 重度用户使用(与Github同步)",
+                "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_MultiMode.ini": "ACL4SSR_Online_Full_MultiMode.ini 全分组 多模式 重度用户使用(与Github同步)",
+                "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_NoAuto.ini": "ACL4SSR_Online_Full_NoAuto.ini 全分组 无自动测速 重度用户使用(与Github同步)",
+                "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_AdblockPlus.ini": "ACL4SSR_Online_Full_AdblockPlus 全分组 重度用户使用 更多去广告(与Github同步)",
+                "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_Netflix.ini": "ACL4SSR_Online_Full_Netflix 全分组 重度用户使用 奈飞全量(与Github同步)",
+                "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_Google.ini": "ACL4SSR_Online_Full_Google 全分组 重度用户使用 谷歌细分(与Github同步)"}
+            # update_dict = {unquote("/ACL4SSR_Online_Full_Mannix.ini"): "本地配置"}
+            redis_add_map(REDIS_KEY_PROXIES_MODEL, update_dict)
+            # 设定默认选择的模板
+            redis_add(REDIS_KEY_PROXIES_MODEL_CHOSEN, "ACL4SSR_Online 默认版 分组比较全(本地离线模板)")
+        except:
+            pass
 
 
 # 多线程写入A.m3u
@@ -320,11 +430,30 @@ def distribute_data(data, file, num_threads):
         t.join()
 
 
-# def check_live_streams(mapdata):
-#     cpu_count = multiprocessing.cpu_count()
-#     with ThreadPoolExecutor(max_workers=cpu_count) as executor:
-#         futures = [executor.submit(check_url, url) for url in mapdata.keys()]
-#     return {url: mapdata[url] for url, future in zip(mapdata.keys(), futures) if future.result()}
+def distribute_data_proxies(data, file, num_threads):
+    length = len(data)
+    # 计算每个线程处理的数据大小
+    chunk_size = (length + num_threads - 1) // num_threads
+    # 将数据切分为若干个块，每个块包含 chunk_size 个代理
+    chunks = [data[i:i + chunk_size] for i in range(0, length, chunk_size)]
+    # 创建一个任务队列，并向队列中添加任务
+    task_queue = queue.Queue()
+    for chunk in chunks:
+        task_queue.put(chunk)
+    # 创建线程池
+    threads = []
+    for i in range(num_threads):
+        t = threading.Thread(target=worker2, args=(task_queue, file))
+        t.start()
+        threads.append(t)
+    # 等待任务队列中的所有任务完成
+    task_queue.join()
+    # 向任务队列中添加 num_threads 个 None 值，以通知线程退出
+    for i in range(num_threads):
+        task_queue.put(None)
+    # 等待所有线程退出
+    for t in threads:
+        t.join()
 
 
 # 上传文件bytes格式规整
@@ -767,15 +896,629 @@ def formatdata_multithread(data, num_threads):
     executor.shutdown(wait=True)
     return my_dict
 
-    # my_dict = methodA(formatMultiThreadName, [result.splitlines(), 100, processDataMethodName])
-    # 定义方法A，接受一个函数名参数和一个参数列表
-    # def methodA(methodName, params):
-    #     # 使用eval()函数来执行传递进来的方法名对应的函数，并传递参数列表
-    #     result = eval(methodName + '(' + ', '.join(str(p) for p in params) + ')')
-    #     return result
+
+# # 节点去重复做不了，数据落库挺麻烦就不做了，节点转配置随缘，应该能命中一些简单的配置
+# def download_from_url(url):
+#     try:
+#         # 下载订阅链接内容
+#         response = requests.get(url, timeout=10)
+#         if response.status_code == 200:
+#             try:
+#                 content = base64.b64decode(response.content).decode('utf-8')
+#             except:
+#                 content = response.content.decode("utf-8")
+#         else:
+#             return None
+#         if content.startswith(
+#                 ("ss://", "ssr://", "vmess://", "vless://", "https://", "trojan://", "http://")):
+#             temp_dict = []
+#             mutil_proxie_methods(content, temp_dict)
+#             return temp_dict
+#         else:
+#             temp_dict = []
+#             multi_proxies_yaml(temp_dict, content)
+#             return temp_dict
+#     except Exception as e:
+#         print(f"下载或处理链接 {url} 出错：{e}")
+#         return None
+
+
+# 暂时不考虑自己写节点解析，重复造轮子很累，这个方法暂时不维护了，实际使用时BUG太多了
+# def download_proxies(SUBSCRIPTION_URLS):
+#     my_dict = []
+#     with concurrent.futures.ThreadPoolExecutor(max_workers=len(SUBSCRIPTION_URLS)) as executor:
+#         future_to_url = {executor.submit(download_from_url, url): url for url in SUBSCRIPTION_URLS}
+#         for future in concurrent.futures.as_completed(future_to_url):
+#             url = future_to_url[future]
+#             result = future.result()
+#             if result is not None and len(result) > 0:
+#                 my_dict.extend(result)
+#
+#     return my_dict
+
+
+# 随缘节点转换配置
+# def mutil_proxie_methods(content, my_dict):
+#     # 根据订阅链接格式处理不同类型的节点
+#     for proxy_str in content.splitlines():
+#         try:
+#             proxy_str = proxy_str.strip()
+#             if not proxy_str:
+#                 continue
+#             # 根据代理协议关键字来判断协议类型并解析代理配置
+#             if proxy_str.startswith("ss://"):
+#                 try:
+#                     method, password, server, port = base64.b64decode(proxy_str[5:]).decode().split(":")
+#                 except:
+#                     method, passwordandserver, port = base64.b64decode(proxy_str[5:]).decode().split(":")
+#                     password, server = passwordandserver.split("@")
+#                 new_dict = {
+#                     'name': proxy_str.split('#')[-1].strip(),
+#                     'server': server,
+#                     "type": "ss",
+#                     'port': port,
+#                     'cipher': method or "auto",
+#                     'password': password,
+#                 }
+#                 my_dict.append("- " + json.dumps(new_dict, ensure_ascii=False))
+#                 # my_dict.append(f"- {new_dict}\n")
+#             # 严格匹配openclash中ssr节点的格式
+#             elif proxy_str.startswith("ssr://"):
+#                 decoded = base64.b64decode(proxy_str[6:]).decode("utf-8")
+#                 parts = decoded.split(":")
+#                 server, port, protocol, method, obfs, password_and_params = parts[0], parts[1], parts[2], parts[3], \
+#                     parts[
+#                         4], parts[5]
+#                 password_and_params = password_and_params.split("/?")
+#                 password, params = password_and_params[0], password_and_params[1]
+#                 params_dict = dict(re.findall(r'(\w+)=([^\&]+)', params))
+#                 group = params_dict.get("group", "")
+#                 udp = params_dict.get("udp", "true").lower() == "true"
+#                 obfs_param = params_dict.get("obfsparam", "")
+#                 protocol_param = params_dict.get("protoparam", "")
+#                 remarks_base64 = params_dict.get("remarks", "").encode('utf-8')
+#                 remarks = base64.b64decode(remarks_base64).decode('utf-8') if remarks_base64 else ""
+#                 name = f"{remarks}-[{group}]"
+#                 new_dict = {
+#                     "name": name,
+#                     "server": server,
+#                     "type": "ssr",
+#                     "port": int(port),
+#                     "udp": udp,
+#                     "password": password,
+#                     "cipher": method,
+#                     "protocol": protocol,
+#                     "protocol_param": protocol_param,
+#                     "obfs": obfs,
+#                     "obfs_param": obfs_param
+#                 }
+#                 my_dict.append("- " + json.dumps(new_dict, ensure_ascii=False))
+#             # 严格匹配openclash中vmess节点的格式
+#             elif proxy_str.startswith("vmess://"):
+#                 vmess_data = base64.urlsafe_b64decode(proxy_str[8:]).decode()
+#                 vmess_json = json.loads(vmess_data)
+#                 new_dict = {
+#                     'server': vmess_json["add"] or vmess_json["address"] or vmess_json["server"] or vmess_json[
+#                         "host"] or vmess_json["remote"],
+#                     'port': vmess_json["port"] or vmess_json["server_port"],
+#                     'alterId': vmess_json["aid"] or vmess_json["alterId"] or "0",
+#                     'uuid': vmess_json["id"] or vmess_json["aid"] or vmess_json["uuid"],
+#                     'type': "vmess",
+#                     'sni': vmess_json["sni"] or vmess_json["host"] or "",
+#                     'cipher': vmess_json['cipher'] or vmess_json['method'] or vmess_json['security'] or vmess_json[
+#                         'encryption'] or "auto",
+#                     'name': vmess_json["ps"] or vmess_json["name"] or vmess_json["remarks"] or "unkown",
+#                     'protocol': vmess_json["v"] or "2",
+#                     'network': vmess_json["net"] or vmess_json["network"] or "ws",
+#                     'ws-path': vmess_json["ws-path"] or vmess_json["path"] or "",
+#                     'tls': vmess_json["tls"] or vmess_json["security"] or False,
+#                     'skip-cert-verify': vmess_json["skip-cert-verify"] or vmess_json["insecure"] or True,
+#                     'udp': vmess_json["udp"] or True,
+#                     'ws-opts': vmess_json["ws-opts"] or vmess_json["ws-headers"] or "",
+#                 }
+#                 my_dict.append("- " + json.dumps(new_dict, ensure_ascii=False))
+#             elif proxy_str.startswith("vless://"):
+#                 vless_data = base64.urlsafe_b64decode(proxy_str[8:]).decode()
+#                 vless_json = json.loads(vless_data)
+#                 new_dict = {
+#                     'name': vless_json.get('ps', ''),
+#                     'server': vless_json['add'],
+#                     'server_port': vless_json['port'],
+#                     'protocol': vless_json['net'],
+#                     'cipher': vless_json['type'],
+#                     'password': vless_json['id'],
+#                     'plugin': '',
+#                     'plugin_opts': {}
+#                 }
+#                 my_dict.append("- " + json.dumps(new_dict, ensure_ascii=False))
+#             elif proxy_str.startswith("https://"):
+#                 https_parts = proxy_str.split(":")
+#                 server, port = https_parts[1], https_parts[2].split("/")[0]
+#                 new_dict = {
+#                     'remarks': proxy_str.split('#')[-1].strip(),
+#                     'server': server,
+#                     'server_port': port,
+#                     'protocol': 'http',
+#                     'cipher': 'GET',
+#                     'password': '',
+#                     'plugin': '',
+#                     'plugin_opts': {},
+#                 }
+#                 my_dict.append("- " + json.dumps(new_dict, ensure_ascii=False))
+#             elif proxy_str.startswith("trojan://"):
+#                 # 解析链接中的各个部分
+#                 parsed_link = urlparse(proxy_str)
+#                 password = parsed_link.username  # 密码
+#                 server = parsed_link.hostname  # 服务器地址
+#                 port = parsed_link.port  # 端口号（如果未指定则为 None）
+#                 remarks = unquote(parsed_link.fragment)  # 备注信息（需进行 URL 解码）
+#                 new_dict = {
+#                     "name": remarks,
+#                     "server": server,
+#                     "type": "trojan",
+#                     "port": port or 443,
+#                     "password": password,
+#                     "udp": True,
+#                     "skip-cert-verify": True,
+#                 }
+#                 my_dict.append("- " + json.dumps(new_dict, ensure_ascii=False))
+#             else:
+#                 print(f"无法解析代理链接：{proxy_str}")
+#         except:
+#             pass
+
+
+# def str_constructor(loader, node):
+#     return loader.construct_scalar(node)
+#
+#
+# def dict_constructor(loader, node):
+#     data = {}
+#     yield data
+#     if isinstance(node, yaml.MappingNode):
+#         for key_node, value_node in node.value:
+#             key = loader.construct_object(key_node)
+#             # 如果遇到 `!<str>` 标签，使用自定义的 `str_constructor` 处理
+#             if key == "password":
+#                 value = loader.construct_scalar(value_node)
+#                 data[key] = str_constructor(loader, value_node)
+#             else:
+#                 value = loader.construct_object(value_node)
+#                 data[key] = value
+#
+#
+# def multi_proxies_yaml(my_dict, yaml_data):
+#     try:
+#         data = yaml.load(yaml_data, Loader=yaml.FullLoader)
+#     except:
+#         # 特殊标签
+#         yaml.add_constructor("!<str>", str_constructor)
+#         yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, dict_constructor)
+#         # 加载 YAML 数据
+#         data = yaml.load(yaml_data, Loader=yaml.FullLoader)
+#     if data:
+#         # 标准clash代理，提取proxies部分的字典，直接复制不做任何改变
+#         if 'proxies' in data:
+#             proxies = data['proxies']
+#             for proxy in proxies:
+#                 my_dict.append("- " + json.dumps(proxy, ensure_ascii=False))
+#                 # my_dict.append(f"- {proxy}\n")
+#         else:
+#             # 直接全部是代理配置字典，随缘提取
+#             proxy_list = json.loads(yaml_data)
+#             for proxy in proxy_list:
+#                 try:
+#                     new_dict = {}
+#                     for key, value in proxy.items():
+#                         if key == "name" or key == "remarks":
+#                             new_dict["name"] = value
+#                         elif key == "server" or key == "host" or key == "add" or key == "address":
+#                             new_dict["server"] = value
+#                         elif key == "port" or key == "server_port":
+#                             new_dict["port"] = value
+#                         elif key == "password":
+#                             new_dict["password"] = value
+#                         elif key == "type":
+#                             new_dict["type"] = value
+#                         elif key == "id" or key == "uuid":
+#                             new_dict["uuid"] = value
+#                         elif key == "cipher" or key == "method" or key == "security":
+#                             new_dict["cipher"] = value
+#                         elif key == "alterId" or key == "aid":
+#                             new_dict["alterId"] = value
+#                         elif key == "network" or key == "net":
+#                             new_dict["network"] = value
+#                         elif key == "flow":
+#                             new_dict["flow"] = value
+#                         else:
+#                             new_dict[key] = value
+#                     if 'type' not in new_dict:
+#                         new_dict["type"] = get_proxy_type(proxy)
+#                     if 'name' not in new_dict:
+#                         new_dict["name"] = "unkown"
+#                     my_dict.append("- " + json.dumps(new_dict, ensure_ascii=False))
+#                 except:
+#                     pass
+#
+#
+# def get_proxy_type(node):
+#     # 判断节点类型，返回代理类型字符串
+#     if "method" in node and "server_port" in node:
+#         if "protocol" in node and "obfs" in node:
+#             return "ssr"
+#         return "ss"
+#     elif "addr" in node:
+#         if "password" in node:
+#             return "trijan"
+#         if "aid" in node:
+#             return "vmess"
+#         return "vless"
+#     else:
+#         raise ValueError("Unknown proxy type")
+
+
+def getProxyButton():
+    button = redis_get(REDIS_KEY_PROXIES_TYPE)
+    if not button:
+        button = "button-1"
+        redis_add(REDIS_KEY_PROXIES_TYPE, "button-1")
+    return button.decode("utf-8")
+
+
+# 获取自己选择的代理服务器文件,要么本地url，要么远程配置url
+def getProxyServerChosen():
+    # 根据选择的代理配置名字获取代理配置的url
+    model = redis_get(REDIS_KEY_PROXIES_SERVER_CHOSEN)
+    if model:
+        model =model.decode("utf-8")
+        models = redis_get_map(REDIS_KEY_PROXIES_SERVER)
+        for url, name in models.items():
+            if model == name:
+                return url
+        return URL
+    else:
+        return URL
+
+
+# 获取自己选择的代理配置文件,要么本地url，要么远程配置url
+def getProxyModelChosen():
+    # 根据选择的代理配置名字获取代理配置的url
+    model = redis_get(REDIS_KEY_PROXIES_MODEL_CHOSEN)
+    if model:
+        model = model.decode("utf-8")
+        models = redis_get_map(REDIS_KEY_PROXIES_MODEL)
+        for url, name in models.items():
+            if model == name:
+                return url
+        return ""
+    else:
+        return ""
+
+
+# 代理转换配置字典生成
+def generateProxyConfig(urlStr):
+    params = {
+        "url": urlStr,
+        "insert": False,
+        "config": getProxyModelChosen()
+    }
+    button = getProxyButton()
+    # Clash新参数
+    if button == "button-1":
+        params["target"] = "clash"
+        params["new_name"] = True
+    # ClashR新参数
+    elif button == "button-2":
+        params["target"] = "clashr"
+        params["new_name"] = True
+    # Clash
+    elif button == "button-3":
+        params["target"] = "clash"
+    # Surge3
+    elif button == "button-4":
+        params["target"] = "surge"
+        params["ver"] = 3
+    # Surge4
+    elif button == "button-5":
+        params["target"] = "surge"
+        params["ver"] = 4
+    # Quantumult
+    elif button == "button-6":
+        params["target"] = "quan"
+    # Surfboard
+    elif button == "button-7":
+        params["target"] = "surfboard"
+    # Loon
+    elif button == "button-8":
+        params["target"] = "loon"
+    # SSAndroid
+    elif button == "button-9":
+        params["target"] = "sssub"
+    # V2Ray
+    elif button == "button-10":
+        params["target"] = "v2ray"
+    # ss
+    elif button == "button-11":
+        params["target"] = "ss"
+    # ssr
+    elif button == "button-12":
+        params["target"] = "ssr"
+    # ssd
+    elif button == "button-13":
+        params["target"] = "ssd"
+    # ClashR
+    elif button == "button-14":
+        params["target"] = "clashr"
+    # Surge2
+    elif button == "button-15":
+        params["target"] = "surge"
+        params["ver"] = 2
+    # QuantumultX
+    elif button == "button-16":
+        params["target"] = "quanx"
+    return params
+
+
+def chaorongheProxies(filename):
+    redis_dict = r.hgetall(REDIS_KEY_PROXIES_LINK)
+    urlStr = ""
+    for key in redis_dict.keys():
+        if urlStr != "":
+            urlStr += "|"
+        urlStr += key.decode('utf-8')
+    params = generateProxyConfig(urlStr)
+    # 本地配置   urllib.parse.quote("/path/to/clash/config_template.yaml"
+    # 网络配置   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online.ini"
+    response = requests.get(getProxyServerChosen(), params=params, timeout=180)
+    if response.status_code == 200:
+        # 订阅成功处理逻辑
+        # print(response.text)
+        if os.path.exists(filename):
+            os.remove(filename)
+        with open(filename, 'w'):
+            pass
+        write_content_to_file(response.content, filename, 100)
+        # # 下载 Clash 配置文件
+        # with open(filename, 'wb') as f:
+        #     f.write(response.content)
+        return "result"
+    else:
+        # 订阅失败处理逻辑
+        print("Error:", response.status_code, response.reason)
+        return "empty"
+
+
+# 线程池切分下载的内容写入本地
+def write_chunk(chunk, filename, offset):
+    with open(filename, 'r+b') as f:
+        f.seek(offset)
+        f.write(chunk)
+
+
+def write_file_thread(content, filename, start, end):
+    write_chunk(content[start:end], filename, start)
+
+
+def write_content_to_file(content, filename, num_threads):
+    # 计算每个线程要处理的数据块大小
+    chunk_size = len(content) // num_threads
+
+    # 创建字节流分割点列表
+    points = [i * chunk_size for i in range(num_threads)]
+    points.append(len(content))
+
+    # 定义线程任务
+    def worker(start, end):
+        write_file_thread(content, filename, start, end)
+
+    # 启动多个线程下载和写入数据块
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        future_tasks = []
+        for i in range(num_threads):
+            start, end = points[i], points[i + 1]
+            future = executor.submit(worker, start, end)
+            future_tasks.append(future)
+
+        for future in future_tasks:
+            future.result()
+
+
+def setRandomValueChosen(key1, key2):
+    redis_dict = r.hgetall(key1)
+    if redis_dict and len(redis_dict.items()) > 0:
+        for key, value in redis_dict.items():
+            redis_add(key2, value)
+            return
+    else:
+        if key1 == REDIS_KEY_PROXIES_SERVER:
+            initProxyServer()
+        elif key1 == REDIS_KEY_PROXIES_MODEL:
+            initProxyModel()
 
 
 ############################################################协议区####################################################
+
+
+# 选择目标转换的远程配置
+@app.route('/chooseProxyModel', methods=['POST'])
+def chooseProxyModel():
+    button = request.json.get('selected_button')
+    redis_add(REDIS_KEY_PROXIES_MODEL_CHOSEN, button)
+    return "success"
+
+
+# 选择目标转换的远程服务器
+@app.route('/chooseProxyServer', methods=['POST'])
+def chooseProxyServer():
+    button = request.json.get('selected_button')
+    redis_add(REDIS_KEY_PROXIES_SERVER_CHOSEN, button)
+    return "success"
+
+
+# 服务器启动时加载选择的配置
+@app.route('/getSelectedModel', methods=['GET'])
+def getSelectedModel():
+    model = redis_get(REDIS_KEY_PROXIES_MODEL_CHOSEN)
+    return jsonify({'button': model.decode("utf-8")})
+
+
+# 服务器启动时加载选择的服务器
+@app.route('/getSelectedServer', methods=['GET'])
+def getSelectedServer():
+    model = redis_get(REDIS_KEY_PROXIES_SERVER_CHOSEN)
+    return jsonify({'button': model.decode("utf-8")})
+
+
+# 拉取列表-代理模板
+@app.route('/reloadProxyModels', methods=['GET'])
+def reloadProxyModels():
+    return jsonify(redis_get_map(REDIS_KEY_PROXIES_SERVER))
+
+
+# 上传节点后端服务器json文件
+@app.route('/upload_json_file10', methods=['POST'])
+def upload_json_file10():
+    return upload_json(request, REDIS_KEY_PROXIES_SERVER, "/tmp_data10.json")
+
+
+# 删除全部节点后端服务器配置
+@app.route('/removem3ulinks10', methods=['GET'])
+def removem3ulinks10():
+    redis_del_map(REDIS_KEY_PROXIES_SERVER)
+    redis_del(REDIS_KEY_PROXIES_SERVER_CHOSEN)
+    initProxyServer()
+    return "success"
+
+
+# 导出节点远程订阅配置
+@app.route('/download_json_file10', methods=['GET'])
+def download_json_file10():
+    return download_json_file_base(REDIS_KEY_PROXIES_SERVER, "/app/temp_proxyserverlistlink.json",
+                                   "temp_proxyserverlistlink.json")
+
+
+# 删除节点远程后端服务器订阅
+@app.route('/deletewm3u10', methods=['POST'])
+def deletewm3u10():
+    returnJson = dellist(request, REDIS_KEY_PROXIES_SERVER)
+    setRandomValueChosen(REDIS_KEY_PROXIES_SERVER, REDIS_KEY_PROXIES_SERVER_CHOSEN)
+    return returnJson
+
+
+# 添加节点后端订阅
+@app.route('/addnewm3u10', methods=['POST'])
+def addnewm3u10():
+    return addlist(request, REDIS_KEY_PROXIES_SERVER)
+
+
+# 拉取全部后端服务器配置
+@app.route('/getall10', methods=['GET'])
+def getall10():
+    return jsonify(redis_get_map(REDIS_KEY_PROXIES_SERVER))
+
+
+# 删除全部节点远程配置订阅
+@app.route('/removem3ulinks9', methods=['GET'])
+def removem3ulinks9():
+    redis_del_map(REDIS_KEY_PROXIES_MODEL)
+    redis_del(REDIS_KEY_PROXIES_MODEL_CHOSEN)
+    initProxyModel()
+    return "success"
+
+
+# 导出节点远程订阅配置
+@app.route('/download_json_file9', methods=['GET'])
+def download_json_file9():
+    return download_json_file_base(REDIS_KEY_PROXIES_MODEL, "/app/temp_proxyremotemodellistlink.json",
+                                   "temp_proxyremotemodellistlink.json")
+
+
+# 删除节点远程配置订阅
+@app.route('/deletewm3u9', methods=['POST'])
+def deletewm3u9():
+    returnJson = dellist(request, REDIS_KEY_PROXIES_MODEL)
+    setRandomValueChosen(REDIS_KEY_PROXIES_MODEL, REDIS_KEY_PROXIES_MODEL_CHOSEN)
+    return returnJson
+
+
+# 添加节点远程配置订阅
+@app.route('/addnewm3u9', methods=['POST'])
+def addnewm3u9():
+    return addlist(request, REDIS_KEY_PROXIES_MODEL)
+
+
+# 拉取全部节点订阅远程配置
+@app.route('/getall9', methods=['GET'])
+def getall9():
+    return jsonify(redis_get_map(REDIS_KEY_PROXIES_MODEL))
+
+
+# 上传节点远程配置json文件
+@app.route('/upload_json_file9', methods=['POST'])
+def upload_json_file9():
+    return upload_json(request, REDIS_KEY_PROXIES_MODEL, "/tmp_data9.json")
+
+
+# 服务器启动时加载选择的节点类型id
+@app.route('/getSelectedButtonId', methods=['GET'])
+def getSelectedButtonId():
+    button = getProxyButton()
+    return jsonify({'button': button})
+
+
+# 选择目标转换的节点类型id
+@app.route('/chooseProxy', methods=['POST'])
+def chooseProxy():
+    button = request.json.get('selected_button')
+    redis_add(REDIS_KEY_PROXIES_TYPE, button)
+    return "success"
+
+
+# 删除全部节点订阅
+@app.route('/removem3ulinks8', methods=['GET'])
+def removem3ulinks8():
+    redis_del_map(REDIS_KEY_PROXIES_LINK)
+    return "success"
+
+
+# 删除节点订阅
+@app.route('/deletewm3u8', methods=['POST'])
+def deletewm3u8():
+    return dellist(request, REDIS_KEY_PROXIES_LINK)
+
+
+# 添加节点订阅
+@app.route('/addnewm3u8', methods=['POST'])
+def addnewm3u8():
+    return addlist(request, REDIS_KEY_PROXIES_LINK)
+
+
+# 拉取全部节点订阅
+@app.route('/getall8', methods=['GET'])
+def getall8():
+    return jsonify(redis_get_map(REDIS_KEY_PROXIES_LINK))
+
+
+# 导出节点订阅配置
+@app.route('/download_json_file8', methods=['GET'])
+def download_json_file8():
+    return download_json_file_base(REDIS_KEY_PROXIES_LINK, "/app/temp_proxieslistlink.json",
+                                   "temp_proxieslistlink.json")
+
+
+# 全部节点订阅链接超融合
+@app.route('/chaoronghe6', methods=['GET'])
+def chaoronghe6():
+    try:
+        return chaorongheProxies('/config.yaml')
+    except:
+        return "empty"
+
+
+# 上传节点配置json文件
+@app.route('/upload_json_file8', methods=['POST'])
+def upload_json_file8():
+    return upload_json(request, REDIS_KEY_PROXIES_LINK, "/tmp_data8.json")
 
 
 # 一键上传全部配置集合文件
@@ -850,7 +1593,7 @@ def chaoronghe5():
         return chaorongheBase(REDIS_KEY_WHITELIST_IPV6_LINK, 'process_data_abstract6',
                               REDIS_KEY_WHITELIST_IPV6_DATA, "/ipv6.txt")
     except:
-        pass
+        return "empty"
 
 
 # 导出ipv6订阅配置
@@ -910,7 +1653,7 @@ def chaoronghe4():
         return chaorongheBase(REDIS_KEY_WHITELIST_IPV4_LINK, 'process_data_abstract5',
                               REDIS_KEY_WHITELIST_IPV4_DATA, "/ipv4.txt")
     except:
-        pass
+        return "empty"
 
 
 # 导出ipv4订阅配置
@@ -942,7 +1685,7 @@ def chaoronghe3():
         # return chaorongheBase(REDIS_KEY_BLACKLIST_LINK, 'process_data_abstract2',
         #                       REDIS_KEY_BLACKLIST_DATA, "/C.txt")
     except:
-        pass
+        return "empty"
 
 
 # 删除全部白名单源订阅链接
@@ -1006,7 +1749,7 @@ def chaoronghe2():
         # return chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract2',
         #                       REDIS_KEY_WHITELIST_DATA, "/B.txt")
     except:
-        pass
+        return "empty"
 
 
 # 拉取全部白名单订阅
@@ -1131,7 +1874,7 @@ def chaoronghe():
         return chaorongheBase(REDIS_KEY_M3U_LINK, 'process_data_abstract', REDIS_KEY_M3U_DATA,
                               "/A.m3u")
     except:
-        pass
+        return "empty"
 
 
 # 导出直播源订阅配置

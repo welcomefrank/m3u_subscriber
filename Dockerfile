@@ -3,6 +3,8 @@ FROM nginx
 # 将当前目录下的 python 脚本复制到容器中的 /app 目录
 COPY main.py /app/main.py
 
+COPY ./*.ini /app/
+
 # 将前端文件复制到容器中的 /usr/share/nginx/html 目录
 COPY index.html /usr/share/nginx/html
 
@@ -13,15 +15,9 @@ COPY nginx.conf /etc/nginx/nginx.conf
 #COPY requirements.txt /app/requirements.txt
 RUN apt-get update && \
     apt-get install -y python3-pip redis-server && \
-    pip3 install --no-cache-dir flask redis requests aiohttp && \
+    pip3 install --no-cache-dir flask redis requests aiohttp pyyaml&& \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-
-#RUN apt-get update && \
-#    apt-get install -y python3-pip redis-server && \
-#    pip3 install --no-cache-dir flask redis requests && \
-#    apt-get clean && \
-#    rm -rf /var/lib/apt/lists/*
 
 # 暴露容器的端口
 EXPOSE 4395
