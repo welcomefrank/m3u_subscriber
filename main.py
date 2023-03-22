@@ -1169,7 +1169,7 @@ def getProxyButton():
         dict[REDIS_KEY_PROXIES_TYPE] = button
         redis_add(REDIS_KEY_PROXIES_TYPE, dict)
         return button
-    return dict[REDIS_KEY_PROXIES_TYPE].decode("utf-8")
+    return dict[REDIS_KEY_PROXIES_TYPE]
 
 
 # 获取自己选择的代理服务器文件,要么本地url，要么远程配置url
@@ -1177,7 +1177,7 @@ def getProxyServerChosen():
     # 根据选择的代理配置名字获取代理配置的url
     dict = redis_get_map(REDIS_KEY_PROXIES_SERVER_CHOSEN)
     if dict:
-        model = dict[REDIS_KEY_PROXIES_SERVER_CHOSEN].decode("utf-8")
+        model = dict[REDIS_KEY_PROXIES_SERVER_CHOSEN]
         models = redis_get_map(REDIS_KEY_PROXIES_SERVER)
         for url, name in models.items():
             if model == name:
@@ -1193,7 +1193,6 @@ def getProxyModelChosen():
     dict = redis_get_map(REDIS_KEY_PROXIES_MODEL_CHOSEN)
     if dict:
         model = dict[REDIS_KEY_PROXIES_MODEL_CHOSEN]
-        model = model.decode("utf-8")
         models = redis_get_map(REDIS_KEY_PROXIES_MODEL)
         for url, name in models.items():
             if model == name:
@@ -1373,14 +1372,14 @@ def chooseProxyServer():
 @app.route('/getSelectedModel', methods=['GET'])
 def getSelectedModel():
     dict = redis_get_map(REDIS_KEY_PROXIES_MODEL_CHOSEN)
-    return jsonify({'button': dict[REDIS_KEY_PROXIES_MODEL_CHOSEN].decode("utf-8")})
+    return jsonify({'button': dict[REDIS_KEY_PROXIES_MODEL_CHOSEN]})
 
 
 # 服务器启动时加载选择的服务器
 @app.route('/getSelectedServer', methods=['GET'])
 def getSelectedServer():
     dict = redis_get_map(REDIS_KEY_PROXIES_SERVER_CHOSEN)
-    return jsonify({'button': dict[REDIS_KEY_PROXIES_SERVER_CHOSEN].decode("utf-8")})
+    return jsonify({'button': dict[REDIS_KEY_PROXIES_SERVER_CHOSEN]})
 
 
 # 拉取列表-代理模板
