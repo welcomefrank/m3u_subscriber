@@ -291,7 +291,7 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
     result = download_files(results)
     # 格式优化
     # my_dict = formattxt_multithread(result.split("\n"), 100)
-    my_dict = formattxt_multithread(result.splitlines(), 10, processDataMethodName)
+    my_dict = formattxt_multithread(result.splitlines(), processDataMethodName)
     # my_dict = formattxt_multithread(result.splitlines(), 100)
     if len(my_dict) == 0:
         return "empty"
@@ -597,7 +597,8 @@ class MyConcreteClass(MyAbstractClass):
         pass
 
 
-def formattxt_multithread(data, num_threads, method_name):
+def formattxt_multithread(data, method_name):
+    num_threads = min(math.ceil(len(data) / 1000), 100)
     my_dict = {}
     # 计算每个线程处理的数据段大小
     step = math.ceil(len(data) / num_threads)
@@ -1861,7 +1862,7 @@ def savem3uarea():
     # 获取 HTML 页面发送的 POST 请求参数
     m3utext = request.json.get('m3utext')
     # 格式优化
-    my_dict = formattxt_multithread(m3utext.split("\n"), 10, 'process_data_abstract')
+    my_dict = formattxt_multithread(m3utext.split("\n"), 'process_data_abstract')
     redis_add_map(REDIS_KEY_M3U_DATA, my_dict)
     return jsonify({'addresult': "add success"})
 
