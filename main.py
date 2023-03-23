@@ -167,16 +167,28 @@ def upload_json(request, rediskey, filename):
         return jsonify({'success': False})
 
 
-# 定时器每隔半小时自动刷新订阅列表
-def timer_func():
+def execute(method_name, sleepSecond):
     while True:
-        chaoronghe()
-        chaoronghe2()
-        chaoronghe3()
-        chaoronghe4()
-        chaoronghe5()
-        chaoronghe6()
-        time.sleep(86400)  # 等待24小时
+        # 获取方法对象
+        method = globals().get(method_name)
+        # 判断方法是否存在
+        if not method:
+            break
+        # 执行方法
+        method()
+        time.sleep(sleepSecond)  # 等待24小时
+
+
+# # 定时器每隔半小时自动刷新订阅列表
+# def timer_func():
+#     while True:
+#         chaoronghe()
+#         chaoronghe2()
+#         chaoronghe3()
+#         chaoronghe4()
+#         chaoronghe5()
+#         chaoronghe6()
+#         time.sleep(86400)  # 等待24小时
 
 
 def check_file(m3u_dict):
@@ -207,10 +219,11 @@ def check_url(url):
 
 def fetch_url(url):
     try:
-        response = requests.get(url, timeout=5)
+        response = requests.get(url, timeout=30)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         m3u_string = response.text
         m3u_string += "\n"
+        #print(f"success to fetch URL: {url}")
         return m3u_string
     except requests.exceptions.RequestException as e:
         print(f"Failed to fetch URL: {url}")
@@ -248,17 +261,22 @@ def worker2(queue, file):
         queue.task_done()
 
 
-# len(urls)
 def download_files(urls):
-    try:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=len(urls)) as executor:
-            results = list(executor.map(fetch_url, urls))
-        # 等待所有任务执行完毕
-        executor.shutdown(wait=True)
-        # return results
-        return "".join(results)
-    except:
-        return ""
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        # 提交下载任务并获取future对象列表
+        future_to_url = {executor.submit(fetch_url, url): url for url in urls}
+        # 获取各个future对象的返回值并存储在字典中
+        results = []
+        for future in concurrent.futures.as_completed(future_to_url):
+            url = future_to_url[future]
+            try:
+                result = future.result()
+            except Exception as exc:
+                print('%r generated an exception: %s' % (url, exc))
+            else:
+                results.append(result)
+    # 将结果按照原始URL列表的顺序排序并返回它们
+    return "".join(results)
 
 
 # 添加一条数据进入字典
@@ -289,18 +307,18 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
     result = download_files(results)
     # 格式优化
     # my_dict = formattxt_multithread(result.split("\n"), 100)
-    my_dict = formattxt_multithread(result.splitlines(), 100, processDataMethodName)
+    my_dict = formattxt_multithread(result.splitlines(), 10, processDataMethodName)
     # my_dict = formattxt_multithread(result.splitlines(), 100)
     if len(my_dict) == 0:
         return "empty"
     old_dict = redis_get_map(redisKeyData)
     my_dict.update(old_dict)
     # 同步方法写出全部配置
-    distribute_data(my_dict, fileName, 100)
+    distribute_data(my_dict, fileName, 10)
     redis_add_map(redisKeyData, my_dict)
     # 异步缓慢检测出有效链接
     # asyncio.run(asynctask(my_dict))
-    if fileName == "/A.m3u":
+    if redisKeyLink == REDIS_KEY_M3U_LINK:
         redis_add_map(REDIS_KEY_M3U_EPG_LOGO, CHANNEL_LOGO)
         redis_add_map(REDIS_KEY_M3U_EPG_GROUP, CHANNEL_GROUP)
         thread = threading.Thread(target=check_file, args=(my_dict,))
@@ -1276,7 +1294,7 @@ def chaorongheProxies(filename):
     params = generateProxyConfig(urlStr)
     # 本地配置   urllib.parse.quote("/path/to/clash/config_template.yaml"
     # 网络配置   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online.ini"
-    response = requests.get(getProxyServerChosen(), params=params, timeout=180)
+    response = requests.get(getProxyServerChosen(), params=params, timeout=360)
     if response.status_code == 200:
         # 订阅成功处理逻辑
         # print(response.text)
@@ -1284,7 +1302,7 @@ def chaorongheProxies(filename):
             os.remove(filename)
         with open(filename, 'w'):
             pass
-        write_content_to_file(response.content, filename, 100)
+        write_content_to_file(response.content, filename, 10)
         # # 下载 Clash 配置文件
         # with open(filename, 'wb') as f:
         #     f.write(response.content)
@@ -1809,7 +1827,7 @@ def removem3ulinks():
 @app.route('/download_m3u_file', methods=['GET'])
 def download_m3u_file():
     my_dict = redis_get_map(REDIS_KEY_M3U_DATA)
-    distribute_data(my_dict, "/app/temp_m3u.m3u", 100)
+    distribute_data(my_dict, "/app/temp_m3u.m3u", 10)
     # 发送JSON文件到前端
     return send_file("temp_m3u.m3u", as_attachment=True)
 
@@ -1821,7 +1839,7 @@ def upload_m3u_file():
     # file_content = file.read().decode('utf-8')
     file_content = file.read()
     # file_content = read_file_with_encoding(file)
-    my_dict = formatdata_multithread(file_content.splitlines(), 100)
+    my_dict = formatdata_multithread(file_content.splitlines(), 10)
     # my_dict = formattxt_multithread(file_content.splitlines(), 100)
     redis_add_map(REDIS_KEY_M3U_DATA, my_dict)
     return '文件已上传'
@@ -1911,19 +1929,34 @@ def process_file():
     # file_content = file.read().decode('utf-8')
     file_content = file.read()
     # file_content = read_file_with_encoding(file)
-    my_dict = formatdata_multithread(file_content.splitlines(), 100)
+    my_dict = formatdata_multithread(file_content.splitlines(), 10)
     # my_dict = formattxt_multithread(file_content.splitlines(), 100)
     # my_dict = formatdata_multithread(file.readlines(), 100)
-    distribute_data(my_dict, "/app/tmp.m3u", 100)
+    distribute_data(my_dict, "/app/tmp.m3u", 10)
     return send_file("tmp.m3u", as_attachment=True)
 
 
 init_db()
 
 if __name__ == '__main__':
-    timer_thread = threading.Thread(target=timer_func)
-    timer_thread.start()
+    timer_thread1 = threading.Thread(target=execute, args=('chaoronghe', 86400))
+    timer_thread1.start()
+    timer_thread2 = threading.Thread(target=execute, args=('chaoronghe2', 86400))
+    timer_thread2.start()
+    timer_thread3 = threading.Thread(target=execute, args=('chaoronghe3', 86400))
+    timer_thread3.start()
+    timer_thread4 = threading.Thread(target=execute, args=('chaoronghe4', 86400))
+    timer_thread4.start()
+    timer_thread5 = threading.Thread(target=execute, args=('chaoronghe5', 86400))
+    timer_thread5.start()
+    timer_thread6 = threading.Thread(target=execute, args=('chaoronghe6', 10800))
+    timer_thread6.start()
     try:
         app.run(debug=True, host='0.0.0.0', port=5000)
     finally:
-        timer_thread.join()
+        timer_thread1.join()
+        timer_thread2.join()
+        timer_thread3.join()
+        timer_thread4.join()
+        timer_thread5.join()
+        timer_thread6.join()
