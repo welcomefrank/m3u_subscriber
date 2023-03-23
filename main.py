@@ -15,7 +15,7 @@ import redis
 import requests
 # import base64
 import time
-# from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse, unquote
 # import yaml
 from flask import Flask, jsonify, request, send_file, render_template
 
@@ -41,6 +41,8 @@ REDIS_KEY_DOMAIN_DATA = "whitedomain"
 REDIS_KEY_BLACKLIST_LINK = "blacklistlink"
 # 黑名单adguardhome
 REDIS_KEY_BLACKLIST_DATA = "blacklistdata"
+# 白名单adguardhome-m3u
+REDIS_KEY_WHITELIST_M3U_DATA = "whitelistm3udata"
 # 黑名单openclash-fallback-filter-domain
 REDIS_KEY_BLACKLIST_OPENCLASH_FALLBACK_FILTER_DOMAIN_DATA = "blacklistopfallbackfilterdomaindata"
 # 黑名单blackdomain
@@ -98,6 +100,8 @@ defalutname = "佚名"
 
 # 订阅模板转换服务器地址API
 URL = "http://192.168.5.1:25500/sub"
+# m3u下载处理时提取直播源域名在adguardhome放行，只放行m3u域名不管分流
+white_list_adguardhome = {}
 
 
 @app.route('/')
@@ -193,9 +197,9 @@ async def download_url(session, url, value):
 
 
 async def asynctask(m3u_dict):
-    connector = aiohttp.TCPConnector(limit=100) # 创建 TCP 连接池，限制并发数为 100
-    async with aiohttp.ClientSession(connector=connector) as session: # 将连接池传递给 ClientSession
-    #async with aiohttp.ClientSession() as session:
+    connector = aiohttp.TCPConnector(limit=100)  # 创建 TCP 连接池，限制并发数为 100
+    async with aiohttp.ClientSession(connector=connector) as session:  # 将连接池传递给 ClientSession
+        # async with aiohttp.ClientSession() as session:
         tasks = []
         for url, value in m3u_dict.items():
             task = asyncio.create_task(download_url(session, url, value))
@@ -290,6 +294,11 @@ def addlist(request, rediskey):
     return jsonify({'addresult': "add success"})
 
 
+def writeTvList():
+    distribute_data(white_list_adguardhome, "/tvlist.txt", 10)
+    white_list_adguardhome.clear()
+
+
 def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
     results = redis_get_map_keys(redisKeyLink)
     result = download_files(results)
@@ -301,9 +310,14 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         return "empty"
     old_dict = redis_get_map(redisKeyData)
     my_dict.update(old_dict)
+    redis_add_map(redisKeyData, my_dict)
+    # 是m3u的情况要维护一下adguardhome
+    if processDataMethodName == 'process_data_abstract':
+        # 同步方法写出全部配置
+        thread = threading.Thread(target=writeTvList)
+        thread.start()
     # 同步方法写出全部配置
     distribute_data(my_dict, fileName, 10)
-    redis_add_map(redisKeyData, my_dict)
     # 异步缓慢检测出有效链接
     # asyncio.run(asynctask(my_dict))
     if redisKeyLink == REDIS_KEY_M3U_LINK:
@@ -726,6 +740,17 @@ def process_data_domain_dnsmasq(data, index, step, my_dict):
                 my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + "*" + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
 
 
+def updateAdguardhomeWithelistForM3u(url):
+    parsed_url = urlparse(url)
+    domain = parsed_url.netloc.split(':')[0] if ':' in parsed_url.netloc else parsed_url.netloc  # 提取IP地址或域名
+    if domain.replace('.', '').isnumeric():  # 判断是否为IP地址
+        return
+    else:
+        # 是域名，但不知道是国内还是国外域名
+        white_list_adguardhome["@@||" + domain + "^"] = ""
+    # 是ip
+
+
 # 字符串内容处理-m3u
 def process_data(data, index, step, my_dict):
     end_index = min(index + step, len(data))
@@ -748,9 +773,11 @@ def process_data(data, index, step, my_dict):
                     continue
                 if name:
                     my_dict[searchurl] = update_epg_by_name(name)
+                    updateAdguardhomeWithelistForM3u(searchurl)
                     # my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
                 else:
                     my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
+                    updateAdguardhomeWithelistForM3u(searchurl)
             # 匹配格式：频道，url
             elif re.match(r"^[^#].*，(http|rtsp|rtmp)", line):
                 name, url = line.split("，", 1)
@@ -759,9 +786,11 @@ def process_data(data, index, step, my_dict):
                     continue
                 if name:
                     my_dict[searchurl] = update_epg_by_name(name)
+                    updateAdguardhomeWithelistForM3u(searchurl)
                     # my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
                 else:
                     my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
+                    updateAdguardhomeWithelistForM3u(searchurl)
         # http|rtsp|rtmp开始，跳过P2p
         elif not line.encode().startswith(b"P2p"):
             searchurl = line
@@ -770,21 +799,25 @@ def process_data(data, index, step, my_dict):
             # 第一行的无名直播
             if i == 0 and index == 0:
                 my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
+                updateAdguardhomeWithelistForM3u(searchurl)
                 continue
             preline = data[i - 1].strip()
             # 没有名字
             if not preline:
                 my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
+                updateAdguardhomeWithelistForM3u(searchurl)
                 continue
             # 不是名字
             if not preline.encode().startswith(b"#EXTINF"):
                 my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
+                updateAdguardhomeWithelistForM3u(searchurl)
                 continue
             # 有裸名字或者#EXTINF开始但是没有tvg-name\tvg-id\group-title
             else:
                 # if not any(substring in line for substring in ["tvg-name", "tvg-id", "group-title"]):
                 # my_dict[searchurl] = f'{preline}\n'
                 my_dict[searchurl] = update_epg(preline)
+                updateAdguardhomeWithelistForM3u(searchurl)
                 continue
 
 
