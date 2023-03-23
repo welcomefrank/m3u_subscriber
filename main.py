@@ -299,8 +299,17 @@ def writeTvList():
     white_list_adguardhome.clear()
 
 
+def updateAdguardhomeWithelistForM3us(urls):
+    for url in urls:
+        updateAdguardhomeWithelistForM3u(url.decode("utf-8"))
+
+
 def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
     results = redis_get_map_keys(redisKeyLink)
+    ism3u = processDataMethodName == 'process_data_abstract'
+    if ism3u:
+        thread = threading.Thread(target=updateAdguardhomeWithelistForM3us, args=(results,))
+        thread.start()
     result = download_files(results)
     # 格式优化
     # my_dict = formattxt_multithread(result.split("\n"), 100)
@@ -312,7 +321,7 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
     my_dict.update(old_dict)
     redis_add_map(redisKeyData, my_dict)
     # 是m3u的情况要维护一下adguardhome
-    if processDataMethodName == 'process_data_abstract':
+    if ism3u:
         # 同步方法写出全部配置
         thread = threading.Thread(target=writeTvList)
         thread.start()
@@ -320,7 +329,7 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
     distribute_data(my_dict, fileName, 10)
     # 异步缓慢检测出有效链接
     # asyncio.run(asynctask(my_dict))
-    if redisKeyLink == REDIS_KEY_M3U_LINK:
+    if ism3u:
         redis_add_map(REDIS_KEY_M3U_EPG_LOGO, CHANNEL_LOGO)
         redis_add_map(REDIS_KEY_M3U_EPG_GROUP, CHANNEL_GROUP)
         thread = threading.Thread(target=check_file, args=(my_dict,))
