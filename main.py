@@ -186,12 +186,16 @@ async def download_url(session, url, value):
                 # 如果url有效，将它和值写入m3u文件
                 with open('/alive.m3u', 'a') as f:
                     f.write(f'{value}{url}\n')
-    except:
-        pass
+    except aiohttp.ClientSSLError as ssl_err:
+        print(f"SSL Error occurred while downloading {url}: {ssl_err}")
+    except Exception as e:
+        print(f"Error occurred while downloading {url}: {e}")
 
 
 async def asynctask(m3u_dict):
-    async with aiohttp.ClientSession() as session:
+    connector = aiohttp.TCPConnector(limit=100) # 创建 TCP 连接池，限制并发数为 100
+    async with aiohttp.ClientSession(connector=connector) as session: # 将连接池传递给 ClientSession
+    #async with aiohttp.ClientSession() as session:
         tasks = []
         for url, value in m3u_dict.items():
             task = asyncio.create_task(download_url(session, url, value))
