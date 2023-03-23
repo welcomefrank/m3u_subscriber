@@ -420,7 +420,7 @@ def initProxyModel():
             tmp_dict = {}
             tmp_dict[REDIS_KEY_PROXIES_MODEL_CHOSEN] = "ACL4SSR_Online 默认版 分组比较全(本地离线模板)"
             # 设定默认选择的模板
-            redis_add(REDIS_KEY_PROXIES_MODEL_CHOSEN, tmp_dict)
+            redis_add_map(REDIS_KEY_PROXIES_MODEL_CHOSEN, tmp_dict)
         except:
             pass
 
@@ -1216,7 +1216,7 @@ def getProxyButton():
         button = "button-1"
         dict = {}
         dict[REDIS_KEY_PROXIES_TYPE] = button
-        redis_add(REDIS_KEY_PROXIES_TYPE, dict)
+        redis_add_map(REDIS_KEY_PROXIES_TYPE, dict)
         return button
     return dict[REDIS_KEY_PROXIES_TYPE]
 
@@ -1420,15 +1420,28 @@ def chooseProxyServer():
 # 服务器启动时加载选择的配置
 @app.route('/getSelectedModel', methods=['GET'])
 def getSelectedModel():
-    dict = redis_get_map(REDIS_KEY_PROXIES_MODEL_CHOSEN)
-    return jsonify({'button': dict[REDIS_KEY_PROXIES_MODEL_CHOSEN]})
+    try:
+        dict = redis_get_map(REDIS_KEY_PROXIES_MODEL_CHOSEN)
+        return jsonify({'button': dict[REDIS_KEY_PROXIES_MODEL_CHOSEN]})
+    except:
+        tmp_dict = {}
+        tmp_dict[REDIS_KEY_PROXIES_MODEL_CHOSEN] = "ACL4SSR_Online 默认版 分组比较全(本地离线模板)"
+        # 设定默认选择的模板
+        redis_add_map(REDIS_KEY_PROXIES_MODEL_CHOSEN, tmp_dict)
+        return jsonify({'button': tmp_dict[REDIS_KEY_PROXIES_MODEL_CHOSEN]})
 
 
 # 服务器启动时加载选择的服务器
 @app.route('/getSelectedServer', methods=['GET'])
 def getSelectedServer():
-    dict = redis_get_map(REDIS_KEY_PROXIES_SERVER_CHOSEN)
-    return jsonify({'button': dict[REDIS_KEY_PROXIES_SERVER_CHOSEN]})
+    try:
+        dict = redis_get_map(REDIS_KEY_PROXIES_SERVER_CHOSEN)
+        return jsonify({'button': dict[REDIS_KEY_PROXIES_SERVER_CHOSEN]})
+    except:
+        tmp_dict = {}
+        tmp_dict[REDIS_KEY_PROXIES_SERVER_CHOSEN] = "本地服务器"
+        redis_add_map(REDIS_KEY_PROXIES_SERVER_CHOSEN, tmp_dict)
+        return jsonify({'button': tmp_dict[REDIS_KEY_PROXIES_SERVER_CHOSEN]})
 
 
 # 拉取列表-代理模板
