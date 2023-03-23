@@ -179,16 +179,24 @@ def execute(method_name, sleepSecond):
         time.sleep(sleepSecond)  # 等待24小时
 
 
-# # 定时器每隔半小时自动刷新订阅列表
-# def timer_func():
-#     while True:
-#         chaoronghe()
-#         chaoronghe2()
-#         chaoronghe3()
-#         chaoronghe4()
-#         chaoronghe5()
-#         chaoronghe6()
-#         time.sleep(86400)  # 等待24小时
+async def download_url(session, url, value):
+    try:
+        async with session.get(url) as resp:
+            if resp.status == 200:
+                # 如果url有效，将它和值写入m3u文件
+                with open('/alive.m3u', 'a') as f:
+                    f.write(f'{value}{url}\n')
+    except:
+        pass
+
+
+async def asynctask(m3u_dict):
+    async with aiohttp.ClientSession() as session:
+        tasks = []
+        for url, value in m3u_dict.items():
+            task = asyncio.create_task(download_url(session, url, value))
+            tasks.append(task)
+        await asyncio.gather(*tasks)
 
 
 def check_file(m3u_dict):
@@ -206,24 +214,13 @@ def check_file(m3u_dict):
         pass
 
 
-def check_url(url):
-    try:
-        resp = requests.get(url, timeout=5)
-        if resp.status_code == 200:
-            return True
-        else:
-            return False
-    except:
-        return False
-
-
 def fetch_url(url):
     try:
         response = requests.get(url, timeout=30)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         m3u_string = response.text
         m3u_string += "\n"
-        #print(f"success to fetch URL: {url}")
+        # print(f"success to fetch URL: {url}")
         return m3u_string
     except requests.exceptions.RequestException as e:
         print(f"Failed to fetch URL: {url}")
@@ -287,19 +284,6 @@ def addlist(request, rediskey):
     my_dict = {addurl: name}
     redis_add_map(rediskey, my_dict)
     return jsonify({'addresult': "add success"})
-
-
-async def asynctask(dict):
-    async with aiohttp.ClientSession() as session:
-        for url, value in dict.items():
-            try:
-                async with session.get(url) as resp:
-                    if resp.status == 200:
-                        # 如果url有效，将它和值写入m3u文件
-                        with open('/alive.m3u', 'a') as f:
-                            f.write(f'{value}{url}\n')
-            except:
-                pass
 
 
 def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
