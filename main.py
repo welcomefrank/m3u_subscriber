@@ -227,7 +227,7 @@ def check_file(m3u_dict):
 def checkbytes(url):
     # 如果是bytes类型，则转换成str类型
     if isinstance(url, bytes):
-        url = url.decode('utf-8')
+        url = url.decode()
 
     # 如果是str类型，则返回元数据
     if isinstance(url, str):
@@ -235,16 +235,15 @@ def checkbytes(url):
 
 
 def fetch_url(url):
-    url = checkbytes(url)
     try:
-        response = requests.get(url, timeout=30)
+        response = requests.get(url, timeout=5)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         m3u_string = response.text
         m3u_string += "\n"
         # print(f"success to fetch URL: {url}")
         return m3u_string
     except requests.exceptions.SSLError:
-        response = requests.get(url, timeout=30, verify=False)
+        response = requests.get(url, timeout=5, verify=False)
         m3u_string = response.text
         m3u_string += "\n"
         return m3u_string
