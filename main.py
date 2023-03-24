@@ -80,7 +80,7 @@ BLACKLIST_ADGUARDHOME_FORMATION = "240.0.0.0 "
 # dnsmasq白名单前缀
 BLACKLIST_DNSMASQ_FORMATION_LEFT = "server=/"
 # dnsmasq白名单后缀
-BLACKLIST_DNSMASQ_FORMATION_right = "/114.114.114.114"
+BLACKLIST_DNSMASQ_FORMATION_right = "/127.0.0.1#5336"
 # 用于匹配纯粹域名的正则表达式
 domain_regex = r'^[a-zA-Z0-9]+([\-\.]{1}[a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$'
 # 用于匹配泛化匹配的域名规则的正则表达式
@@ -102,6 +102,8 @@ defalutname = "佚名"
 URL = "http://192.168.5.1:25500/sub"
 # m3u下载处理时提取直播源域名在adguardhome放行，只放行m3u域名不管分流
 white_list_adguardhome = {}
+# openclash-nameserver-policy
+white_list_nameserver_policy = {}
 
 
 @app.route('/')
@@ -222,7 +224,18 @@ def check_file(m3u_dict):
         pass
 
 
+def checkbytes(url):
+    # 如果是bytes类型，则转换成str类型
+    if isinstance(url, bytes):
+        url = url.decode('utf-8')
+
+    # 如果是str类型，则返回元数据
+    if isinstance(url, str):
+        return url
+
+
 def fetch_url(url):
+    url = checkbytes(url)
     try:
         response = requests.get(url, timeout=30)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
@@ -230,10 +243,15 @@ def fetch_url(url):
         m3u_string += "\n"
         # print(f"success to fetch URL: {url}")
         return m3u_string
+    except requests.exceptions.SSLError:
+        response = requests.get(url, timeout=30, verify=False)
+        m3u_string = response.text
+        m3u_string += "\n"
+        return m3u_string
+    except requests.exceptions.Timeout:
+        print("timeout error, try to get data with longer timeout:" + url)
     except requests.exceptions.RequestException as e:
-        print(f"Failed to fetch URL: {url}")
-        print(e)
-        return ""
+        print("other error: " + url, e)
 
 
 def write_to_file(data, file):
@@ -299,6 +317,11 @@ def writeTvList():
     white_list_adguardhome.clear()
 
 
+def writeOpenclashNameServerPolicy():
+    distribute_data(white_list_nameserver_policy, "/nameServerPolicy.txt", 10)
+    white_list_nameserver_policy.clear()
+
+
 def updateAdguardhomeWithelistForM3us(urls):
     for url in urls:
         updateAdguardhomeWithelistForM3u(url.decode("utf-8"))
@@ -320,7 +343,7 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
     old_dict = redis_get_map(redisKeyData)
     my_dict.update(old_dict)
     redis_add_map(redisKeyData, my_dict)
-    # 是m3u的情况要维护一下adguardhome
+    # 是m3u的情况要维护一下adguardhome，放行直播源域名
     if ism3u:
         # 同步方法写出全部配置
         thread = threading.Thread(target=writeTvList)
@@ -333,6 +356,10 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         redis_add_map(REDIS_KEY_M3U_EPG_LOGO, CHANNEL_LOGO)
         redis_add_map(REDIS_KEY_M3U_EPG_GROUP, CHANNEL_GROUP)
         thread = threading.Thread(target=check_file, args=(my_dict,))
+        thread.start()
+    if processDataMethodName == 'process_data_abstract3':
+        # 生成白名单时顺带生成Nameserver-Policy
+        thread = threading.Thread(target=writeOpenclashNameServerPolicy)
         thread.start()
     return "result"
 
@@ -743,10 +770,19 @@ def process_data_domain_dnsmasq(data, index, step, my_dict):
         # 判断是不是域名或者*.域名
         if re.match(domain_regex, line) or re.match(wildcard_regex, line):
             my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
+            updateOpenclashNameServerPolicy(line)
             if not line.encode().startswith((b"www", b".", b"*")):
                 my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + "*." + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
+                updateOpenclashNameServerPolicy("*." + line)
+                updateOpenclashNameServerPolicy("+." + line)
             if line.encode().startswith(b"."):
                 my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + "*" + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
+                updateOpenclashNameServerPolicy("*" + line)
+                updateOpenclashNameServerPolicy("+" + line)
+
+
+def updateOpenclashNameServerPolicy(url):
+    white_list_nameserver_policy["'" + url + "': '127.0.0.1:5336'"] = ""
 
 
 def updateAdguardhomeWithelistForM3u(url):
@@ -1758,7 +1794,7 @@ def chaoronghe3():
     try:
         return chaorongheBase(REDIS_KEY_BLACKLIST_LINK, 'process_data_abstract7',
                               REDIS_KEY_BLACKLIST_OPENCLASH_FALLBACK_FILTER_DOMAIN_DATA,
-                              "/openclash-fallback-filter-domain.txt")
+                              "/openclash-fallback-filter-domain.conf")
         # return chaorongheBase(REDIS_KEY_BLACKLIST_LINK, 'process_data_abstract2',
         #                       REDIS_KEY_BLACKLIST_DATA, "/C.txt")
     except:
@@ -1822,7 +1858,7 @@ def chaoronghe2():
         # chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract4',
         #                REDIS_KEY_DOMAIN_DATA, "/WhiteDomain.txt")
         return chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract3',
-                              REDIS_KEY_WHITELIST_DATA_DNSMASQ, "/BDnsmasq.txt")
+                              REDIS_KEY_WHITELIST_DATA_DNSMASQ, "/BDnsmasq.conf")
         # return chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract2',
         #                       REDIS_KEY_WHITELIST_DATA, "/B.txt")
     except:
