@@ -9,7 +9,6 @@ import queue
 import re
 import threading
 from concurrent.futures import ThreadPoolExecutor
-
 import aiohttp
 import redis
 import requests
@@ -35,14 +34,8 @@ REDIS_KEY_WHITELIST_LINK = "whitelistlink"
 REDIS_KEY_WHITELIST_DATA = "whitelistdata"
 # 白名单dnsmasq
 REDIS_KEY_WHITELIST_DATA_DNSMASQ = "whitelistdatadnsmasq"
-# 白名单whitedomain
-REDIS_KEY_DOMAIN_DATA = "whitedomain"
 # 黑名单下载链接
 REDIS_KEY_BLACKLIST_LINK = "blacklistlink"
-# 黑名单adguardhome
-REDIS_KEY_BLACKLIST_DATA = "blacklistdata"
-# 白名单adguardhome-m3u
-REDIS_KEY_WHITELIST_M3U_DATA = "whitelistm3udata"
 # 黑名单openclash-fallback-filter-domain
 REDIS_KEY_BLACKLIST_OPENCLASH_FALLBACK_FILTER_DOMAIN_DATA = "blacklistopfallbackfilterdomaindata"
 # 黑名单blackdomain
@@ -102,8 +95,15 @@ defalutname = "佚名"
 URL = "http://192.168.5.1:25500/sub"
 # m3u下载处理时提取直播源域名在adguardhome放行，只放行m3u域名不管分流
 white_list_adguardhome = {}
-# openclash-nameserver-policy
+# 白名单总缓存，数据大量，是全部规则缓存
 white_list_nameserver_policy = {}
+# 黑名单总缓存，数据大量，是全部规则缓存
+black_list_nameserver_policy = {}
+
+# 下载的域名白名单存储到redis服务器里
+REDIS_KEY_WHITE_DOMAINS = "whitedomains"
+# 下载的域名黑名单存储到redis服务器里
+REDIS_KEY_BLACK_DOMAINS = "blackdomains"
 
 
 @app.route('/')
@@ -317,8 +317,17 @@ def writeTvList():
 
 
 def writeOpenclashNameServerPolicy():
-    distribute_data(white_list_nameserver_policy, "/nameServerPolicy.txt", 10)
-    white_list_nameserver_policy.clear()
+    if white_list_nameserver_policy and len(white_list_nameserver_policy) > 0:
+        redis_add_map(REDIS_KEY_WHITE_DOMAINS, white_list_nameserver_policy)
+        distribute_data(white_list_nameserver_policy, "/whiteList.txt", 10)
+        white_list_nameserver_policy.clear()
+
+
+def writeBlackList():
+    if black_list_nameserver_policy and len(black_list_nameserver_policy) > 0:
+        redis_add_map(REDIS_KEY_BLACK_DOMAINS, black_list_nameserver_policy)
+        distribute_data(black_list_nameserver_policy, "/blackList.txt", 10)
+        black_list_nameserver_policy.clear()
 
 
 def updateAdguardhomeWithelistForM3us(urls):
@@ -357,8 +366,12 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         thread = threading.Thread(target=check_file, args=(my_dict,))
         thread.start()
     if processDataMethodName == 'process_data_abstract3':
-        # 生成白名单时顺带生成Nameserver-Policy
+        # 生成白名单顺便写入redis
         thread = threading.Thread(target=writeOpenclashNameServerPolicy)
+        thread.start()
+    if processDataMethodName == 'process_data_abstract7':
+        # 生成黑名单顺便写入redis
+        thread = threading.Thread(target=writeBlackList)
         thread.start()
     return "result"
 
@@ -666,6 +679,10 @@ def formattxt_multithread(data, method_name):
     return my_dict
 
 
+def updateBlackList(url):
+    black_list_nameserver_policy[url] = ""
+
+
 # 字符串内容处理-域名转openclash-fallbackfilter-domain
 def process_data_domain_openclash_fallbackfilter(data, index, step, my_dict):
     end_index = min(index + step, len(data))
@@ -675,19 +692,25 @@ def process_data_domain_openclash_fallbackfilter(data, index, step, my_dict):
             continue
         # 判断是不是+.域名
         if re.match(wildcard_regex2, line):
+            updateBlackList((line.encode().substring(2)).decode())
             my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
         # 判断是不是域名
         elif re.match(domain_regex, line):
             my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
             if not line.encode().startswith(b"www"):
+                updateBlackList(line)
                 my_dict[
                     OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "+." + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+            else:
+                updateBlackList((line.encode().substring(4)).decode())
         # 判断是不是*.域名
         elif re.match(wildcard_regex, line):
+            updateBlackList((line.encode().substring(2)).decode())
             my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line[2:] + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
             my_dict[
                 OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "+." + line[2:] + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
         elif line.encode().startswith(b"."):
+            updateBlackList((line.encode().substring(1)).decode())
             my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "+" + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
 
 
@@ -769,19 +792,21 @@ def process_data_domain_dnsmasq(data, index, step, my_dict):
         # 判断是不是域名或者*.域名
         if re.match(domain_regex, line) or re.match(wildcard_regex, line):
             my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
-            updateOpenclashNameServerPolicy(line)
+            if re.match(domain_regex, line):
+                updateOpenclashNameServerPolicy(line)
+            if line.encode().startswith((b"*.", b"+.")):
+                updateOpenclashNameServerPolicy((line.encode().substring(2)).decode())
+            if line.encode().startswith(b"www."):
+                updateOpenclashNameServerPolicy((line.encode().substring(4)).decode())
             if not line.encode().startswith((b"www", b".", b"*")):
                 my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + "*." + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
-                updateOpenclashNameServerPolicy("*." + line)
-                updateOpenclashNameServerPolicy("+." + line)
             if line.encode().startswith(b"."):
+                updateOpenclashNameServerPolicy((line.encode().substring(1)).encode())
                 my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + "*" + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
-                updateOpenclashNameServerPolicy("*" + line)
-                updateOpenclashNameServerPolicy("+" + line)
 
 
 def updateOpenclashNameServerPolicy(url):
-    white_list_nameserver_policy["'" + url + "': '127.0.0.1:5336'"] = ""
+    white_list_nameserver_policy[url] = ""
 
 
 def updateAdguardhomeWithelistForM3u(url):
