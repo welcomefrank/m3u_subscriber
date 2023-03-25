@@ -1,4 +1,6 @@
 import socket
+import threading
+import time
 
 import dnslib
 
@@ -6,19 +8,21 @@ import redis
 
 r = redis.Redis(host='localhost', port=6379)
 # 白名单总命中缓存规则，数据中等，是实际命中的规则缓存
-white_list_tmp_policy = set()
+white_list_tmp_policy = {}
 # 白名单总命中缓存，数据最少，是实际访问的域名缓存
-white_list_tmp_cache = set()
+white_list_tmp_cache = {}
 # 未知域名访问缓存记录
-unkown_list_tmp_cache = set()
+unkown_list_tmp_cache = {}
 # 下载的域名白名单存储到redis服务器里
 REDIS_KEY_WHITE_DOMAINS = "whitedomains"
 # 下载的域名黑名单存储到redis服务器里
 REDIS_KEY_BLACK_DOMAINS = "blackdomains"
 # 黑名单总命中缓存规则，数据中等，是实际命中的规则缓存
-black_list_tmp_policy = set()
+black_list_tmp_policy = {}
 # 黑名单总命中缓存，数据最少，是实际访问的域名缓存
-black_list_tmp_cache = set()
+black_list_tmp_cache = {}
+white_list_nameserver_policy = {}
+black_list_policy = {}
 
 
 # 规则：先查unkown_list_tmp_cache，有的话转发5335,
@@ -32,38 +36,41 @@ black_list_tmp_cache = set()
 
 # 检测域名是否在全部黑名单域名策略  是-true  不是-false
 def inBlackListPolicy(domain_name_str):
-    black_list_policy = redis_get_map(REDIS_KEY_BLACK_DOMAINS)
+    if len(black_list_policy) == 0:
+        initBlackList()
     if black_list_policy:
         for key in black_list_policy.keys():
             # 新域名在全部规则里有类似域名，更新缓存与策略缓存
             if key in domain_name_str:
-                black_list_tmp_cache.add(domain_name_str)
-                black_list_tmp_policy.add(key)
+                black_list_tmp_cache[domain_name_str] = ""
+                black_list_tmp_policy[key] = ""
                 return True
             # 缓存域名在新域名里有匹配
             if domain_name_str in key:
-                black_list_tmp_cache.add(domain_name_str)
-                black_list_tmp_policy.add(key)
+                black_list_tmp_cache[domain_name_str] = ""
+                black_list_tmp_policy[key] = ""
                 return True
     return False
+
 
 # 检测域名是否在记录的黑名单域名策略缓存  是-true  不是-false
 def inBlackListPolicyCache(domain_name_str):
     # 在今日已经命中的规则里查找
-    for vistedDomain in black_list_tmp_policy:
+    for vistedDomain in black_list_tmp_policy.keys():
         # 新域名在规则里有类似域名，更新black_list_tmp_cache
         if vistedDomain in domain_name_str:
-            black_list_tmp_cache.add(domain_name_str)
+            black_list_tmp_cache[domain_name_str] = ""
             return True
         # 缓存域名在新域名里有匹配
         if domain_name_str in vistedDomain:
-            black_list_tmp_cache.add(domain_name_str)
+            black_list_tmp_cache[domain_name_str] = ""
             return True
     return False
 
+
 # 检测域名是否在记录的黑名单域名缓存  是-true  不是-false
 def inBlackListCache(domain_name_str):
-    for recordThiteDomain in black_list_tmp_cache:
+    for recordThiteDomain in black_list_tmp_cache.keys():
         # 新域名在缓存里有类似域名
         if recordThiteDomain in domain_name_str:
             return True
@@ -72,10 +79,11 @@ def inBlackListCache(domain_name_str):
             return True
     return False
 
+
 # 检测域名是否在未知缓存里，是-True,不是-False
 def inUnkownCache(domain_name_str):
     # 命中未知域名缓存，直接丢给5335
-    for unkown in unkown_list_tmp_cache:
+    for unkown in unkown_list_tmp_cache.keys():
         # 新域名在缓存里有类似域名
         if unkown in domain_name_str:
             return True
@@ -87,7 +95,7 @@ def inUnkownCache(domain_name_str):
 
 # 检测域名是否在记录的白名单域名缓存  是-true  不是-false
 def inWhiteListCache(domain_name_str):
-    for recordThiteDomain in white_list_tmp_cache:
+    for recordThiteDomain in white_list_tmp_cache.keys():
         # 新域名在缓存里有类似域名
         if recordThiteDomain in domain_name_str:
             return True
@@ -100,32 +108,33 @@ def inWhiteListCache(domain_name_str):
 # 检测域名是否在记录的白名单域名策略缓存  是-true  不是-false
 def inWhiteListPolicyCache(domain_name_str):
     # 在今日已经命中的规则里查找
-    for vistedDomain in white_list_tmp_policy:
+    for vistedDomain in white_list_tmp_policy.keys():
         # 新域名在规则里有类似域名，更新white_list_tmp_cache
         if vistedDomain in domain_name_str:
-            white_list_tmp_cache.add(domain_name_str)
+            white_list_tmp_cache[domain_name_str] = ""
             return True
         # 缓存域名在新域名里有匹配
         if domain_name_str in vistedDomain:
-            white_list_tmp_cache.add(domain_name_str)
+            white_list_tmp_cache[domain_name_str] = ""
             return True
     return False
 
 
 # 检测域名是否在全部白名单域名策略  是-true  不是-false
 def inWhiteListPolicy(domain_name_str):
-    white_list_nameserver_policy = redis_get_map(REDIS_KEY_WHITE_DOMAINS)
+    if len(white_list_nameserver_policy) == 0:
+        initWhiteList()
     if white_list_nameserver_policy:
         for key in white_list_nameserver_policy.keys():
             # 新域名在全部规则里有类似域名，更新whiteDomainPolicy
             if key in domain_name_str:
-                white_list_tmp_cache.add(domain_name_str)
-                white_list_tmp_policy.add(key)
+                white_list_tmp_cache[domain_name_str] = ""
+                white_list_tmp_policy[key] = ""
                 return True
             # 缓存域名在新域名里有匹配
             if domain_name_str in key:
-                white_list_tmp_cache.add(domain_name_str)
-                white_list_tmp_policy.add(key)
+                white_list_tmp_cache[domain_name_str] = ""
+                white_list_tmp_policy[key] = ""
                 return True
     return False
 
@@ -156,7 +165,7 @@ def isChinaDomain(data):
     # 在全部白名单规则里查找
     if inWhiteListPolicy(domain_name_str):
         return True
-    unkown_list_tmp_cache.add(domain_name_str)
+    unkown_list_tmp_cache[domain_name_str] = ""
     return False
 
 
@@ -186,7 +195,7 @@ def dns_query(data):
     else:
         port = 5335
     # 随机选择一个DNS服务器openwrt
-    #dns_server = '127.0.0.1'
+    # dns_server = '127.0.0.1'
     # 电脑测试，实际上openwrt也只能使用这个，也就是软路由lan口，127.0.0.1完全没有用，妈的
     dns_server = '192.168.5.1'
     # 向DNS服务器发送请求
@@ -199,16 +208,37 @@ def dns_query(data):
     return response
 
 
+def initWhiteList():
+    whitelist = redis_get_map(REDIS_KEY_WHITE_DOMAINS)
+    if whitelist and len(whitelist) > 0:
+        white_list_nameserver_policy.update(whitelist)
+
+
+def initBlackList():
+    blacklist = redis_get_map(REDIS_KEY_BLACK_DOMAINS)
+    if blacklist and len(blacklist) > 0:
+        black_list_policy.update(blacklist)
+
+
+def init(sleepSecond):
+    while True:
+        initBlackList()
+        initWhiteList()
+        time.sleep(sleepSecond)
+
+
 if __name__ == '__main__':
+    timer_thread1 = threading.Thread(target=init, args=(120,))
+    timer_thread1.start()
     # 创建一个UDP socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         # 绑定本地的IP和端口
-        #sock.bind(('', 5911))
+        # sock.bind(('', 5911))
         # 电脑监听测试
-        #sock.bind(('127.0.0.1', 53))
+        sock.bind(('127.0.0.1', 53))
         # openwrt监听
-        sock.bind(('0.0.0.0', 5911))
+        # sock.bind(('0.0.0.0', 5911))
         # 开始接收客户端的DNS请求
         while True:
             try:
@@ -221,3 +251,4 @@ if __name__ == '__main__':
         pass
     finally:
         sock.close()
+        timer_thread1.join()
