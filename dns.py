@@ -1,3 +1,5 @@
+import concurrent.futures
+import math
 import socket
 import threading
 import time
@@ -33,24 +35,6 @@ black_list_policy = {}
 # 没有命中则black_list_policy，查到则更新black_list_tmp_policy，blacl_list_tmp_cache，再转发5335
 # 没有命中则white_list_nameserver_policy，查到则更新white_list_tmp_policy，white_list_tmp_cache，再转发5336
 # 没有命中则更新unkown_list_tmp_cache，转发给127.0.0.1#5335
-
-# 检测域名是否在全部黑名单域名策略  是-true  不是-false
-def inBlackListPolicy(domain_name_str):
-    if len(black_list_policy) == 0:
-        initBlackList()
-    if black_list_policy:
-        for key in black_list_policy.keys():
-            # 新域名在全部规则里有类似域名，更新缓存与策略缓存
-            if key in domain_name_str:
-                black_list_tmp_cache[domain_name_str] = ""
-                black_list_tmp_policy[key] = ""
-                return True
-            # 缓存域名在新域名里有匹配
-            if domain_name_str in key:
-                black_list_tmp_cache[domain_name_str] = ""
-                black_list_tmp_policy[key] = ""
-                return True
-    return False
 
 
 # 检测域名是否在记录的黑名单域名策略缓存  是-true  不是-false
@@ -120,22 +104,104 @@ def inWhiteListPolicyCache(domain_name_str):
     return False
 
 
+# 检测域名是否在全部黑名单域名策略  是-true  不是-false
+def inBlackListPolicy(domain_name_str):
+    if len(black_list_policy) == 0:
+        initBlackList()
+    if black_list_policy:
+        jump = 0
+        count = 0
+        fail = 0
+        items = sorted(black_list_policy.keys())
+        length = len(items)
+        # 计算每个线程处理的数据大小
+        chunk_size = math.ceil(length / 10)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            futures = []
+            for i in range(10):
+                start_index = i * chunk_size
+                end_index = min(start_index + chunk_size, length)
+                black_list_chunk = items[start_index:end_index]
+                future = executor.submit(check_domain_inBlackListPolicy, domain_name_str, black_list_chunk)
+                futures.append(future)
+                if future.result():
+                    jump += 1
+                    break
+                else:
+                    fail += 1
+            if count == 0:
+                if jump > 0:
+                    count += 1
+                    return True
+                elif fail == 9:
+                    count += 1
+                    return False
+    else:
+        return False
+
+
+def check_domain_inBlackListPolicy(domain_name_str, black_list_chunk):
+    for key in black_list_chunk:
+        # 新域名在全部规则里有类似域名，更新缓存与策略缓存
+        if key in domain_name_str:
+            black_list_tmp_cache[domain_name_str] = ""
+            black_list_tmp_policy[key] = ""
+            return True
+        # 缓存域名在新域名里有匹配
+        if domain_name_str in key:
+            black_list_tmp_cache[domain_name_str] = ""
+            black_list_tmp_policy[key] = ""
+            return True
+
+
 # 检测域名是否在全部白名单域名策略  是-true  不是-false
 def inWhiteListPolicy(domain_name_str):
     if len(white_list_nameserver_policy) == 0:
         initWhiteList()
     if white_list_nameserver_policy:
-        for key in white_list_nameserver_policy.keys():
-            # 新域名在全部规则里有类似域名，更新whiteDomainPolicy
-            if key in domain_name_str:
-                white_list_tmp_cache[domain_name_str] = ""
-                white_list_tmp_policy[key] = ""
-                return True
-            # 缓存域名在新域名里有匹配
-            if domain_name_str in key:
-                white_list_tmp_cache[domain_name_str] = ""
-                white_list_tmp_policy[key] = ""
-                return True
+        jump = 0
+        count = 0
+        fail = 0
+        items = sorted(white_list_nameserver_policy.keys())
+        length = len(items)
+        # 计算每个线程处理的数据大小
+        chunk_size = math.ceil(length / 10)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            futures = []
+            for i in range(0, 10):
+                start_index = i * chunk_size
+                end_index = min(start_index + chunk_size, length)
+                white_list_chunk = items[start_index:end_index]
+                future = executor.submit(check_domain_inWhiteListPolicy, domain_name_str, white_list_chunk)
+                futures.append(future)
+                if future.result():
+                    jump += 1
+                    break
+                else:
+                    fail += 1
+                if count == 0:
+                    if jump > 0:
+                        count += 1
+                        return True
+                    elif fail == 9:
+                        count += 1
+                        return False
+    else:
+        return False
+
+
+def check_domain_inWhiteListPolicy(domain_name_str, white_list_chunk):
+    for key in white_list_chunk:
+        # 新域名在全部规则里有类似域名，更新whiteDomainPolicy
+        if key in domain_name_str:
+            white_list_tmp_cache[domain_name_str] = ""
+            white_list_tmp_policy[key] = ""
+            return True
+        # 缓存域名在新域名里有匹配
+        if domain_name_str in key:
+            white_list_tmp_cache[domain_name_str] = ""
+            white_list_tmp_policy[key] = ""
+            return True
     return False
 
 
@@ -144,9 +210,7 @@ def isChinaDomain(data):
     dns_msg = dnslib.DNSRecord.parse(data)
     domain_name = dns_msg.q.qname
     domain_name_str = str(domain_name)
-    # 命中未知域名缓存，直接丢给5335
-    if inUnkownCache(domain_name_str):
-        return False
+    domain_name_str = domain_name_str[:-1]
     # 在已经命中的外国域名查找，直接丢给5335
     if inBlackListCache(domain_name_str):
         return False
@@ -165,6 +229,9 @@ def isChinaDomain(data):
     # 在全部白名单规则里查找
     if inWhiteListPolicy(domain_name_str):
         return True
+    # 命中未知域名缓存，直接丢给5335
+    if inUnkownCache(domain_name_str):
+        return False
     unkown_list_tmp_cache[domain_name_str] = ""
     return False
 
@@ -236,9 +303,9 @@ if __name__ == '__main__':
         # 绑定本地的IP和端口
         # sock.bind(('', 5911))
         # 电脑监听测试
-        sock.bind(('127.0.0.1', 53))
+        #sock.bind(('127.0.0.1', 53))
         # openwrt监听
-        # sock.bind(('0.0.0.0', 5911))
+        sock.bind(('0.0.0.0', 5911))
         # 开始接收客户端的DNS请求
         while True:
             try:
