@@ -141,19 +141,18 @@ def isChinaDomain(data):
     # 在已经命中的外国域名查找，直接丢给5335
     if inBlackListCache(domain_name_str):
         return False
-    # 在已经命中的中国域名查找，直接丢给5336
-    if inWhiteListCache(domain_name_str):
-        return True
     # 在今日已经命中的黑名单规则里查找
     if inBlackListPolicyCache(domain_name_str):
         return False
-    # 在今日已经命中的白名单规则里查找
-    if inWhiteListPolicyCache(domain_name_str):
-        return True
-    # 在全部白
     # 黑名单规则里查找
     if inBlackListPolicy(domain_name_str):
         return False
+    # 在已经命中的中国域名查找，直接丢给5336
+    if inWhiteListCache(domain_name_str):
+        return True
+    # 在今日已经命中的白名单规则里查找
+    if inWhiteListPolicyCache(domain_name_str):
+        return True
     # 在全部白名单规则里查找
     if inWhiteListPolicy(domain_name_str):
         return True
@@ -186,15 +185,15 @@ def dns_query(data):
         port = 5336
     else:
         port = 5335
-    # 随机选择一个DNS服务器
-    dns_server = '127.0.0.1'
-    # 电脑测试
-    #dns_server = '192.168.5.1'
+    # 随机选择一个DNS服务器openwrt
+    #dns_server = '127.0.0.1'
+    # 电脑测试，实际上openwrt也只能使用这个，也就是软路由lan口，127.0.0.1完全没有用，妈的
+    dns_server = '192.168.5.1'
     # 向DNS服务器发送请求
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.sendto(data, (dns_server, port))
     # 接收DNS服务器的响应
-    response, addr = sock.recvfrom(1024)
+    response, addr = sock.recvfrom(4096)
     sock.close()
     # 返回响应给客户端
     return response
@@ -205,13 +204,15 @@ if __name__ == '__main__':
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         # 绑定本地的IP和端口
-        sock.bind(('', 5911))
-        # 电脑测试
-        #sock.bind(('', 53))
+        #sock.bind(('', 5911))
+        # 电脑监听测试
+        #sock.bind(('127.0.0.1', 53))
+        # openwrt监听
+        sock.bind(('0.0.0.0', 5911))
         # 开始接收客户端的DNS请求
         while True:
             try:
-                data, addr = sock.recvfrom(1024)
+                data, addr = sock.recvfrom(4096)
                 response = dns_query(data)
                 sock.sendto(response, addr)
             except:
