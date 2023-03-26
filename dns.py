@@ -268,6 +268,7 @@ def dns_query(data):
     dns_server = '192.168.5.1'
     # 向DNS服务器发送请求
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.settimeout(25)
     sock.sendto(data, (dns_server, port))
     # 接收DNS服务器的响应
     response, addr = sock.recvfrom(4096)
@@ -340,9 +341,11 @@ if __name__ == '__main__':
         # 绑定本地的IP和端口
         # sock.bind(('', 5911))
         # 电脑监听测试,127.0.0.1是容器内部网络环境
-        sock.bind(('127.0.0.1', 53))
+        #sock.bind(('127.0.0.1', 53))
         # openwrt监听
-        #sock.bind(('0.0.0.0', 5911))
+        sock.bind(('0.0.0.0', 5911))
+        # 设置等待时长为30s,这种很难超时
+        sock.settimeout(30)
         # 开始接收客户端的DNS请求
         while True:
             try:
