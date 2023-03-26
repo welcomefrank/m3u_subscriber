@@ -73,7 +73,7 @@ BLACKLIST_ADGUARDHOME_FORMATION = "240.0.0.0 "
 # dnsmasq白名单前缀
 BLACKLIST_DNSMASQ_FORMATION_LEFT = "server=/"
 # dnsmasq白名单后缀
-BLACKLIST_DNSMASQ_FORMATION_right = "/127.0.0.1#5336"
+BLACKLIST_DNSMASQ_FORMATION_right = "/192.168.5.1#5336"
 # 用于匹配纯粹域名的正则表达式
 domain_regex = r'^[a-zA-Z0-9]+([\-\.]{1}[a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$'
 # 用于匹配泛化匹配的域名规则的正则表达式
@@ -664,7 +664,7 @@ class MyConcreteClass(MyAbstractClass):
 
 
 def formattxt_multithread(data, method_name):
-    num_threads = min(math.ceil(len(data) / 1000), 100)
+    num_threads = 100
     my_dict = {}
     # 计算每个线程处理的数据段大小
     step = math.ceil(len(data) / num_threads)
