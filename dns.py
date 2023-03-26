@@ -3,7 +3,6 @@ import math
 import socket
 import threading
 import time
-import tldextract
 import dnslib
 
 import redis
@@ -112,13 +111,14 @@ def inBlackListPolicy(domain_name_str):
         jump = 0
         count = 0
         fail = 0
+        maxThread = 100
         items = sorted(black_list_policy.keys())
         length = len(items)
         # 计算每个线程处理的数据大小
-        chunk_size = math.ceil(length / 10)
-        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        chunk_size = math.ceil(length / maxThread)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=maxThread) as executor:
             futures = []
-            for i in range(10):
+            for i in range(maxThread):
                 start_index = i * chunk_size
                 end_index = min(start_index + chunk_size, length)
                 black_list_chunk = items[start_index:end_index]
@@ -162,13 +162,14 @@ def inWhiteListPolicy(domain_name_str):
         jump = 0
         count = 0
         fail = 0
+        maxThread = 100
         items = sorted(white_list_nameserver_policy.keys())
         length = len(items)
         # 计算每个线程处理的数据大小
-        chunk_size = math.ceil(length / 10)
-        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        chunk_size = math.ceil(length / maxThread)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=maxThread) as executor:
             futures = []
-            for i in range(0, 10):
+            for i in range(0, maxThread):
                 start_index = i * chunk_size
                 end_index = min(start_index + chunk_size, length)
                 white_list_chunk = items[start_index:end_index]
@@ -287,25 +288,61 @@ def initBlackList():
         black_list_policy.update(blacklist)
 
 
+# redis增加和修改
+def redis_add(key, value):
+    r.set(key, value)
+
+
+# redis查询
+def redis_get(key):
+    return r.get(key)
+
+
+# 0-数据未更新 1-数据已更新 max-所有服务器都更新完毕(有max个服务器做负载均衡)
+REDIS_KEY_UPDATE_WHITE_LIST_FLAG = "updatewhitelistflag"
+REDIS_KEY_UPDATE_BLACK_LIST_FLAG = "updateblacklistflag"
+
+
+# true-拉取更新吧
+def needUpdate(redis_key):
+    flag = redis_get(redis_key)
+    if flag:
+        # 数据没有更新
+        if flag == 0:
+            return False
+        # 服务器全部更新完毕(逻辑不严谨感觉)
+        if flag >= 2:
+            redis_add(redis_key, 0)
+            return False
+        # 服务器未全部完成更新(逻辑不严谨，一个服务器的话还能用用)
+        else:
+            redis_add(redis_key, flag + 1)
+            return True
+    return False
+
+
 def init(sleepSecond):
     while True:
-        initBlackList()
-        initWhiteList()
+        if needUpdate(REDIS_KEY_UPDATE_WHITE_LIST_FLAG):
+            initWhiteList()
+        if needUpdate(REDIS_KEY_UPDATE_BLACK_LIST_FLAG):
+            initBlackList()
         time.sleep(sleepSecond)
 
 
+# 考虑过线程池或者负载均衡，线程池需要多个端口不大合适，负载均衡似乎不错，但有点复杂，后期看看
 if __name__ == '__main__':
-    timer_thread1 = threading.Thread(target=init, args=(120,))
+    timer_thread1 = threading.Thread(target=init, args=(10,))
     timer_thread1.start()
     # 创建一个UDP socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         # 绑定本地的IP和端口
         # sock.bind(('', 5911))
-        # 电脑监听测试
-        #sock.bind(('127.0.0.1', 53))
+        # 电脑监听测试,127.0.0.1是容器内部网络环境
+        sock.bind(('127.0.0.1', 53))
         # openwrt监听
-        sock.bind(('0.0.0.0', 5911))
+        #sock.bind(('0.0.0.0', 5911))
         # 开始接收客户端的DNS请求
         while True:
             try:

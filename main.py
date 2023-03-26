@@ -105,6 +105,9 @@ REDIS_KEY_WHITE_DOMAINS = "whitedomains"
 # 下载的域名黑名单存储到redis服务器里
 REDIS_KEY_BLACK_DOMAINS = "blackdomains"
 
+# 0-数据未更新 1-数据已更新 max-所有服务器都更新完毕(有max个服务器做负载均衡)
+REDIS_KEY_UPDATE_WHITE_LIST_FLAG = "updatewhitelistflag"
+REDIS_KEY_UPDATE_BLACK_LIST_FLAG = "updateblacklistflag"
 
 @app.route('/')
 def index():
@@ -318,14 +321,20 @@ def writeTvList():
 
 def writeOpenclashNameServerPolicy():
     if white_list_nameserver_policy and len(white_list_nameserver_policy) > 0:
+        # 更新redis数据库白名单
         redis_add_map(REDIS_KEY_WHITE_DOMAINS, white_list_nameserver_policy)
+        # 通知dns服务器更新内存
+        redis_add(REDIS_KEY_UPDATE_WHITE_LIST_FLAG, 1)
         distribute_data(white_list_nameserver_policy, "/whiteList.txt", 10)
         white_list_nameserver_policy.clear()
 
 
 def writeBlackList():
     if black_list_nameserver_policy and len(black_list_nameserver_policy) > 0:
+        # 更新redis数据库黑名单
         redis_add_map(REDIS_KEY_BLACK_DOMAINS, black_list_nameserver_policy)
+        # 通知dns服务器更新内存
+        redis_add(REDIS_KEY_UPDATE_BLACK_LIST_FLAG, 1)
         distribute_data(black_list_nameserver_policy, "/blackList.txt", 10)
         black_list_nameserver_policy.clear()
 
