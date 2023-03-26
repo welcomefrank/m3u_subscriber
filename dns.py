@@ -42,11 +42,11 @@ def inBlackListPolicyCache(domain_name_str):
     # 在今日已经命中的规则里查找
     for vistedDomain in black_list_tmp_policy.keys():
         # 新域名在规则里有类似域名，更新black_list_tmp_cache
-        if is_subdomain(vistedDomain, domain_name_str):
+        if vistedDomain in domain_name_str:
             black_list_tmp_cache[domain_name_str] = ""
             return True
         # 缓存域名在新域名里有匹配
-        if is_subdomain(domain_name_str, vistedDomain):
+        if domain_name_str in vistedDomain:
             black_list_tmp_cache[domain_name_str] = ""
             return True
     return False
@@ -56,10 +56,10 @@ def inBlackListPolicyCache(domain_name_str):
 def inBlackListCache(domain_name_str):
     for recordThiteDomain in black_list_tmp_cache.keys():
         # 新域名在缓存里有类似域名
-        if is_subdomain(recordThiteDomain,domain_name_str):
+        if recordThiteDomain in domain_name_str:
             return True
         # # 缓存域名在新域名里有匹配
-        if is_subdomain(domain_name_str, recordThiteDomain):
+        if domain_name_str in recordThiteDomain:
             return True
     return False
 
@@ -81,10 +81,10 @@ def inUnkownCache(domain_name_str):
 def inWhiteListCache(domain_name_str):
     for recordThiteDomain in white_list_tmp_cache.keys():
         # 新域名在缓存里有类似域名
-        if is_subdomain(recordThiteDomain, domain_name_str):
+        if recordThiteDomain in domain_name_str:
             return True
         # # 缓存域名在新域名里有匹配
-        if is_subdomain(domain_name_str, recordThiteDomain):
+        if domain_name_str in recordThiteDomain:
             return True
     return False
 
@@ -94,11 +94,11 @@ def inWhiteListPolicyCache(domain_name_str):
     # 在今日已经命中的规则里查找
     for vistedDomain in white_list_tmp_policy.keys():
         # 新域名在规则里有类似域名，更新white_list_tmp_cache
-        if is_subdomain(vistedDomain, domain_name_str):
+        if vistedDomain in domain_name_str:
             white_list_tmp_cache[domain_name_str] = ""
             return True
         # 缓存域名在新域名里有匹配
-        if is_subdomain(domain_name_str, vistedDomain):
+        if domain_name_str in vistedDomain:
             white_list_tmp_cache[domain_name_str] = ""
             return True
     return False
@@ -143,12 +143,12 @@ def inBlackListPolicy(domain_name_str):
 def check_domain_inBlackListPolicy(domain_name_str, black_list_chunk):
     for key in black_list_chunk:
         # 新域名在全部规则里有类似域名，更新缓存与策略缓存
-        if is_subdomain(key, domain_name_str):
+        if key in domain_name_str:
             black_list_tmp_cache[domain_name_str] = ""
             black_list_tmp_policy[key] = ""
             return True
         # 缓存域名在新域名里有匹配
-        if is_subdomain(domain_name_str, key):
+        if domain_name_str in key:
             black_list_tmp_cache[domain_name_str] = ""
             black_list_tmp_policy[key] = ""
             return True
@@ -193,25 +193,15 @@ def inWhiteListPolicy(domain_name_str):
 def check_domain_inWhiteListPolicy(domain_name_str, white_list_chunk):
     for key in white_list_chunk:
         # 新域名在全部规则里有类似域名，更新whiteDomainPolicy
-        if is_subdomain(domain_name_str, key):
+        if domain_name_str in key:
             white_list_tmp_cache[domain_name_str] = ""
             white_list_tmp_policy[key] = ""
             return True
         # 缓存域名在新域名里有匹配
-        if is_subdomain(key, domain_name_str):
+        if key in domain_name_str:
             white_list_tmp_cache[domain_name_str] = ""
             white_list_tmp_policy[key] = ""
             return True
-    return False
-
-
-def is_subdomain(child, parent):
-    child_domain = tldextract.extract(child).domain
-    parent_domain = tldextract.extract(parent).domain
-    child_subdomain = tldextract.extract(child).subdomain
-    parent_subdomain = tldextract.extract(parent).subdomain
-    if child_domain == parent_domain and child_subdomain.endswith(parent_subdomain):
-        return True
     return False
 
 
@@ -313,9 +303,9 @@ if __name__ == '__main__':
         # 绑定本地的IP和端口
         # sock.bind(('', 5911))
         # 电脑监听测试
-        sock.bind(('127.0.0.1', 53))
+        #sock.bind(('127.0.0.1', 53))
         # openwrt监听
-        #sock.bind(('0.0.0.0', 5911))
+        sock.bind(('0.0.0.0', 5911))
         # 开始接收客户端的DNS请求
         while True:
             try:
