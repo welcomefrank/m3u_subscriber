@@ -39,11 +39,29 @@
             width: 45%
         }
 
-        .subUrl, .subUrl2, .subUrl3, .subUrl4, .subUrl5, .subUrl6, .subUrl8,.subUrl9,.subUrl10 {
+        .subUrl, .subUrl2, .subUrl3, .subUrl4, .subUrl5, .subUrl6, .subUrl8,.subUrl9,.subUrl10,#threads,#chinaDnsServer,#chinaDnsPort,#extraDnsServer,#extraDnsPort  {
             width: 70%;
             background-color: #758a99;
             color: aliceblue;
             font-size: x-large;
+        }
+
+        #threads,#chinaDnsServer,#chinaDnsPort,#extraDnsServer,#extraDnsPort {
+            text-align: right;
+            padding-top: 20px;
+            padding-bottom: 20px;
+         }
+
+        #threadsButton,#chinaDnsServerBtn,#chinaDnsPortBtn,#extraDnsServerBtn,#extraDnsPortBtn
+        {
+            padding: 20px 30px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+
+            float: right
         }
 
         .subname, .subname2, .subname3, .subname4, .subname5, .subname6, .subname8,.subname9,.subname10 {
@@ -72,7 +90,9 @@
         #download-json-btn6, #download-json-btn7, #upload-json-btn7, #upload-json-btn8, #add-row8, .subUrl8, .subname8, .save-button8, .delete-button8, #download-json-btn8, #removem3ulinks8
         ,#upload-json-btn9, #add-row9, .subUrl9, .subname9, .save-button9, .delete-button9, #download-json-btn9
         , #removem3ulinks9,#upload-json-btn10, #add-row10, .subUrl10, .subname10, .save-button10, .delete-button10
-        , #download-json-btn10, #removem3ulinks10,.dropdown,#proxy-model-switch,#proxy-model-switch2,.dropdown2{
+        , #download-json-btn10, #removem3ulinks10,.dropdown,#proxy-model-switch,#proxy-model-switch2,.dropdown2,#threadsButton,#chinaDnsServerBtn,#chinaDnsPortBtn,#extraDnsServerBtn
+            ,#extraDnsPortBtn
+        {
             font-size: x-large;
         }
 
@@ -99,10 +119,13 @@
             width: 25%;
         }
 
-        #input, #output {
+        #input, #output,#threads,#chinaDnsServer,#chinaDnsPort,#extraDnsServer,#extraDnsPort {
             width: 90%;
             background-color: #758a99;
-            color: aliceblue
+            color: aliceblue;
+            font-size: x-large;
+            border-radius: 5px;
+
         }
 
         .buttonChooseProxies {
@@ -160,19 +183,19 @@
 <div id="switchbox" style="font-size: x-large">
     <label>
         <input type="radio" name="page" id="page1" checked>
-        <span>公共网络直播源订阅</span>
+        <span>直播源订阅</span>
     </label>
     <label>
         <input type="radio" name="page" id="page2">
-        <span>直播源数据管理</span>
+        <span>直播源管理</span>
     </label>
     <label>
         <input type="radio" name="page" id="page3">
-        <span>密码记录账本</span>
+        <span>密码本</span>
     </label>
     <label>
         <input type="radio" name="page" id="page4">
-        <span>批量生成随机密码</span>
+        <span>随机密码</span>
     </label>
     <label>
         <input type="radio" name="page" id="page5">
@@ -206,10 +229,14 @@
         <input type="radio" name="page" id="page12">
         <span>节点订阅-后端地址</span>
     </label>
+    <label>
+        <input type="radio" name="page" id="page13">
+        <span>DNS分流器</span>
+    </label>
 </div>
 <div id="choice">
     <div id="page1" style="display: block;">
-        <h1>公共网络直播源订阅:从网络下载直播源</h1>
+        <h1>直播源订阅:从网络下载直播源</h1>
         <div style="float: left;width: 70%">
             <h3>后台默认24小时自动执行生成操作,同时触发有效直播源在后台缓慢检测</h3>
             <h3>M3U超融合直播源订阅地址:docker主机地址:端口/url/A.m3u</h3>
@@ -610,6 +637,47 @@
             </table>
         </div>
     </div>
+    <div id="page13" style="display: none;">
+        <h1>DNS分流器</h1>
+        <div style="float: left;width: 70%">
+            <h3>设置分流并发线程,分流服务器</h3>
+        </div>
+        <div style="display: flex;width: 100%;">
+            黑白名单并发检测线程数
+        </div>
+        <div style="width:100%">
+            <input type="text" id="threads"/>
+            <button id="threadsButton" onclick="saveData()">保存</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            国内DNS服务器地址
+        </div>
+        <div style="width:100%">
+            <input type="text" id="chinaDnsServer"/>
+            <button id="chinaDnsServerBtn" onclick="saveChinaDnsServer()">保存</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            国内DNS服务器端口
+        </div>
+        <div style="width:100%">
+            <input type="text" id="chinaDnsPort"/>
+            <button id="chinaDnsPortBtn" onclick="saveChinaDnsPort()">保存</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            国外DNS服务器地址
+        </div>
+        <div style="width:100%">
+            <input type="text" id="extraDnsServer"/>
+            <button id="extraDnsServerBtn" onclick="saveExtraDnsServer()">保存</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            国外DNS服务器端口
+        </div>
+        <div style="width:100%">
+            <input type="text" id="extraDnsPort"/>
+            <button id="extraDnsPortBtn" onclick="saveExtraDnsPort()">保存</button>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -673,18 +741,16 @@
     const inputTable10 = document.getElementById('input-table10');
     const downloadBtn10 = document.getElementById('download-json-btn10');
 
-    // 节点订阅-节点类型转换按钮选项框
+        // 节点订阅-节点类型转换按钮选项框
     var buttons = document.querySelectorAll('.buttonChooseProxies');
     var selectedButtonId = sessionStorage.getItem('selected-button-id');
 
-    // 节点订阅-节点类型如果存在已选择按钮，则将该按钮设置为活动状态
-    if (selectedButtonId) {
-        var selectedButton = document.getElementById(selectedButtonId);
-        if (selectedButton) {
-            selectedButton.classList.add('active');
-        }
-    }
-    // 节点订阅-服务器选择
+    // 输入框显示线程数
+    const threadNum = document.getElementById('threads');
+    // 线程数缓存
+    var threadsCache = sessionStorage.getItem('threads');
+
+        // 节点订阅-服务器选择
     const proxymodelswitch = document.getElementById('proxy-model-switch');
     const dropdown = document.querySelector('.dropdown');
     const list = dropdown.querySelector('.dropdown-content');
@@ -693,6 +759,109 @@
     const proxymodelswitch2 = document.getElementById('proxy-model-switch2');
     const dropdown2 = document.querySelector('.dropdown2');
     const list2 = dropdown2.querySelector('.dropdown-content2');
+
+    // 输入框显示中国DNS服务器
+    const chinaDnsServer = document.getElementById('chinaDnsServer');
+    // 中国DNS服务器缓存
+    var chinaDnsServercache = sessionStorage.getItem('chinaDnsServer');
+
+    // 输入框显示中国DNS端口
+    const chinaDnsPort = document.getElementById('chinaDnsPort');
+    // 中国DNS端口缓存
+    var chinaDnsPortcache = sessionStorage.getItem('chinaDnsPort');
+
+    // 输入框显示外国DNS服务器
+    const extraDnsServer = document.getElementById('extraDnsServer');
+    // 外国DNS服务器缓存
+    var extraDnsServercache = sessionStorage.getItem('extraDnsServer');
+
+    // 输入框显示外国DNS端口
+    const extraDnsPort = document.getElementById('extraDnsPort');
+    // 外国DNS端口缓存
+    var extraDnsPortcache = sessionStorage.getItem('extraDnsPort');
+
+    //修改外国DNS端口
+    function saveExtraDnsPort() {
+        saveDnsSetting('/saveExtraDnsPort','extraDnsPort',extraDnsPort)
+    }
+
+    //外国DNS端口加载
+    function reloadExtraDnsPort() {
+        reloadDnsSetting(extraDnsPortcache,extraDnsPort,'/getExtraDnsPort','extraDnsPort')
+    }
+
+    //修改外国DNS服务器
+    function saveExtraDnsServer() {
+        saveDnsSetting('/saveExtraDnsServer','extraDnsServer',extraDnsServer)
+    }
+
+    //外国DNS服务器加载
+    function reloadExtraDnsServer() {
+        reloadDnsSetting(extraDnsServercache,extraDnsServer,'/getExtraDnsServer','extraDnsServer')
+    }
+
+    //修改中国DNS端口
+    function saveChinaDnsPort() {
+        saveDnsSetting('/savechinaDnsPort','chinaDnsPort',chinaDnsPort)
+    }
+
+    //中国DNS端口加载
+    function reloadChinaDnsPort() {
+        reloadDnsSetting(chinaDnsPortcache,chinaDnsPort,'/getChinaDnsPort','chinaDnsPort')
+    }
+
+    //修改中国DNS服务器
+    function saveChinaDnsServer() {
+        saveDnsSetting('/savechinaDnsServer','chinaDnsServer',chinaDnsServer)
+    }
+
+    //中国DNS服务器加载
+    function reloadChinaDnsServer() {
+        reloadDnsSetting(chinaDnsServercache,chinaDnsServer,'/getChinaDnsServer','chinaDnsServer')
+    }
+
+    //线程数加载
+    function reloadThreadNum() {
+        reloadDnsSetting(threadsCache,threadNum,'/getThreadNum','threads')
+    }
+
+        //修改线程数
+    function saveData() {
+        saveDnsSetting('/saveThreadS','threads',threadNum)
+    }
+
+    function reloadDnsSetting(targetcache, targetConst, requestpath, targetCacheName) {
+        if (targetcache) {
+            targetConst.value = targetcache
+        } else {
+            // 发送 GET 请求
+            fetch(requestpath)
+                .then(response => response.json())  // 将响应体解析为 JSON 格式
+                .then(data => {
+                    // 更新服务器设置
+                    targetConst.value = data.button;
+                    sessionStorage.setItem(targetCacheName, data.button);
+                })
+        }
+    }
+
+    function saveDnsSetting(requestPath,id,idVar){
+        let data = document.getElementById(id).value;
+        sendData(requestPath,data);
+        idVar.value = data;
+        sessionStorage.setItem(id, data);
+    }
+
+
+    // 节点订阅-节点类型如果存在已选择按钮，则将该按钮设置为活动状态
+    if (selectedButtonId) {
+        var selectedButton = document.getElementById(selectedButtonId);
+        if (selectedButton) {
+            selectedButton.classList.add('active');
+        }
+    }
+
+
 
     function reloadProxyModels(requestpath, value) {
         if (requestpath === '/getall10') {
@@ -743,11 +912,10 @@
             method: 'POST',
             body: JSON.stringify({'selected_button': name}),
             headers: {'Content-Type': 'application/json'}
-        });
+        }).catch(error => console.error(error));
     }
 
-    // 节点订阅-加载选择的服务器配置
-    reloadSelectedServer()
+
     function reloadSelectedServer() {
         // 发送 GET 请求
         fetch('/getSelectedServer')
@@ -758,8 +926,6 @@
             }).catch(error => console.error(error));
     }
 
-    // 节点订阅-加载选择的远程配置
-    reloadSelectedModel()
     function reloadSelectedModel() {
         // 发送 GET 请求
         fetch('/getSelectedModel')
@@ -1340,6 +1506,15 @@
     });
 
     function init() {
+        // 节点订阅-加载选择的服务器配置
+        reloadSelectedServer()
+        // 节点订阅-加载选择的远程配置
+        reloadSelectedModel()
+        reloadThreadNum()
+        reloadChinaDnsServer()
+        reloadExtraDnsServer()
+        reloadExtraDnsPort()
+        reloadChinaDnsPort()
         reloadProxyServerListLink()
         reloadProxyModelListLink()
         reloadWhiteListLink()

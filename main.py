@@ -109,6 +109,27 @@ REDIS_KEY_BLACK_DOMAINS = "blackdomains"
 REDIS_KEY_UPDATE_WHITE_LIST_FLAG = "updatewhitelistflag"
 REDIS_KEY_UPDATE_BLACK_LIST_FLAG = "updateblacklistflag"
 REDIS_KEY_UPDATE_IPV4_LIST_FLAG = "updateipv4listflag"
+REDIS_KEY_UPDATE_THREAD_NUM_FLAG = "updatethreadnumflag"
+REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG = "updatechinadnsserverflag"
+REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG = "updatechinadnsportflag"
+REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG = "updateextradnsserverflag"
+REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG = "updateextradnsportflag"
+
+REDIS_KEY_THREADS = "threadsnum"
+threadsNum = {REDIS_KEY_THREADS: 0}
+
+REDIS_KEY_CHINA_DNS_SERVER = "chinadnsserver"
+chinadnsserver = {REDIS_KEY_CHINA_DNS_SERVER: "127.0.0.1"}
+
+REDIS_KEY_CHINA_DNS_PORT = "chinadnsport"
+chinadnsport = {REDIS_KEY_CHINA_DNS_PORT: 5336}
+
+REDIS_KEY_EXTRA_DNS_SERVER = "extradnsserver"
+extradnsserver = {REDIS_KEY_EXTRA_DNS_SERVER: "127.0.0.1"}
+
+REDIS_KEY_EXTRA_DNS_PORT = "extradnsport"
+extradnsport = {REDIS_KEY_EXTRA_DNS_PORT: 7874}
+
 
 @app.route('/')
 def index():
@@ -402,6 +423,11 @@ def init_db():
         print("no group in redis")
     initProxyModel()
     initProxyServer()
+    init_threads_num()
+    init_china_dns_port()
+    init_china_dns_server()
+    init_extra_dns_server()
+    init_extra_dns_port()
 
 
 # 初始化节点后端服务器
@@ -1467,7 +1493,200 @@ def setRandomValueChosen(key1, key2):
             initProxyModel()
 
 
+# 黑白名单线程数获取
+def init_threads_num():
+    data = threadsNum.get(REDIS_KEY_THREADS)
+    if data and data > 0:
+        return data
+    num = redis_get(REDIS_KEY_THREADS)
+    if num:
+        num = num.decode()
+        if num == 0:
+            num = 100
+            redis_add(REDIS_KEY_THREADS, num)
+            threadsNum[REDIS_KEY_THREADS] = num
+            redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 1)
+    else:
+        num = 100
+        redis_add(REDIS_KEY_THREADS, num)
+        threadsNum[REDIS_KEY_THREADS] = num
+        redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 1)
+    return num
+
+
+# 中国DNS端口获取
+def init_china_dns_port():
+    data = chinadnsport.get(REDIS_KEY_CHINA_DNS_PORT)
+    if data and data > 0:
+        return data
+    num = redis_get(REDIS_KEY_CHINA_DNS_PORT)
+    if num:
+        num = num.decode()
+        if num == 0:
+            num = 5336
+            redis_add(REDIS_KEY_CHINA_DNS_PORT, num)
+            chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = num
+            redis_add(REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG, 1)
+    else:
+        num = 5336
+        redis_add(REDIS_KEY_CHINA_DNS_PORT, num)
+        chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = num
+        redis_add(REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG, 1)
+    return num
+
+
+# 外国DNS端口获取
+def init_extra_dns_port():
+    data = extradnsport.get(REDIS_KEY_EXTRA_DNS_PORT)
+    if data and data > 0:
+        return data
+    num = redis_get(REDIS_KEY_EXTRA_DNS_PORT)
+    if num:
+        num = num.decode()
+        if num == 0:
+            num = 7874
+            redis_add(REDIS_KEY_EXTRA_DNS_PORT, num)
+            extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = num
+            redis_add(REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG, 1)
+    else:
+        num = 7874
+        redis_add(REDIS_KEY_EXTRA_DNS_PORT, num)
+        extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = num
+        redis_add(REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG, 1)
+    return num
+
+
+# 中国DNS服务器获取
+def init_china_dns_server():
+    data = chinadnsserver.get(REDIS_KEY_CHINA_DNS_SERVER)
+    if data:
+        return data
+    num = redis_get(REDIS_KEY_CHINA_DNS_SERVER)
+    if num:
+        num = num.decode()
+        if num == "":
+            num = "127.0.0.1"
+            redis_add(REDIS_KEY_CHINA_DNS_SERVER, num)
+            chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = num
+            redis_add(REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG, 1)
+    else:
+        num = "127.0.0.1"
+        redis_add(REDIS_KEY_CHINA_DNS_SERVER, num)
+        chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = num
+        redis_add(REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG, 1)
+    return num
+
+
+# 外国DNS服务器获取
+def init_extra_dns_server():
+    data = extradnsserver.get(REDIS_KEY_EXTRA_DNS_SERVER)
+    if data:
+        return data
+    num = redis_get(REDIS_KEY_EXTRA_DNS_SERVER)
+    if num:
+        num = num.decode()
+        if num == "":
+            num = "127.0.0.1"
+            redis_add(REDIS_KEY_EXTRA_DNS_SERVER, num)
+            extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = num
+            redis_add(REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG, 1)
+    else:
+        num = "127.0.0.1"
+        redis_add(REDIS_KEY_EXTRA_DNS_SERVER, num)
+        extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = num
+        redis_add(REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG, 1)
+    return num
+
+
 ############################################################协议区####################################################
+
+# 获取外国DNS端口
+@app.route('/getExtraDnsPort', methods=['GET'])
+def getExtraDnsPort():
+    num = init_extra_dns_port()
+    return jsonify({'button': num})
+
+
+# 修改外国DNS端口
+@app.route('/saveExtraDnsPort', methods=['POST'])
+def saveExtraDnsPort():
+    data = request.json['selected_button']
+    redis_add(REDIS_KEY_EXTRA_DNS_PORT, int(data))
+    extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = int(data)
+    redis_add(REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG, 1)
+    return "数据已经保存"
+
+
+# 获取外国DNS服务器
+@app.route('/getExtraDnsServer', methods=['GET'])
+def getExtraDnsServer():
+    num = init_extra_dns_server()
+    return jsonify({'button': num})
+
+
+# 修改外国DNS服务器
+@app.route('/saveExtraDnsServer', methods=['POST'])
+def saveExtraDnsServer():
+    data = request.json['selected_button']
+    if data == "":
+        data = "127.0.0.1"
+    redis_add(REDIS_KEY_EXTRA_DNS_SERVER, data)
+    extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = data
+    redis_add(REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG, 1)
+    return "数据已经保存"
+
+
+# 获取中国DNS端口
+@app.route('/getChinaDnsPort', methods=['GET'])
+def getChinaDnsPort():
+    num = init_china_dns_port()
+    return jsonify({'button': num})
+
+
+# 修改中国DNS端口
+@app.route('/savechinaDnsPort', methods=['POST'])
+def savechinaDnsPort():
+    data = request.json['selected_button']
+    redis_add(REDIS_KEY_CHINA_DNS_PORT, int(data))
+    chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = int(data)
+    redis_add(REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG, 1)
+    return "数据已经保存"
+
+
+# 获取中国DNS服务器
+@app.route('/getChinaDnsServer', methods=['GET'])
+def getChinaDnsServer():
+    num = init_china_dns_server()
+    return jsonify({'button': num})
+
+
+# 修改中国DNS服务器
+@app.route('/savechinaDnsServer', methods=['POST'])
+def savechinaDnsServer():
+    data = request.json['selected_button']
+    if data == "":
+        data = "127.0.0.1"
+    redis_add(REDIS_KEY_CHINA_DNS_SERVER, data)
+    chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = data
+    redis_add(REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG, 1)
+    return "数据已经保存"
+
+
+# 获取黑白名单并发检测线程数
+@app.route('/getThreadNum', methods=['GET'])
+def getThreadNum():
+    num = init_threads_num()
+    return jsonify({'button': num})
+
+
+# 修改黑白名单并发检测线程数
+@app.route('/saveThreadS', methods=['POST'])
+def saveThreadS():
+    data = request.json['selected_button']
+    redis_add(REDIS_KEY_THREADS, min(int(data), 500))
+    threadsNum[REDIS_KEY_THREADS] = min(int(data), 500)
+    redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 1)
+    return "数据已经保存"
 
 
 # 选择目标转换的远程配置
@@ -1493,10 +1712,11 @@ def chooseProxyServer():
 # 服务器启动时加载选择的配置
 @app.route('/getSelectedModel', methods=['GET'])
 def getSelectedModel():
-    try:
-        dict = redis_get_map(REDIS_KEY_PROXIES_MODEL_CHOSEN)
-        return jsonify({'button': dict[REDIS_KEY_PROXIES_MODEL_CHOSEN]})
-    except:
+    dict = redis_get_map(REDIS_KEY_PROXIES_MODEL_CHOSEN)
+    value = dict[REDIS_KEY_PROXIES_MODEL_CHOSEN]
+    if value:
+        return jsonify({'button': value})
+    else:
         tmp_dict = {}
         tmp_dict[REDIS_KEY_PROXIES_MODEL_CHOSEN] = "ACL4SSR_Online 默认版 分组比较全(本地离线模板)"
         # 设定默认选择的模板
@@ -1507,10 +1727,11 @@ def getSelectedModel():
 # 服务器启动时加载选择的服务器
 @app.route('/getSelectedServer', methods=['GET'])
 def getSelectedServer():
-    try:
-        dict = redis_get_map(REDIS_KEY_PROXIES_SERVER_CHOSEN)
-        return jsonify({'button': dict[REDIS_KEY_PROXIES_SERVER_CHOSEN]})
-    except:
+    dict = redis_get_map(REDIS_KEY_PROXIES_SERVER_CHOSEN)
+    value = dict[REDIS_KEY_PROXIES_SERVER_CHOSEN]
+    if value:
+        return jsonify({'button': value})
+    else:
         tmp_dict = {}
         tmp_dict[REDIS_KEY_PROXIES_SERVER_CHOSEN] = "bridge模式:本地服务器"
         redis_add_map(REDIS_KEY_PROXIES_SERVER_CHOSEN, tmp_dict)
@@ -2053,9 +2274,8 @@ def process_file():
     return send_file("tmp.m3u", as_attachment=True)
 
 
-init_db()
-
 if __name__ == '__main__':
+    init_db()
     timer_thread1 = threading.Thread(target=execute, args=('chaoronghe', 86400))
     timer_thread1.start()
     timer_thread2 = threading.Thread(target=execute, args=('chaoronghe2', 86400))

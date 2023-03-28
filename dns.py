@@ -29,10 +29,10 @@ ipv4_list = {}
 ipv4_list_tmp_cache = {}
 ipv4_list_tmp_policy = {}
 
-ipCheckDomian=["ip.skk.moe","ip.swcdn.skk.moe","api.ipify.org",
-               "api-ipv4.ip.sb","d.skk.moe","qqwry.api.skk.moe",
-               "ipinfo.io","cdn.ipinfo.io","ip.sb",
-               "ip-api.com","browserleaks.com","www.dnsleaktest.com"]
+ipCheckDomian = ["ip.skk.moe", "ip.swcdn.skk.moe", "api.ipify.org",
+                 "api-ipv4.ip.sb", "d.skk.moe", "qqwry.api.skk.moe",
+                 "ipinfo.io", "cdn.ipinfo.io", "ip.sb",
+                 "ip-api.com", "browserleaks.com", "www.dnsleaktest.com"]
 
 # 规则：先查unkown_list_tmp_cache，有的话转发5335,
 # 没有再查black_list_tmp_cache，有记录直接转发5335,
@@ -44,6 +44,26 @@ ipCheckDomian=["ip.skk.moe","ip.swcdn.skk.moe","api.ipify.org",
 # 没有命中则更新unkown_list_tmp_cache，转发给127.0.0.1#5335
 
 HOST_IP = "0.0.0.0"
+
+# 并发检测白名单黑名单线程数主键
+REDIS_KEY_THREADS = "threadsnum"
+threadsNum = {REDIS_KEY_THREADS: 100}
+
+# 中国DNS服务器主键
+REDIS_KEY_CHINA_DNS_SERVER = "chinadnsserver"
+chinadnsserver = {REDIS_KEY_CHINA_DNS_SERVER: "127.0.0.1"}
+
+# 中国DNS端口主键
+REDIS_KEY_CHINA_DNS_PORT = "chinadnsport"
+chinadnsport = {REDIS_KEY_CHINA_DNS_PORT: 5336}
+
+# 外国DNS服务器主键
+REDIS_KEY_EXTRA_DNS_SERVER = "extradnsserver"
+extradnsserver = {REDIS_KEY_EXTRA_DNS_SERVER: "127.0.0.1"}
+
+# 外国DNS端口主键
+REDIS_KEY_EXTRA_DNS_PORT = "extradnsport"
+extradnsport = {REDIS_KEY_EXTRA_DNS_PORT: 7874}
 
 
 # 获取软路由主路由ip
@@ -363,7 +383,11 @@ def redis_get(key):
 REDIS_KEY_UPDATE_WHITE_LIST_FLAG = "updatewhitelistflag"
 REDIS_KEY_UPDATE_BLACK_LIST_FLAG = "updateblacklistflag"
 REDIS_KEY_UPDATE_IPV4_LIST_FLAG = "updateipv4listflag"
-
+REDIS_KEY_UPDATE_THREAD_NUM_FLAG = "updatethreadnumflag"
+REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG = "updatechinadnsserverflag"
+REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG = "updatechinadnsportflag"
+REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG = "updateextradnsserverflag"
+REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG = "updateextradnsportflag"
 
 # true-拉取更新吧
 def needUpdate(redis_key):
@@ -392,6 +416,16 @@ def init(sleepSecond):
             initBlackList()
         # if needUpdate(REDIS_KEY_UPDATE_IPV4_LIST_FLAG):
         #     initIpv4List()
+        if needUpdate(REDIS_KEY_UPDATE_THREAD_NUM_FLAG):
+            init_threads_num()
+        if needUpdate(REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG):
+            init_china_dns_server()
+        if needUpdate(REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG):
+            init_china_dns_port()
+        if needUpdate(REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG):
+            init_extra_dns_server()
+        if needUpdate(REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG):
+            init_extra_dns_port()
         time.sleep(sleepSecond)
 
 
@@ -416,7 +450,7 @@ def dns_query(data):
     dns_server = '127.0.0.1'
     # 电脑测试，实际上openwrt也只能使用这个，也就是软路由lan口，127.0.0.1完全没有用，妈的
     # docker的dns似乎无法到达，只能是插件
-    #dns_server = '192.168.5.1'
+    # dns_server = '192.168.5.1'
     # dns_server = HOST_IP
     # 向DNS服务器发送请求
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -429,9 +463,92 @@ def dns_query(data):
     return response
 
 
+def init_threads_num():
+    num = redis_get(REDIS_KEY_THREADS)
+    if num:
+        num = num.decode()
+        if num == 0:
+            num = 100
+            redis_add(REDIS_KEY_THREADS, num)
+            threadsNum[REDIS_KEY_THREADS] = num
+        threadsNum[REDIS_KEY_THREADS] = num
+    else:
+        num = 100
+        redis_add(REDIS_KEY_THREADS, num)
+        threadsNum[REDIS_KEY_THREADS] = num
+
+
+# 中国DNS端口获取
+def init_china_dns_port():
+    num = redis_get(REDIS_KEY_CHINA_DNS_PORT)
+    if num:
+        num = num.decode()
+        if num == 0:
+            num = 5336
+            redis_add(REDIS_KEY_CHINA_DNS_PORT, num)
+            chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = num
+        chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = num
+    else:
+        num = 5336
+        redis_add(REDIS_KEY_CHINA_DNS_PORT, num)
+        chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = num
+
+
+# 外国DNS端口获取
+def init_extra_dns_port():
+    num = redis_get(REDIS_KEY_EXTRA_DNS_PORT)
+    if num:
+        num = num.decode()
+        if num == 0:
+            num = 7874
+            redis_add(REDIS_KEY_EXTRA_DNS_PORT, num)
+            extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = num
+        extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = num
+    else:
+        num = 7874
+        redis_add(REDIS_KEY_EXTRA_DNS_PORT, num)
+        extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = num
+
+
+# 中国DNS服务器获取
+def init_china_dns_server():
+    num = redis_get(REDIS_KEY_CHINA_DNS_SERVER)
+    if num:
+        num = num.decode()
+        if num == "":
+            num = "127.0.0.1"
+            redis_add(REDIS_KEY_CHINA_DNS_SERVER, num)
+            chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = num
+        chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = num
+    else:
+        num = "127.0.0.1"
+        redis_add(REDIS_KEY_CHINA_DNS_SERVER, num)
+        chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = num
+
+
+def init_extra_dns_server():
+    num = redis_get(REDIS_KEY_EXTRA_DNS_SERVER)
+    if num:
+        num = num.decode()
+        if num == "":
+            num = "127.0.0.1"
+            redis_add(REDIS_KEY_EXTRA_DNS_SERVER, num)
+            extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = num
+        extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = num
+    else:
+        num = "127.0.0.1"
+        redis_add(REDIS_KEY_EXTRA_DNS_SERVER, num)
+        extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = num
+
+
 # 考虑过线程池或者负载均衡，线程池需要多个端口不大合适，负载均衡似乎不错，但有点复杂，后期看看
 if __name__ == '__main__':
-    #HOST_IP = getMasterIp()
+    init_threads_num()
+    init_china_dns_server()
+    init_china_dns_port()
+    init_extra_dns_server()
+    init_extra_dns_port()
+    # HOST_IP = getMasterIp()
     timer_thread1 = threading.Thread(target=init, args=(10,))
     timer_thread1.start()
     # 创建一个UDP socket
