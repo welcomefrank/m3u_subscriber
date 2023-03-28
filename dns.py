@@ -4,8 +4,8 @@ import socket
 import threading
 import time
 import dnslib
-
 import redis
+import ipaddress
 
 r = redis.Redis(host='localhost', port=6379)
 # 白名单总命中缓存规则，数据中等，是实际命中的规则缓存
@@ -24,7 +24,15 @@ black_list_tmp_policy = {}
 black_list_tmp_cache = {}
 white_list_nameserver_policy = {}
 black_list_policy = {}
+ipv4_list = {}
 
+ipv4_list_tmp_cache = {}
+ipv4_list_tmp_policy = {}
+
+ipCheckDomian=["ip.skk.moe","ip.swcdn.skk.moe","api.ipify.org",
+               "api-ipv4.ip.sb","d.skk.moe","qqwry.api.skk.moe",
+               "ipinfo.io","cdn.ipinfo.io","ip.sb",
+               "ip-api.com","browserleaks.com","www.dnsleaktest.com"]
 
 # 规则：先查unkown_list_tmp_cache，有的话转发5335,
 # 没有再查black_list_tmp_cache，有记录直接转发5335,
@@ -34,6 +42,44 @@ black_list_policy = {}
 # 没有命中则black_list_policy，查到则更新black_list_tmp_policy，blacl_list_tmp_cache，再转发5335
 # 没有命中则white_list_nameserver_policy，查到则更新white_list_tmp_policy，white_list_tmp_cache，再转发5336
 # 没有命中则更新unkown_list_tmp_cache，转发给127.0.0.1#5335
+
+HOST_IP = "0.0.0.0"
+
+
+# 获取软路由主路由ip
+def getMasterIp():
+    # 获取宿主机IP地址
+    host_ip = socket.gethostbyname(socket.gethostname())
+    # client = docker.from_env()
+    # # 设置要创建容器的参数
+    # container_name = 'my_container_name'
+    # image_name = 'my_image_name'
+    # command = 'python /path/to/my_script.py'
+    # volumes = {'/path/on/host': {'bind': '/path/on/container', 'mode': 'rw'}}
+    # ports = {'8080/tcp': ('0.0.0.0', 8080)}
+    #
+    # # 获取宿主机IP地址
+    # host_ip = socket.gethostbyname(socket.gethostname())
+    #
+    # # 设置容器的host_config属性
+    # host_config = client.api.create_host_config(
+    #     network_mode='host',  # 使用宿主机的网络模式
+    #     extra_hosts={'host.docker.internal': host_ip}  # 添加一个docker内部host和宿主机IP的映射
+    # )
+    #
+    # # 创建容器
+    # container = client.containers.create(
+    #     name=container_name,
+    #     image=image_name,
+    #     command=command,
+    #     volumes=volumes,
+    #     ports=ports,
+    #     host_config=host_config
+    # )
+    #
+    # # 启动容器
+    # container.start()
+    return host_ip
 
 
 # 检测域名是否在记录的黑名单域名策略缓存  是-true  不是-false
@@ -103,50 +149,77 @@ def inWhiteListPolicyCache(domain_name_str):
     return False
 
 
+def check_domain_inIpv4ListPolicy(ip, ipv4_list_chunk):
+    for key in ipv4_list_chunk:
+        if ip in ipaddress.IPv4Network(key):
+            ipv4_list_tmp_cache[ip] = ""
+            ipv4_list_tmp_policy[key] = ""
+            return True
+
+
+# 判断域名ip是否归属中国大陆
+def is_china_domain(domain):
+    # 解析域名为IP地址
+    try:
+        ip_address = ipaddress.IPv4Address(socket.gethostbyname(domain))
+    except socket.gaierror:
+        return False
+    # 判断IP地址是否是私有IP地址
+    if ip_address.is_private:
+        return False
+    if len(ipv4_list) == 0:
+        initIpv4List()
+    # 判断IP地址是否在中国大陆IP段中
+    maxThread = 100
+    items = sorted(ipv4_list.keys())
+    length = len(items)
+    # 计算每个线程处理的数据大小
+    chunk_size = math.ceil(length / maxThread)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=maxThread) as executor:
+        futures = []
+        for i in range(maxThread):
+            start_index = i * chunk_size
+            end_index = min(start_index + chunk_size, length)
+            black_list_chunk = items[start_index:end_index]
+            future = executor.submit(check_domain_inIpv4ListPolicy, black_list_chunk)
+            futures.append(future)
+            if future.result():
+                return True
+        return False
+
+
 # 检测域名是否在全部黑名单域名策略  是-true  不是-false
 def inBlackListPolicy(domain_name_str):
     if len(black_list_policy) == 0:
         initBlackList()
     if black_list_policy:
-        jump = 0
-        count = 0
-        fail = 0
-        maxThread = 100
-        items = sorted(black_list_policy.keys())
-        length = len(items)
-        # 计算每个线程处理的数据大小
-        chunk_size = math.ceil(length / maxThread)
-        with concurrent.futures.ThreadPoolExecutor(max_workers=maxThread) as executor:
-            futures = []
-            for i in range(maxThread):
-                start_index = i * chunk_size
-                end_index = min(start_index + chunk_size, length)
-                black_list_chunk = items[start_index:end_index]
-                future = executor.submit(check_domain_inBlackListPolicy, domain_name_str, black_list_chunk)
-                futures.append(future)
-                if future.result():
-                    jump += 1
-                    break
-                else:
-                    fail += 1
-            if count == 0:
-                if jump > 0:
-                    count += 1
-                    return True
-                elif fail == 9:
-                    count += 1
-                    return False
+        if len(black_list_policy) == 0:
+            return False
+        thik = stupidThink(domain_name_str)
+        for thinkDomain in thik:
+            maxThread = 100
+            items = sorted(black_list_policy.keys())
+            length = len(items)
+            # 计算每个线程处理的数据大小
+            chunk_size = math.ceil(length / maxThread)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=maxThread) as executor:
+                futures = []
+                for i in range(maxThread):
+                    start_index = i * chunk_size
+                    end_index = min(start_index + chunk_size, length)
+                    black_list_chunk = items[start_index:end_index]
+                    future = executor.submit(check_domain_inBlackListPolicy, thinkDomain, black_list_chunk)
+                    futures.append(future)
+                    if future.result():
+                        return True
+        return False
+
     else:
         return False
 
 
 def check_domain_inBlackListPolicy(domain_name_str, black_list_chunk):
     for key in black_list_chunk:
-        # 新域名在全部规则里有类似域名，更新缓存与策略缓存
-        if key in domain_name_str:
-            black_list_tmp_cache[domain_name_str] = ""
-            black_list_tmp_policy[key] = ""
-            return True
         # 缓存域名在新域名里有匹配
         if domain_name_str in key:
             black_list_tmp_cache[domain_name_str] = ""
@@ -159,34 +232,27 @@ def inWhiteListPolicy(domain_name_str):
     if len(white_list_nameserver_policy) == 0:
         initWhiteList()
     if white_list_nameserver_policy:
-        jump = 0
-        count = 0
-        fail = 0
-        maxThread = 100
-        items = sorted(white_list_nameserver_policy.keys())
-        length = len(items)
-        # 计算每个线程处理的数据大小
-        chunk_size = math.ceil(length / maxThread)
-        with concurrent.futures.ThreadPoolExecutor(max_workers=maxThread) as executor:
-            futures = []
-            for i in range(0, maxThread):
-                start_index = i * chunk_size
-                end_index = min(start_index + chunk_size, length)
-                white_list_chunk = items[start_index:end_index]
-                future = executor.submit(check_domain_inWhiteListPolicy, domain_name_str, white_list_chunk)
-                futures.append(future)
-                if future.result():
-                    jump += 1
-                    break
-                else:
-                    fail += 1
-                if count == 0:
-                    if jump > 0:
-                        count += 1
+        if len(white_list_nameserver_policy) == 0:
+            return False
+        thik = stupidThink(domain_name_str)
+        for thinkDomain in thik:
+            maxThread = 100
+            items = sorted(white_list_nameserver_policy.keys())
+            length = len(items)
+            # 计算每个线程处理的数据大小
+            chunk_size = math.ceil(length / maxThread)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=maxThread) as executor:
+                futures = []
+                for i in range(0, maxThread):
+                    start_index = i * chunk_size
+                    end_index = min(start_index + chunk_size, length)
+                    white_list_chunk = items[start_index:end_index]
+                    future = executor.submit(check_domain_inWhiteListPolicy, thinkDomain, white_list_chunk)
+                    futures.append(future)
+                    if future.result():
                         return True
-                    elif fail == 9:
-                        count += 1
-                        return False
+        return False
+
     else:
         return False
 
@@ -198,12 +264,18 @@ def check_domain_inWhiteListPolicy(domain_name_str, white_list_chunk):
             white_list_tmp_cache[domain_name_str] = ""
             white_list_tmp_policy[key] = ""
             return True
-        # 缓存域名在新域名里有匹配
-        if key in domain_name_str:
-            white_list_tmp_cache[domain_name_str] = ""
-            white_list_tmp_policy[key] = ""
-            return True
     return False
+
+
+def stupidThink(domain_name):
+    sub_domains = []
+    for i in range(len(domain_name.split('.')) - 1):
+        sub_domains.append('.'.join(domain_name.split('.')[i:]))
+    return sub_domains
+
+
+# 白名单中国大陆IPV4下载数据
+REDIS_KEY_WHITELIST_IPV4_DATA = "whitelistipv4data"
 
 
 # 是中国域名   是-true  不是-false
@@ -212,6 +284,10 @@ def isChinaDomain(data):
     domain_name = dns_msg.q.qname
     domain_name_str = str(domain_name)
     domain_name_str = domain_name_str[:-1]
+    if domain_name_str in ipCheckDomian:
+        return False
+    if domain_name_str.endswith(".cn") or domain_name_str.endswith(".中国"):
+        return True
     # 在已经命中的外国域名查找，直接丢给5335
     if inBlackListCache(domain_name_str):
         return False
@@ -234,6 +310,10 @@ def isChinaDomain(data):
     # if inUnkownCache(domain_name_str):
     #     return False
     # unkown_list_tmp_cache[domain_name_str] = ""
+
+    # if is_china_domain(domain_name_str):
+    #     white_list_tmp_cache[domain_name_str] = ""
+    #     return True
     return False
 
 
@@ -251,32 +331,6 @@ def redis_get_map(key):
     return python_dict
 
 
-# 定义一个函数，用于接收客户端的DNS请求
-
-
-def dns_query(data):
-    # 解析客户端的DNS请求
-    # domain_name = data[2:-5].decode('utf-8')
-    # simple_domain_name = simpleDomain(domain_name)
-    if isChinaDomain(data):
-        port = 5336
-    else:
-        port = 5335
-    # 随机选择一个DNS服务器openwrt
-    # dns_server = '127.0.0.1'
-    # 电脑测试，实际上openwrt也只能使用这个，也就是软路由lan口，127.0.0.1完全没有用，妈的
-    dns_server = '192.168.5.1'
-    # 向DNS服务器发送请求
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.settimeout(25)
-    sock.sendto(data, (dns_server, port))
-    # 接收DNS服务器的响应
-    response, addr = sock.recvfrom(4096)
-    sock.close()
-    # 返回响应给客户端
-    return response
-
-
 def initWhiteList():
     whitelist = redis_get_map(REDIS_KEY_WHITE_DOMAINS)
     if whitelist and len(whitelist) > 0:
@@ -287,6 +341,12 @@ def initBlackList():
     blacklist = redis_get_map(REDIS_KEY_BLACK_DOMAINS)
     if blacklist and len(blacklist) > 0:
         black_list_policy.update(blacklist)
+
+
+def initIpv4List():
+    ipv4list = redis_get_map(REDIS_KEY_WHITELIST_IPV4_DATA)
+    if ipv4list and len(ipv4list) > 0:
+        ipv4_list.update(ipv4list)
 
 
 # redis增加和修改
@@ -302,12 +362,14 @@ def redis_get(key):
 # 0-数据未更新 1-数据已更新 max-所有服务器都更新完毕(有max个服务器做负载均衡)
 REDIS_KEY_UPDATE_WHITE_LIST_FLAG = "updatewhitelistflag"
 REDIS_KEY_UPDATE_BLACK_LIST_FLAG = "updateblacklistflag"
+REDIS_KEY_UPDATE_IPV4_LIST_FLAG = "updateipv4listflag"
 
 
 # true-拉取更新吧
 def needUpdate(redis_key):
     flag = redis_get(redis_key)
     if flag:
+        flag = int(flag.decode())
         # 数据没有更新
         if flag == 0:
             return False
@@ -328,24 +390,67 @@ def init(sleepSecond):
             initWhiteList()
         if needUpdate(REDIS_KEY_UPDATE_BLACK_LIST_FLAG):
             initBlackList()
+        # if needUpdate(REDIS_KEY_UPDATE_IPV4_LIST_FLAG):
+        #     initIpv4List()
         time.sleep(sleepSecond)
+
+
+# 定义一个函数，用于接收客户端的DNS请求
+
+
+def dns_query(data):
+    # 解析客户端的DNS请求
+    # domain_name = data[2:-5].decode('utf-8')
+    # simple_domain_name = simpleDomain(domain_name)
+    if isChinaDomain(data):
+        # 5336-大陆，测试是桥接模式可以被寻址路由
+        port = 5336
+        # dns_server = '114.114.114.114'
+        # dns_server = '192.168.5.95'
+    else:
+        # 外国5335/7874,测试应该是桥接模式可以被寻址路由，host模式和插件的adguardhome直接放弃使用
+        # 桥接模式
+        # dns_server = '192.168.5.1'
+        port = 7874
+    # 随机选择一个DNS服务器openwrt，host模式
+    dns_server = '127.0.0.1'
+    # 电脑测试，实际上openwrt也只能使用这个，也就是软路由lan口，127.0.0.1完全没有用，妈的
+    # docker的dns似乎无法到达，只能是插件
+    #dns_server = '192.168.5.1'
+    # dns_server = HOST_IP
+    # 向DNS服务器发送请求
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.settimeout(15)
+    sock.sendto(data, (dns_server, port))
+    # 接收DNS服务器的响应
+    response, addr = sock.recvfrom(4096)
+    sock.close()
+    # 返回响应给客户端
+    return response
 
 
 # 考虑过线程池或者负载均衡，线程池需要多个端口不大合适，负载均衡似乎不错，但有点复杂，后期看看
 if __name__ == '__main__':
+    #HOST_IP = getMasterIp()
     timer_thread1 = threading.Thread(target=init, args=(10,))
     timer_thread1.start()
     # 创建一个UDP socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
+        # # 软路由模式
+        # if HOST_IP == "192.168.5.1" or HOST_IP == "127.0.0.1":
+        #     port = 5911
+        # # 电脑模式
+        # else:
+        #     port = 53
         # 绑定本地的IP和端口
         # sock.bind(('', 5911))
         # 电脑监听测试,127.0.0.1是容器内部网络环境
-        #sock.bind(('127.0.0.1', 53))
-        # openwrt监听
         sock.bind(('0.0.0.0', 5911))
+        # openwrt监听
+        # sock.bind(('0.0.0.0', 5911))
         # 设置等待时长为30s,这种很难超时
-        sock.settimeout(30)
+        sock.settimeout(18)
         # 开始接收客户端的DNS请求
         while True:
             try:

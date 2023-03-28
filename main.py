@@ -73,7 +73,7 @@ BLACKLIST_ADGUARDHOME_FORMATION = "240.0.0.0 "
 # dnsmasq白名单前缀
 BLACKLIST_DNSMASQ_FORMATION_LEFT = "server=/"
 # dnsmasq白名单后缀
-BLACKLIST_DNSMASQ_FORMATION_right = "/192.168.5.1#5336"
+BLACKLIST_DNSMASQ_FORMATION_right = "/114.114.114.114"
 # 用于匹配纯粹域名的正则表达式
 domain_regex = r'^[a-zA-Z0-9]+([\-\.]{1}[a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$'
 # 用于匹配泛化匹配的域名规则的正则表达式
@@ -108,6 +108,7 @@ REDIS_KEY_BLACK_DOMAINS = "blackdomains"
 # 0-数据未更新 1-数据已更新 max-所有服务器都更新完毕(有max个服务器做负载均衡)
 REDIS_KEY_UPDATE_WHITE_LIST_FLAG = "updatewhitelistflag"
 REDIS_KEY_UPDATE_BLACK_LIST_FLAG = "updateblacklistflag"
+REDIS_KEY_UPDATE_IPV4_LIST_FLAG = "updateipv4listflag"
 
 @app.route('/')
 def index():
@@ -382,6 +383,9 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         # 生成黑名单顺便写入redis
         thread = threading.Thread(target=writeBlackList)
         thread.start()
+    if processDataMethodName == 'process_data_abstract5':
+        # 通知dns服务器更新内存
+        redis_add(REDIS_KEY_UPDATE_IPV4_LIST_FLAG, 1)
     return "result"
 
 
@@ -409,12 +413,12 @@ def initProxyServer():
     else:
         try:
             update_dict = {
-                "http://127.0.0.1:25500/sub": "本地服务器",
-                "http://192.168.5.1:25500/sub": "本地服务器2"}
+                "http://127.0.0.1:25500/sub": "host模式:本地服务器",
+                "http://192.168.5.1:25500/sub": "bridge模式:本地服务器"}
             redis_add_map(REDIS_KEY_PROXIES_SERVER, update_dict)
             # 设定默认选择的模板
             tmp_dict = {}
-            tmp_dict[REDIS_KEY_PROXIES_SERVER_CHOSEN] = "本地服务器"
+            tmp_dict[REDIS_KEY_PROXIES_SERVER_CHOSEN] = "bridge模式:本地服务器"
             redis_add_map(REDIS_KEY_PROXIES_SERVER_CHOSEN, tmp_dict)
         except:
             pass
@@ -1508,7 +1512,7 @@ def getSelectedServer():
         return jsonify({'button': dict[REDIS_KEY_PROXIES_SERVER_CHOSEN]})
     except:
         tmp_dict = {}
-        tmp_dict[REDIS_KEY_PROXIES_SERVER_CHOSEN] = "本地服务器"
+        tmp_dict[REDIS_KEY_PROXIES_SERVER_CHOSEN] = "bridge模式:本地服务器"
         redis_add_map(REDIS_KEY_PROXIES_SERVER_CHOSEN, tmp_dict)
         return jsonify({'button': tmp_dict[REDIS_KEY_PROXIES_SERVER_CHOSEN]})
 
