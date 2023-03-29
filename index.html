@@ -865,8 +865,11 @@
 
     function reloadProxyModels(requestpath, value) {
         if (requestpath === '/getall10') {
+            while (list.firstChild) {
+                list.removeChild(list.firstChild);
+            }
             const li = document.createElement('li');
-            li.textContent = value;
+            li.textContent = value
             list.appendChild(li);
             // 监听下拉菜单项点击事件
             li.addEventListener('click', () => {
@@ -879,6 +882,9 @@
             });
         }
         if (requestpath === '/getall9') {
+            while (list2.firstChild) {
+                list2.removeChild(list2.firstChild);
+            }
             const li = document.createElement('li');
             li.textContent = value;
             list2.appendChild(li);
@@ -1025,6 +1031,16 @@
 
     //从数据库拉取订阅列表数据
     function reloadBase(requestpath, suburlclassname, subnameclassname, savebuttonname, delbuttonname, inputTableElement) {
+        // 旧的不去新的不来
+        // 获取表格的tbody元素
+        const tbody = inputTableElement.querySelector('tbody');
+        // 获取所有的行元素
+        const rows = tbody.querySelectorAll('tr');
+        // 遍历每个行元素并删除
+        rows.forEach((row) => {
+            tbody.removeChild(row);
+        });
+
         fetch(requestpath)
             .then(response => response.json())
             .then(data => {

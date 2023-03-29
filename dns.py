@@ -29,6 +29,7 @@ ipv4_list = {}
 ipv4_list_tmp_cache = {}
 ipv4_list_tmp_policy = {}
 
+# china   api.ttt.sh
 ipCheckDomian = ["ip.skk.moe", "ip.swcdn.skk.moe", "api.ipify.org",
                  "api-ipv4.ip.sb", "d.skk.moe", "qqwry.api.skk.moe",
                  "ipinfo.io", "cdn.ipinfo.io", "ip.sb",
@@ -298,6 +299,10 @@ def stupidThink(domain_name):
 REDIS_KEY_WHITELIST_IPV4_DATA = "whitelistipv4data"
 
 
+# 外国判断  1  1  1  1   0   1   0    0
+# 中国判断  1     0      0       1
+# 直接信任黑名单规则
+# 直接信任白名单规则
 # 是中国域名   是-true  不是-false
 def isChinaDomain(data):
     dns_msg = dnslib.DNSRecord.parse(data)
@@ -326,14 +331,6 @@ def isChinaDomain(data):
     # 在全部白名单规则里查找
     if inWhiteListPolicy(domain_name_str):
         return True
-    # # 命中未知域名缓存，直接丢给5335
-    # if inUnkownCache(domain_name_str):
-    #     return False
-    # unkown_list_tmp_cache[domain_name_str] = ""
-
-    # if is_china_domain(domain_name_str):
-    #     white_list_tmp_cache[domain_name_str] = ""
-    #     return True
     return False
 
 
@@ -430,44 +427,6 @@ def init(sleepSecond):
         time.sleep(sleepSecond)
 
 
-# 定义一个函数，用于接收客户端的DNS请求
-
-
-def dns_query(data):
-    # 解析客户端的DNS请求
-    # domain_name = data[2:-5].decode('utf-8')
-    # simple_domain_name = simpleDomain(domain_name)
-    if isChinaDomain(data):
-        # 5336-大陆，测试是桥接模式可以被寻址路由
-        # port = 5336
-        port = chinadnsport[REDIS_KEY_CHINA_DNS_PORT]
-        dns_server = chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER]
-        # dns_server = '114.114.114.114'
-        # dns_server = '192.168.5.95'
-    else:
-        # 外国5335/7874,测试应该是桥接模式可以被寻址路由，host模式和插件的adguardhome直接放弃使用
-        # 桥接模式
-        # dns_server = '192.168.5.1'
-        port = extradnsport[REDIS_KEY_EXTRA_DNS_PORT]
-        dns_server = extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER]
-        # port = 7874
-    # 随机选择一个DNS服务器openwrt，host模式
-    #dns_server = '127.0.0.1'
-    # 电脑测试，实际上openwrt也只能使用这个，也就是软路由lan口，127.0.0.1完全没有用，妈的
-    # docker的dns似乎无法到达，只能是插件
-    # dns_server = '192.168.5.1'
-    # dns_server = HOST_IP
-    # 向DNS服务器发送请求
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.settimeout(15)
-    sock.sendto(data, (dns_server, port))
-    # 接收DNS服务器的响应
-    response, addr = sock.recvfrom(4096)
-    sock.close()
-    # 返回响应给客户端
-    return response
-
-
 # 线程数获取
 def init_threads_num():
     num = redis_get(REDIS_KEY_THREADS)
@@ -475,12 +434,10 @@ def init_threads_num():
         num = int(num.decode())
         if num == 0:
             num = 100
-            redis_add(REDIS_KEY_THREADS, num)
             threadsNum[REDIS_KEY_THREADS] = num
         threadsNum[REDIS_KEY_THREADS] = num
     else:
         num = 100
-        redis_add(REDIS_KEY_THREADS, num)
         threadsNum[REDIS_KEY_THREADS] = num
 
 
@@ -491,12 +448,10 @@ def init_china_dns_port():
         num = int(num.decode())
         if num == 0:
             num = 5336
-            redis_add(REDIS_KEY_CHINA_DNS_PORT, num)
             chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = num
         chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = num
     else:
         num = 5336
-        redis_add(REDIS_KEY_CHINA_DNS_PORT, num)
         chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = num
 
 
@@ -507,12 +462,10 @@ def init_extra_dns_port():
         num = int(num.decode())
         if num == 0:
             num = 7874
-            redis_add(REDIS_KEY_EXTRA_DNS_PORT, num)
             extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = num
         extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = num
     else:
         num = 7874
-        redis_add(REDIS_KEY_EXTRA_DNS_PORT, num)
         extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = num
 
 
@@ -523,12 +476,10 @@ def init_china_dns_server():
         num = num.decode()
         if num == "":
             num = "127.0.0.1"
-            redis_add(REDIS_KEY_CHINA_DNS_SERVER, num)
             chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = num
         chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = num
     else:
         num = "127.0.0.1"
-        redis_add(REDIS_KEY_CHINA_DNS_SERVER, num)
         chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = num
 
 
@@ -539,13 +490,50 @@ def init_extra_dns_server():
         num = num.decode()
         if num == "":
             num = "127.0.0.1"
-            redis_add(REDIS_KEY_EXTRA_DNS_SERVER, num)
             extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = num
         extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = num
     else:
         num = "127.0.0.1"
-        redis_add(REDIS_KEY_EXTRA_DNS_SERVER, num)
         extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = num
+
+
+# 定义一个函数，用于接收客户端的DNS请求
+
+
+def dns_query(data):
+    # 解析客户端的DNS请求
+    if isChinaDomain(data):
+        port = chinadnsport[REDIS_KEY_CHINA_DNS_PORT]
+        dns_server = chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER]
+    else:
+        port = extradnsport[REDIS_KEY_EXTRA_DNS_PORT]
+        dns_server = extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER]
+    # 向DNS服务器发送请求
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.settimeout(15)
+        sock.sendto(data, (dns_server, port))
+        # 接收DNS服务器的响应
+        response, addr = sock.recvfrom(4096)
+        sock.close()
+        # 返回响应给客户端
+        return response
+    except socket.error as e:
+        print(f'dns_query error: {e}')
+        return ''
+
+
+# 定义可调用对象
+def handle_request(sock, executor):
+    # 接收DNS请求
+    try:
+        data, addr = sock.recvfrom(4096)
+        # 异步调用dns_query函数
+        response = executor.submit(dns_query, data)
+        # 发送DNS响应
+        sock.sendto(response.result(), addr)
+    except socket.error as e:
+        print(f'handle_request error: {e}')
 
 
 # 考虑过线程池或者负载均衡，线程池需要多个端口不大合适，负载均衡似乎不错，但有点复杂，后期看看
@@ -555,36 +543,31 @@ if __name__ == '__main__':
     init_china_dns_port()
     init_extra_dns_server()
     init_extra_dns_port()
-    # HOST_IP = getMasterIp()
     timer_thread1 = threading.Thread(target=init, args=(10,))
     timer_thread1.start()
-    # 创建一个UDP socket
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        # # 软路由模式
-        # if HOST_IP == "192.168.5.1" or HOST_IP == "127.0.0.1":
-        #     port = 5911
-        # # 电脑模式
-        # else:
-        #     port = 53
-        # 绑定本地的IP和端口
-        # sock.bind(('', 5911))
-        # 电脑监听测试,127.0.0.1是容器内部网络环境
-        sock.bind(('0.0.0.0', 5911))
-        # openwrt监听
-        # sock.bind(('0.0.0.0', 5911))
-        # 设置等待时长为30s,这种很难超时
-        sock.settimeout(18)
-        # 开始接收客户端的DNS请求
-        while True:
+        # 创建一个线程池对象
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            # 创建一个UDP socket
             try:
-                data, addr = sock.recvfrom(4096)
-                response = dns_query(data)
-                sock.sendto(response, addr)
-            except:
-                pass
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                sock.bind(('0.0.0.0', 5911))
+                # 设置等待时长为30s
+                sock.settimeout(30)
+                # 开始接收客户端的DNS请求
+                try:
+                    while True:
+                        try:
+                            handle_request(sock, executor)
+                        except:
+                            pass
+                except:
+                    pass
+                finally:
+                    sock.close()
+            except socket.error as e:
+                print(f'socket error: {e}')
     except:
         pass
     finally:
-        sock.close()
         timer_thread1.join()

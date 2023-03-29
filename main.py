@@ -1683,8 +1683,8 @@ def getThreadNum():
 @app.route('/saveThreadS', methods=['POST'])
 def saveThreadS():
     data = request.json['selected_button']
-    redis_add(REDIS_KEY_THREADS, min(int(data), 500))
-    threadsNum[REDIS_KEY_THREADS] = min(int(data), 500)
+    redis_add(REDIS_KEY_THREADS, min(int(data), 200))
+    threadsNum[REDIS_KEY_THREADS] = min(int(data), 200)
     redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 1)
     return "数据已经保存"
 
