@@ -78,7 +78,9 @@ adguardhome)，dns监听端口-5911(在软路由dhcp/dns设置转发127.0.0.1#59
 
 备注：dns分流器可以自己设置服务器和端口，建议使用host模式减少一层路由。
 
-实际使用中建议把它作为软路由adguardhome插件的上游dns，在分流器里外国dns设置openclash，国内dns随便你填野生的114.114.114.114:53或者自己整的
+实际使用中建议把它作为软路由adguardhome插件的上游dns，adguardhome作为dnsmasq的上游，
+
+在分流器里外国dns设置openclash，国内dns随便你填野生的114.114.114.114:53或者自己整的
 
 这样子顺便可以集中使用adguardhome插件的广告过滤
 
