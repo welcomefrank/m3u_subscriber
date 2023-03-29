@@ -10,6 +10,7 @@ import re
 import threading
 from concurrent.futures import ThreadPoolExecutor
 import aiohttp
+import aiofiles
 import redis
 import requests
 # import base64
@@ -210,13 +211,12 @@ def execute(method_name, sleepSecond):
         time.sleep(sleepSecond)  # 等待24小时
 
 
-async def download_url(session, url, value):
+async def download_url(session, url, value, sem):
     try:
-        async with session.get(url) as resp:
+        async with sem, session.get(url) as resp:  # 使用asyncio.Semaphore限制TCP连接的数量
             if resp.status == 200:
-                # 如果url有效，将它和值写入m3u文件
-                with open('/alive.m3u', 'a') as f:
-                    f.write(f'{value}{url}\n')
+                async with aiofiles.open('/alive.m3u', 'a') as f: # 异步的方式写入内容
+                    await f.write(f'{value}{url}n')
     except aiohttp.ClientSSLError as ssl_err:
         print(f"SSL Error occurred while downloading {url}: {ssl_err}")
     except Exception as e:
@@ -224,12 +224,11 @@ async def download_url(session, url, value):
 
 
 async def asynctask(m3u_dict):
-    connector = aiohttp.TCPConnector(limit=100)  # 创建 TCP 连接池，限制并发数为 100
-    async with aiohttp.ClientSession(connector=connector) as session:  # 将连接池传递给 ClientSession
-        # async with aiohttp.ClientSession() as session:
+    sem = asyncio.Semaphore(100)  # 限制TCP连接的数量为100个
+    async with aiohttp.ClientSession() as session:
         tasks = []
         for url, value in m3u_dict.items():
-            task = asyncio.create_task(download_url(session, url, value))
+            task = asyncio.create_task(download_url(session, url, value, sem))
             tasks.append(task)
         await asyncio.gather(*tasks)
 
