@@ -389,6 +389,7 @@ REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG = "updatechinadnsportflag"
 REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG = "updateextradnsserverflag"
 REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG = "updateextradnsportflag"
 
+
 # true-拉取更新吧
 def needUpdate(redis_key):
     flag = redis_get(redis_key)
@@ -438,16 +439,20 @@ def dns_query(data):
     # simple_domain_name = simpleDomain(domain_name)
     if isChinaDomain(data):
         # 5336-大陆，测试是桥接模式可以被寻址路由
-        port = 5336
+        # port = 5336
+        port = chinadnsport[REDIS_KEY_CHINA_DNS_PORT]
+        dns_server = chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER]
         # dns_server = '114.114.114.114'
         # dns_server = '192.168.5.95'
     else:
         # 外国5335/7874,测试应该是桥接模式可以被寻址路由，host模式和插件的adguardhome直接放弃使用
         # 桥接模式
         # dns_server = '192.168.5.1'
-        port = 7874
+        port = extradnsport[REDIS_KEY_EXTRA_DNS_PORT]
+        dns_server = extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER]
+        # port = 7874
     # 随机选择一个DNS服务器openwrt，host模式
-    dns_server = '127.0.0.1'
+    #dns_server = '127.0.0.1'
     # 电脑测试，实际上openwrt也只能使用这个，也就是软路由lan口，127.0.0.1完全没有用，妈的
     # docker的dns似乎无法到达，只能是插件
     # dns_server = '192.168.5.1'
@@ -463,10 +468,11 @@ def dns_query(data):
     return response
 
 
+# 线程数获取
 def init_threads_num():
     num = redis_get(REDIS_KEY_THREADS)
     if num:
-        num = num.decode()
+        num = int(num.decode())
         if num == 0:
             num = 100
             redis_add(REDIS_KEY_THREADS, num)
@@ -482,7 +488,7 @@ def init_threads_num():
 def init_china_dns_port():
     num = redis_get(REDIS_KEY_CHINA_DNS_PORT)
     if num:
-        num = num.decode()
+        num = int(num.decode())
         if num == 0:
             num = 5336
             redis_add(REDIS_KEY_CHINA_DNS_PORT, num)
@@ -498,7 +504,7 @@ def init_china_dns_port():
 def init_extra_dns_port():
     num = redis_get(REDIS_KEY_EXTRA_DNS_PORT)
     if num:
-        num = num.decode()
+        num = int(num.decode())
         if num == 0:
             num = 7874
             redis_add(REDIS_KEY_EXTRA_DNS_PORT, num)
@@ -526,6 +532,7 @@ def init_china_dns_server():
         chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = num
 
 
+# 外国dns服务器获取
 def init_extra_dns_server():
     num = redis_get(REDIS_KEY_EXTRA_DNS_SERVER)
     if num:
@@ -563,7 +570,7 @@ if __name__ == '__main__':
         # 绑定本地的IP和端口
         # sock.bind(('', 5911))
         # 电脑监听测试,127.0.0.1是容器内部网络环境
-        sock.bind(('0.0.0.0', 5911))
+        sock.bind(('0.0.0.0', 53))
         # openwrt监听
         # sock.bind(('0.0.0.0', 5911))
         # 设置等待时长为30s,这种很难超时

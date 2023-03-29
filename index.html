@@ -937,8 +937,6 @@
     }
 
 
-    // 加载代理类型:clash/v2ray/ss/ssr...
-    reloadSelectedButtonId()
     function reloadSelectedButtonId() {
         // 发送 GET 请求
         fetch('/getSelectedButtonId')
@@ -1499,32 +1497,53 @@
         for (let i = 0; i < pages.length; i++) {
             if (pages[i].id === selectedPage) {
                 pages[i].style.display = "block";
+                reloadPageDataById(selectedPage);
             } else {
                 pages[i].style.display = "none";
             }
         }
     });
 
+    //只在切换到对应页面时进行对应页面查询
+    function reloadPageDataById(selectedPage) {
+        if (selectedPage === pages[0].id) {
+            reload()
+        } else if (selectedPage === pages[1].id) {
+            handleScroll()
+        } else if (selectedPage === pages[2].id) {
+            reloadPasswordList()
+        } else if (selectedPage === pages[4].id) {
+            reloadWhiteListLink()
+        } else if (selectedPage === pages[5].id) {
+            reloadBlackListLink()
+        } else if (selectedPage === pages[6].id) {
+            reloadIpv4ListLink()
+        } else if (selectedPage === pages[7].id) {
+            reloadIpv6ListLink()
+        } else if (selectedPage === pages[9].id) {
+            // 这里面有查询有问题，暂时不管
+            reloadProxiesListLink()
+            reloadProxyServerListLink()
+            reloadProxyModelListLink()
+            // 加载代理类型:clash/v2ray/ss/ssr...
+            reloadSelectedButtonId()
+        } else if (selectedPage === pages[10].id) {
+            // 节点订阅-加载选择的远程配置
+            reloadSelectedModel()
+        } else if (selectedPage === pages[11].id) {
+            // 节点订阅-加载选择的服务器配置
+            reloadSelectedServer()
+        } else if (selectedPage === pages[12].id) {
+            reloadThreadNum()
+            reloadChinaDnsServer()
+            reloadExtraDnsServer()
+            reloadExtraDnsPort()
+            reloadChinaDnsPort()
+        }
+    }
+
     function init() {
-        // 节点订阅-加载选择的服务器配置
-        reloadSelectedServer()
-        // 节点订阅-加载选择的远程配置
-        reloadSelectedModel()
-        reloadThreadNum()
-        reloadChinaDnsServer()
-        reloadExtraDnsServer()
-        reloadExtraDnsPort()
-        reloadChinaDnsPort()
-        reloadProxyServerListLink()
-        reloadProxyModelListLink()
-        reloadWhiteListLink()
-        reloadBlackListLink()
-        handleScroll()
         reload()
-        reloadIpv4ListLink()
-        reloadIpv6ListLink()
-        reloadPasswordList()
-        reloadProxiesListLink()
     }
 
     // 超融合-工具-上传m3u文件-自动下载格式规整化的m3u文件

@@ -1500,7 +1500,7 @@ def init_threads_num():
         return data
     num = redis_get(REDIS_KEY_THREADS)
     if num:
-        num = num.decode()
+        num = int(num.decode())
         if num == 0:
             num = 100
             redis_add(REDIS_KEY_THREADS, num)
@@ -1521,7 +1521,7 @@ def init_china_dns_port():
         return data
     num = redis_get(REDIS_KEY_CHINA_DNS_PORT)
     if num:
-        num = num.decode()
+        num = int(num.decode())
         if num == 0:
             num = 5336
             redis_add(REDIS_KEY_CHINA_DNS_PORT, num)
@@ -1542,7 +1542,7 @@ def init_extra_dns_port():
         return data
     num = redis_get(REDIS_KEY_EXTRA_DNS_PORT)
     if num:
-        num = num.decode()
+        num = int(num.decode())
         if num == 0:
             num = 7874
             redis_add(REDIS_KEY_EXTRA_DNS_PORT, num)
