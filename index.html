@@ -1484,10 +1484,6 @@
         }
     }
 
-    //将 handleScroll 函数绑定到 window 的 scroll 事件上，以便在用户滚动窗口时触发
-    window.addEventListener('scroll', handleScroll);
-    //handleScroll();
-
     // 切换页面
     switchbox.addEventListener("change", () => {
         // Get selected page
@@ -1509,7 +1505,9 @@
         if (selectedPage === pages[0].id) {
             reload()
         } else if (selectedPage === pages[1].id) {
-            handleScroll()
+            //将 handleScroll 函数绑定到 window 的 scroll 事件上，以便在用户滚动窗口时触发
+            window.addEventListener('scroll', handleScroll);
+            //handleScroll()
         } else if (selectedPage === pages[2].id) {
             reloadPasswordList()
         } else if (selectedPage === pages[4].id) {
@@ -1539,6 +1537,9 @@
             reloadExtraDnsServer()
             reloadExtraDnsPort()
             reloadChinaDnsPort()
+        }
+        if (selectedPage !== pages[1].id) {
+            window.removeEventListener('scroll', handleScroll);
         }
     }
 
