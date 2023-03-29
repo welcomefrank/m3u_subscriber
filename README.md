@@ -8,7 +8,25 @@
 
 ### 安装步骤:
 
-#### 一、bridge模式:不推荐使用，目前这个模式会导致dns分流器异常
+#### 一、host模式:推荐使用，可以减少一层路由，并且不会导致dns出问题
+
+arm64:
+
+docker run -d --name m3usubscriber-4395 --restart unless-stopped -p --net=host  jkld310/m3usubscriber:latest  
+
+docker run -d --name m3usubscriber --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged jkld310/m3usubscriber:latest
+
+docker run -d --name m3usubscriber-4395 --restart unless-stopped --net=host -d jkld310/m3usubscriber:arm64v8
+
+docker run -d --name m3usubscriber --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged jkld310/m3usubscriber:arm64v8
+
+x86/amd64:
+
+docker run -d --name m3usubscriber-4395 --restart unless-stopped --net=host -d jkld310/m3usubscriber:x86_64   
+
+docker run -d --name m3usubscriber --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged jkld310/m3usubscriber:x86_64
+
+#### 二、bridge模式:不推荐使用，目前这个模式会导致dns分流器异常
 
 默认arm64架构:
 
@@ -22,29 +40,17 @@ adm64/x86_64架构:
 
 docker run -d --name m3usubscriber --restart unless-stopped -p 4395:4395 -p 5911:5911  jkld310/m3usubscriber:x86_64   
 
-#### 二、host模式:推荐使用，可以减少一层路由，并且不会导致dns出问题
-
-arm64:
-
-docker run -d --name m3usubscriber-4395 --restart unless-stopped -p --net=host  jkld310/m3usubscriber:latest  
-
-docker run -d --name m3usubscriber-4395 --restart unless-stopped --net=host -d jkld310/m3usubscriber:arm64v8
-
-x86/amd64:
-
-docker run -d --name m3usubscriber-4395 --restart unless-stopped --net=host -d jkld310/m3usubscriber:x86_64   
-
 ### 非常高兴能为您介绍本工具所实现的各项功能：
 
 1-您可以轻松保存来自互联网的直播源订阅链接；
 
 比如:https://raw.githubusercontent.com/liudaoguiguzi/ppap/main/1.m3u
 
-2-将保存的链接整合为一个局域网直播源订阅链接，通过该链接，您可以在局域网内访问您所保存的所有直播源链接内容；
+##### 2-将保存的链接整合为一个局域网直播源订阅链接，通过该链接，您可以在局域网内访问您所保存的所有直播源链接内容；
 
 3-每个功能模块都有导入导出配置功能，顺便加了一键导入导出，这个只对订阅性质的功能有效
 
-4-工具在后台每隔12小时会自动执行生成M3U超融合直播源订阅功能，即会自动刷新所有直播源订阅链接内容。
+4-工具在后台每隔24小时会自动执行生成M3U超融合直播源订阅功能，即会自动刷新所有直播源订阅链接内容。
 
 5-m3u文件标准格式转换，您可以上传M3U直播源文件获得去重复且格式统一的M3U文件，目前只有m3u格式的直播源文件，没有txt格式
 
@@ -66,11 +72,15 @@ docker run -d --name m3usubscriber-4395 --restart unless-stopped --net=host -d j
 
 ##### 13-添加了类似acl4ssr的功能，测试效果比较弱鸡,自用
 
-##### 14-增加了基于redis的dns分流器，配合白名单和黑名单进行分流，转发5335端口(外国+中国域名漏网之鱼，可以使用openclash)，转发5336端口(大部分命中的中国域名，可以使用
+##### 14-增加了基于redis的dns分流器，配合白名单和黑名单进行分流，转发7874端口(外国+中国域名漏网之鱼，可以使用openclash)，转发5336端口(大部分命中的中国域名，可以使用
 
 adguardhome)，dns监听端口-5911(在软路由dhcp/dns设置转发127.0.0.1#5911)，自用
 
-备注：dns分流器需要把软路由的LAN的网段改成192.168.5.1，我是参考adguardhome来写，不过暂时远远不能做到它那么便民友好
+备注：dns分流器可以自己设置服务器和端口，建议使用host模式减少一层路由。
+
+实际使用中建议把它作为软路由adguardhome插件的上游dns，在分流器里外国dns设置openclash，国内dns随便你填野生的114.114.114.114:53或者自己整的
+
+这样子顺便可以集中使用adguardhome插件的广告过滤
 
 ### 接下来，您只需要按照以下步骤即可使用本工具：
 
