@@ -4,7 +4,7 @@
 一个偏离初心的工具箱，目前有直播源、白名单黑名单、节点订阅、dns分流器等功能，主要是为了方便自己的网上冲浪做的，并不是很好入手
 
 
-![image](https://raw.githubusercontent.com/liudaoguiguzi/m3u_subscriber/main/%E5%9B%BE%E7%89%871.png)
+![image](https://raw.githubusercontent.com/paperbluster/m3u_subscriber/main/%E5%9B%BE%E7%89%871.png)
 
 ### 安装步骤:
 
