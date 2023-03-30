@@ -379,7 +379,7 @@ def redis_get(key):
 # 0-数据未更新 1-数据已更新 max-所有服务器都更新完毕(有max个服务器做负载均衡)
 REDIS_KEY_UPDATE_WHITE_LIST_FLAG = "updatewhitelistflag"
 REDIS_KEY_UPDATE_BLACK_LIST_FLAG = "updateblacklistflag"
-REDIS_KEY_UPDATE_IPV4_LIST_FLAG = "updateipv4listflag"
+#REDIS_KEY_UPDATE_IPV4_LIST_FLAG = "updateipv4listflag"
 REDIS_KEY_UPDATE_THREAD_NUM_FLAG = "updatethreadnumflag"
 REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG = "updatechinadnsserverflag"
 REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG = "updatechinadnsportflag"
@@ -551,7 +551,7 @@ if __name__ == '__main__':
             # 创建一个UDP socket
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                sock.bind(('0.0.0.0', 5911))
+                sock.bind(('0.0.0.0', 22770))
                 # 设置等待时长为30s
                 sock.settimeout(30)
                 # 开始接收客户端的DNS请求

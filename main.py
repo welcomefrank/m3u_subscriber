@@ -1,5 +1,8 @@
 import abc
 import asyncio
+import base64
+import secrets
+import string
 import concurrent
 import ipaddress
 import json
@@ -18,6 +21,11 @@ import time
 from urllib.parse import urlparse, unquote
 # import yaml
 from flask import Flask, jsonify, request, send_file, render_template
+
+
+import chardet
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -131,6 +139,30 @@ extradnsserver = {REDIS_KEY_EXTRA_DNS_SERVER: "127.0.0.1"}
 REDIS_KEY_EXTRA_DNS_PORT = "extradnsport"
 extradnsport = {REDIS_KEY_EXTRA_DNS_PORT: 7874}
 
+# m3u密码
+REDIS_KEY_THREADS2 = "threadsnum2"
+threadsNum2 = {REDIS_KEY_THREADS2: ""}
+
+# 白名单密码
+REDIS_KEY_THREADS3 = "threadsnum3"
+threadsNum3 = {REDIS_KEY_THREADS3: ""}
+
+# 黑名单密码
+REDIS_KEY_THREADS4 = "threadsnum4"
+threadsNum4 = {REDIS_KEY_THREADS4: ""}
+
+# ipv4密码
+REDIS_KEY_THREADS5 = "threadsnum5"
+threadsNum5 = {REDIS_KEY_THREADS5: ""}
+
+# ipv6密码
+REDIS_KEY_THREADS6 = "threadsnum6"
+threadsNum6 = {REDIS_KEY_THREADS6: ""}
+
+# 节点订阅密码
+REDIS_KEY_THREADS7 = "threadsnum7"
+threadsNum7 = {REDIS_KEY_THREADS7: ""}
+
 
 @app.route('/')
 def index():
@@ -170,7 +202,7 @@ def redis_get_map(key):
 def redis_get_map_keys(key):
     redis_dict = r.hgetall(key)
     array = [key for key in redis_dict.keys()]
-    return array
+    return array, redis_dict
 
 
 # redis删除map字典
@@ -215,7 +247,7 @@ async def download_url(session, url, value, sem):
     try:
         async with sem, session.get(url) as resp:  # 使用asyncio.Semaphore限制TCP连接的数量
             if resp.status == 200:
-                async with aiofiles.open('/alive.m3u', 'a') as f: # 异步的方式写入内容
+                async with aiofiles.open('/alive.m3u', 'a') as f:  # 异步的方式写入内容
                     await f.write(f'{value}{url}\n')
     except aiohttp.ClientSSLError as ssl_err:
         print(f"SSL Error occurred while downloading {url}: {ssl_err}")
@@ -258,17 +290,28 @@ def checkbytes(url):
         return url
 
 
-def fetch_url(url):
+# 判断是否需要解密
+def checkToDecrydecrypt(url, redis_dict, m3u_string):
+    password = redis_dict.get(url).decode()
+    if password and password != "":
+        blankContent = decrypt(password, m3u_string)
+        return blankContent
+    return m3u_string
+
+
+def fetch_url(url, redis_dict):
     try:
         response = requests.get(url, timeout=5)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         m3u_string = response.text
+        m3u_string=checkToDecrydecrypt(url, redis_dict,m3u_string)
         m3u_string += "\n"
         # print(f"success to fetch URL: {url}")
         return m3u_string
     except requests.exceptions.SSLError:
         response = requests.get(url, timeout=5, verify=False)
         m3u_string = response.text
+        m3u_string = checkToDecrydecrypt(url, redis_dict,m3u_string)
         m3u_string += "\n"
         return m3u_string
     except requests.exceptions.Timeout:
@@ -293,9 +336,9 @@ def worker(queue, file):
 
 
 def write_to_file2(data, file):
-    with open(file, 'a', encoding='utf-8') as f:
+    with open(file, 'a', ) as f:
         for line in data:
-            f.write(f'{line}\n')
+            f.write(f'{line}')
 
 
 def worker2(queue, file):
@@ -307,10 +350,10 @@ def worker2(queue, file):
         queue.task_done()
 
 
-def download_files(urls):
+def download_files(urls, redis_dict):
     with concurrent.futures.ThreadPoolExecutor() as executor:
         # 提交下载任务并获取future对象列表
-        future_to_url = {executor.submit(fetch_url, url): url for url in urls}
+        future_to_url = {executor.submit(fetch_url, url, redis_dict): url for url in urls}
         # 获取各个future对象的返回值并存储在字典中
         results = []
         for future in concurrent.futures.as_completed(future_to_url):
@@ -348,6 +391,9 @@ def writeOpenclashNameServerPolicy():
         redis_add(REDIS_KEY_UPDATE_WHITE_LIST_FLAG, 1)
         distribute_data(white_list_nameserver_policy, "/whiteList.txt", 10)
         white_list_nameserver_policy.clear()
+        # 白名单加密
+        download_secert_file("/whiteList.txt", "/WTEN.txt", REDIS_KEY_THREADS3,
+                             threadsNum3)
 
 
 def writeBlackList():
@@ -358,6 +404,9 @@ def writeBlackList():
         redis_add(REDIS_KEY_UPDATE_BLACK_LIST_FLAG, 1)
         distribute_data(black_list_nameserver_policy, "/blackList.txt", 10)
         black_list_nameserver_policy.clear()
+        # 黑名单加密
+        download_secert_file("/blackList.txt", "/BLEN.txt", REDIS_KEY_THREADS4,
+                             threadsNum4)
 
 
 def updateAdguardhomeWithelistForM3us(urls):
@@ -366,12 +415,12 @@ def updateAdguardhomeWithelistForM3us(urls):
 
 
 def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
-    results = redis_get_map_keys(redisKeyLink)
+    results, redis_dict = redis_get_map_keys(redisKeyLink)
     ism3u = processDataMethodName == 'process_data_abstract'
     if ism3u:
         thread = threading.Thread(target=updateAdguardhomeWithelistForM3us, args=(results,))
         thread.start()
-    result = download_files(results)
+    result = download_files(results, redis_dict)
     # 格式优化
     # my_dict = formattxt_multithread(result.split("\n"), 100)
     my_dict = formattxt_multithread(result.splitlines(), processDataMethodName)
@@ -388,25 +437,72 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         thread.start()
     # 同步方法写出全部配置
     distribute_data(my_dict, fileName, 10)
-    # 异步缓慢检测出有效链接
-    # asyncio.run(asynctask(my_dict))
     if ism3u:
+        # 神速直播源有效性检测
         redis_add_map(REDIS_KEY_M3U_EPG_LOGO, CHANNEL_LOGO)
         redis_add_map(REDIS_KEY_M3U_EPG_GROUP, CHANNEL_GROUP)
         thread = threading.Thread(target=check_file, args=(my_dict,))
+        # 加密全部直播源
+        thread2 = threading.Thread(target=download_secert_file,
+                                   args=(fileName, "/AEN.txt", REDIS_KEY_THREADS2, threadsNum2))
         thread.start()
+        thread2.start()
     if processDataMethodName == 'process_data_abstract3':
         # 生成白名单顺便写入redis
         thread = threading.Thread(target=writeOpenclashNameServerPolicy)
+        # 加密
+        thread2 = threading.Thread(target=download_secert_file,
+                                   args=(fileName, "/DQEN.txt", REDIS_KEY_THREADS3, threadsNum3))
         thread.start()
+        thread2.start()
     if processDataMethodName == 'process_data_abstract7':
         # 生成黑名单顺便写入redis
         thread = threading.Thread(target=writeBlackList)
+        # 加密
+        thread2 = threading.Thread(target=download_secert_file,
+                                   args=(fileName, "/OPPDEN.txt", REDIS_KEY_THREADS4, threadsNum4))
         thread.start()
+        thread2.start()
+    # 暂时没有意义,ip数据太大了
     if processDataMethodName == 'process_data_abstract5':
         # 通知dns服务器更新内存
-        redis_add(REDIS_KEY_UPDATE_IPV4_LIST_FLAG, 1)
+        # redis_add(REDIS_KEY_UPDATE_IPV4_LIST_FLAG, 1)
+        # 加密
+        thread = threading.Thread(target=download_secert_file,
+                                  args=(fileName, "/VFEN.txt", REDIS_KEY_THREADS5, threadsNum5))
+        thread.start()
+    # ipv6加密
+    if processDataMethodName == 'process_data_abstract6':
+        # 加密
+        thread = threading.Thread(target=download_secert_file,
+                                  args=(fileName, "/VSEN.txt", REDIS_KEY_THREADS6, threadsNum6))
+        thread.start()
     return "result"
+
+
+# 把自己本地文件加密生成对应的加密文本
+def download_secert_file(fileName, secretFileName, redis_key, dict_cache):
+    # 读取文件内容
+    with open(fileName, 'rb') as f:
+        ciphertext = f.read()
+    secretContent = encrypt(ciphertext, redis_key, dict_cache)
+    thread_write_bytes_to_file(secretFileName, secretContent)
+
+
+# 使用线程池把bytes流内容写入本地文件
+def thread_write_bytes_to_file(filename, bytesContent):
+    if len(bytesContent) == 0:
+        return
+    if os.path.exists(filename):
+        os.remove(filename)
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        future = executor.submit(write_bytes_to_file, filename, bytesContent)
+        future.result()
+
+
+def write_bytes_to_file(filename, plaintext):
+    with open(filename, 'wb') as f:
+        f.write(plaintext)
 
 
 def init_db():
@@ -458,23 +554,23 @@ def initProxyModel():
     else:
         try:
             update_dict = {
-                "http://127.0.0.1:4395/url/ACL4SSR_Online.ini": "ACL4SSR_Online 默认版 分组比较全(本地离线模板)",
-                "http://127.0.0.1:4395/url/ACL4SSR_Online_AdblockPlus.ini": "ACL4SSR_Online_AdblockPlus 更多去广告(本地离线模板)",
-                "http://127.0.0.1:4395/url/ACL4SSR_Online_Full_Google.ini": "ACL4SSR_Online_Full_Google 全分组 重度用户使用 谷歌细分(本地离线模板)",
-                "http://127.0.0.1:4395/url/ACL4SSR_Online_Full.ini": "ACL4SSR_Online_Full 全分组 重度用户使用(本地离线模板)",
-                "http://127.0.0.1:4395/url/ACL4SSR_Online_Full_MultiMode.ini": "ACL4SSR_Online_Full_MultiMode.ini 全分组 多模式 重度用户使用(本地离线模板)",
-                "http://127.0.0.1:4395/url/ACL4SSR_Online_Full_Netflix.ini": "ACL4SSR_Online_Full_Netflix 全分组 重度用户使用 奈飞全量(本地离线模板)",
-                "http://127.0.0.1:4395/url/ACL4SSR_Online_Full_NoAuto.ini": "ACL4SSR_Online_Full_NoAuto.ini 全分组 无自动测速 重度用户使用(本地离线模板)",
-                "http://127.0.0.1:4395/url/ACL4SSR_Online_Mini.ini": "ACL4SSR_Online_Mini 精简版(本地离线模板)",
-                "http://127.0.0.1:4395/url/ACL4SSR_Online_Mini_AdblockPlus.ini": "ACL4SSR_Online_Mini_AdblockPlus.ini 精简版 更多去广告(本地离线模板)",
-                "http://127.0.0.1:4395/url/ACL4SSR_Online_Mini_Fallback.ini": "ACL4SSR_Online_Mini_Fallback.ini 精简版 带故障转移(本地离线模板)",
-                "http://127.0.0.1:4395/url/ACL4SSR_Online_Mini_MultiCountry.ini": "ACL4SSR_Online_Mini_MultiCountry.ini 精简版 带港美日国家(本地离线模板)",
-                "http://127.0.0.1:4395/url/ACL4SSR_Online_Mini_MultiMode.ini": "ACL4SSR_Online_Mini_MultiMode.ini 精简版 自动测速、故障转移、负载均衡(本地离线模板)",
-                "http://127.0.0.1:4395/url/ACL4SSR_Online_Mini_NoAuto.ini": "ACL4SSR_Online_Mini_NoAuto.ini 精简版 不带自动测速(本地离线模板)",
-                "http://127.0.0.1:4395/url/ACL4SSR_Online_MultiCountry.ini": "ACL4SSR_Online_MultiCountry 多国分组(本地离线模板)",
-                "http://127.0.0.1:4395/url/ACL4SSR_Online_NoAuto.ini": "ACL4SSR_Online_NoAuto 无自动测速(本地离线模板)",
-                "http://127.0.0.1:4395/url/ACL4SSR_Online_NoReject.ini": "ACL4SSR_Online_NoReject 无广告拦截规则(本地离线模板)",
-                "http://127.0.0.1:4395/url/ACL4SSR_Online_Full_AdblockPlus.ini": "ACL4SSR_Online_Full_AdblockPlus 全分组 重度用户使用 更多去广告(本地离线模板)",
+                "http://127.0.0.1:22771/url/ACL4SSR_Online.ini": "ACL4SSR_Online 默认版 分组比较全(本地离线模板)",
+                "http://127.0.0.1:22771/url/ACL4SSR_Online_AdblockPlus.ini": "ACL4SSR_Online_AdblockPlus 更多去广告(本地离线模板)",
+                "http://127.0.0.1:22771/url/ACL4SSR_Online_Full_Google.ini": "ACL4SSR_Online_Full_Google 全分组 重度用户使用 谷歌细分(本地离线模板)",
+                "http://127.0.0.1:22771/url/ACL4SSR_Online_Full.ini": "ACL4SSR_Online_Full 全分组 重度用户使用(本地离线模板)",
+                "http://127.0.0.1:22771/url/ACL4SSR_Online_Full_MultiMode.ini": "ACL4SSR_Online_Full_MultiMode.ini 全分组 多模式 重度用户使用(本地离线模板)",
+                "http://127.0.0.1:22771/url/ACL4SSR_Online_Full_Netflix.ini": "ACL4SSR_Online_Full_Netflix 全分组 重度用户使用 奈飞全量(本地离线模板)",
+                "http://127.0.0.1:22771/url/ACL4SSR_Online_Full_NoAuto.ini": "ACL4SSR_Online_Full_NoAuto.ini 全分组 无自动测速 重度用户使用(本地离线模板)",
+                "http://127.0.0.1:22771/url/ACL4SSR_Online_Mini.ini": "ACL4SSR_Online_Mini 精简版(本地离线模板)",
+                "http://127.0.0.1:22771/url/ACL4SSR_Online_Mini_AdblockPlus.ini": "ACL4SSR_Online_Mini_AdblockPlus.ini 精简版 更多去广告(本地离线模板)",
+                "http://127.0.0.1:22771/url/ACL4SSR_Online_Mini_Fallback.ini": "ACL4SSR_Online_Mini_Fallback.ini 精简版 带故障转移(本地离线模板)",
+                "http://127.0.0.1:22771/url/ACL4SSR_Online_Mini_MultiCountry.ini": "ACL4SSR_Online_Mini_MultiCountry.ini 精简版 带港美日国家(本地离线模板)",
+                "http://127.0.0.1:22771/url/ACL4SSR_Online_Mini_MultiMode.ini": "ACL4SSR_Online_Mini_MultiMode.ini 精简版 自动测速、故障转移、负载均衡(本地离线模板)",
+                "http://127.0.0.1:22771/url/ACL4SSR_Online_Mini_NoAuto.ini": "ACL4SSR_Online_Mini_NoAuto.ini 精简版 不带自动测速(本地离线模板)",
+                "http://127.0.0.1:22771/url/ACL4SSR_Online_MultiCountry.ini": "ACL4SSR_Online_MultiCountry 多国分组(本地离线模板)",
+                "http://127.0.0.1:22771/url/ACL4SSR_Online_NoAuto.ini": "ACL4SSR_Online_NoAuto 无自动测速(本地离线模板)",
+                "http://127.0.0.1:22771/url/ACL4SSR_Online_NoReject.ini": "ACL4SSR_Online_NoReject 无广告拦截规则(本地离线模板)",
+                "http://127.0.0.1:22771/url/ACL4SSR_Online_Full_AdblockPlus.ini": "ACL4SSR_Online_Full_AdblockPlus 全分组 重度用户使用 更多去广告(本地离线模板)",
                 "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online.ini": "ACL4SSR_Online 默认版 分组比较全(与Github同步)",
                 "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_AdblockPlus.ini": "ACL4SSR_Online_AdblockPlus 更多去广告(与Github同步)",
                 "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_MultiCountry.ini": "ACL4SSR_Online_MultiCountry 多国分组(与Github同步)",
@@ -541,6 +637,10 @@ def distribute_data(data, file, num_threads):
 
 
 def distribute_data_proxies(data, file, num_threads):
+    if len(data) == 0:
+        return
+    if os.path.exists(file):
+        os.remove(file)
     length = len(data)
     # 计算每个线程处理的数据大小
     chunk_size = (length + num_threads - 1) // num_threads
@@ -564,64 +664,6 @@ def distribute_data_proxies(data, file, num_threads):
     # 等待所有线程退出
     for t in threads:
         t.join()
-
-
-# 上传文件bytes格式规整
-def format_data(data, index, step, my_dict):
-    defalutname = "佚名"
-    end_index = min(index + step, len(data))
-    for i in range(index, end_index):
-        # print(type(data[i]))
-        line = data[i].decode("utf-8").strip()
-        if not line:
-            continue
-        # 假定直播名字和直播源不在同一行
-        if line.startswith("#EXTINF"):
-            continue
-        # 不是http开头，可能是直播源
-        if not line.startswith(("http", "rtsp", "rtmp")):
-            # 匹配格式：频道,url
-            if re.match(r"^[^#].*,(http|rtsp|rtmp)", line):
-                name, url = line.split(",", 1)
-                searchurl = url
-                if searchurl in my_dict.keys():
-                    continue
-                if name:
-                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
-                else:
-                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
-            elif re.match(r"^[^#].*，(http|rtsp|rtmp)", line):
-                name, url = line.split("，", 1)
-                searchurl = url
-                if searchurl in my_dict.keys():
-                    continue
-                if name:
-                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
-                else:
-                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
-        # http开始
-        else:
-            # 去重复
-            searchurl = line
-            if searchurl in my_dict.keys():
-                continue
-            # 第一行的无名直播
-            if i == 0 and index == 0:
-                my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
-                continue
-            preline = data[i - 1].decode("utf-8").strip()
-            # 没有名字
-            if not preline:
-                my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
-                continue
-            # 不是名字
-            if not preline.startswith("#EXTINF"):
-                my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
-                continue
-            # 有名字
-            else:
-                my_dict[searchurl] = f'{preline}\n'
-                continue
 
 
 # 抽象类，定义抽象方法process_data_abstract
@@ -729,26 +771,27 @@ def process_data_domain_openclash_fallbackfilter(data, index, step, my_dict):
         if not line:
             continue
         # 判断是不是+.域名
+        lineEncoder = line.encode()
         if re.match(wildcard_regex2, line):
-            updateBlackList((line.encode().substring(2)).decode())
+            updateBlackList((lineEncoder.substring(2)).decode())
             my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
         # 判断是不是域名
         elif re.match(domain_regex, line):
             my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
-            if not line.encode().startswith(b"www"):
+            if not lineEncoder.startswith(b"www"):
                 updateBlackList(line)
                 my_dict[
                     OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "+." + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
             else:
-                updateBlackList((line.encode().substring(4)).decode())
+                updateBlackList((lineEncoder.substring(4)).decode())
         # 判断是不是*.域名
         elif re.match(wildcard_regex, line):
-            updateBlackList((line.encode().substring(2)).decode())
+            updateBlackList((lineEncoder.substring(2)).decode())
             my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line[2:] + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
             my_dict[
                 OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "+." + line[2:] + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
-        elif line.encode().startswith(b"."):
-            updateBlackList((line.encode().substring(1)).decode())
+        elif lineEncoder.startswith(b"."):
+            updateBlackList((lineEncoder.substring(1)).decode())
             my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "+" + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
 
 
@@ -832,14 +875,15 @@ def process_data_domain_dnsmasq(data, index, step, my_dict):
             my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
             if re.match(domain_regex, line):
                 updateOpenclashNameServerPolicy(line)
-            if line.encode().startswith((b"*.", b"+.")):
-                updateOpenclashNameServerPolicy((line.encode().substring(2)).decode())
-            if line.encode().startswith(b"www."):
-                updateOpenclashNameServerPolicy((line.encode().substring(4)).decode())
-            if not line.encode().startswith((b"www", b".", b"*")):
+            lineEncoder = line.encode()
+            if lineEncoder.startswith((b"*.", b"+.")):
+                updateOpenclashNameServerPolicy((lineEncoder.substring(2)).decode())
+            if lineEncoder.startswith(b"www."):
+                updateOpenclashNameServerPolicy((lineEncoder.substring(4)).decode())
+            if not lineEncoder.startswith((b"www", b".", b"*")):
                 my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + "*." + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
-            if line.encode().startswith(b"."):
-                updateOpenclashNameServerPolicy((line.encode().substring(1)).encode())
+            if lineEncoder.startswith(b"."):
+                updateOpenclashNameServerPolicy((lineEncoder.substring(1)).encode())
                 my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + "*" + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
 
 
@@ -858,6 +902,114 @@ def updateAdguardhomeWithelistForM3u(url):
     # 是ip
 
 
+# 自动编码格式检测转换
+def decode_text(text):
+    try:
+        # detect encoding of the string
+        result = chardet.detect(text.encode())
+        # decode the string using detected encoding
+        decoded_text = text.encode(result['encoding']).decode('utf-8')
+        return decoded_text
+    except UnicodeDecodeError:
+        pass
+    try:
+        result = text.encode('ascii', 'ignore')  # 将 Unicode 字符串转换为 Windows 系统默认编码（GB18030）的字节串
+        return result.decode('utf-8')
+    except UnicodeDecodeError:
+        pass
+    try:
+        result = text.encode('cp936', 'ignore')  # 将 Unicode 字符串转换为 Windows 系统默认编码（GB18030）的字节串
+        return result.decode('utf-8')
+    except UnicodeDecodeError:
+        pass
+    # 尝试使用 UTF-8 编码方式进行解码
+    try:
+        decoded_text = text.encode('utf-8').decode('utf-8')
+        return decoded_text
+    except UnicodeDecodeError:
+        pass
+    # 尝试使用 GBK 编码方式进行解码
+    try:
+        decoded_text = text.encode('gbk').decode('gbk')
+        return decoded_text
+    except UnicodeDecodeError:
+        pass
+
+
+def decode_bytes(text):
+    # detect encoding of the byte string
+    result = chardet.detect(text)
+
+    # decode the string using detected encoding
+    decoded_text = text.decode(result['encoding'])
+    return decoded_text
+
+
+def pureUrl(s):
+    result = s.split('$', 1)[0]
+    return result
+
+
+# 上传文件bytes格式规整
+def format_data(data, index, step, my_dict):
+    defalutname = "佚名"
+    end_index = min(index + step, len(data))
+    for i in range(index, end_index):
+        # print(type(data[i]))
+        line = decode_bytes(data[i]).strip()
+        # line = data[i].decode("utf-8").strip()
+        if not line:
+            continue
+        # 假定直播名字和直播源不在同一行
+        if line.startswith("#EXTINF"):
+            continue
+        # 不是http开头，可能是直播源
+        if not line.startswith(("http", "rtsp", "rtmp")):
+            # 匹配格式：频道,url
+            if re.match(r"^[^#].*,(http|rtsp|rtmp)", line):
+                name, url = line.split(",", 1)
+                searchurl = pureUrl(url)
+                if searchurl in my_dict.keys():
+                    continue
+                if name:
+                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
+                else:
+                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
+            elif re.match(r"^[^#].*，(http|rtsp|rtmp)", line):
+                name, url = line.split("，", 1)
+                searchurl = pureUrl(url)
+                if searchurl in my_dict.keys():
+                    continue
+                if name:
+                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
+                else:
+                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
+        # http开始
+        else:
+            # 去重复
+            searchurl = pureUrl(line)
+            if searchurl in my_dict.keys():
+                continue
+            # 第一行的无名直播
+            if i == 0 and index == 0:
+                my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
+                continue
+            preline = decode_bytes(data[i] - 1).strip()
+            # preline = data[i - 1].decode("utf-8").strip()
+            # 没有名字
+            if not preline:
+                my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
+                continue
+            # 不是名字
+            if not preline.startswith("#EXTINF"):
+                my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
+                continue
+            # 有名字
+            else:
+                my_dict[searchurl] = f'{preline}\n'
+                continue
+
+
 # 字符串内容处理-m3u
 def process_data(data, index, step, my_dict):
     end_index = min(index + step, len(data))
@@ -867,15 +1019,16 @@ def process_data(data, index, step, my_dict):
         # 空行
         if not line:
             continue
+        lineEncoder = line.encode()
         # 假定直播名字和直播源不在同一行，跳过频道名字
-        if line.encode().startswith(b"#EXTINF"):
+        if lineEncoder.startswith(b"#EXTINF"):
             continue
         # 不是http开头，也可能是直播源
-        if not line.encode().startswith((b"http", b"rtsp", b"rtmp")):
+        if not lineEncoder.startswith((b"http", b"rtsp", b"rtmp")):
             # 匹配格式：频道,url
             if re.match(r"^[^#].*,(http|rtsp|rtmp)", line):
                 name, url = line.split(",", 1)
-                searchurl = url
+                searchurl = pureUrl(url)
                 if searchurl in my_dict.keys():
                     continue
                 if name:
@@ -888,7 +1041,7 @@ def process_data(data, index, step, my_dict):
             # 匹配格式：频道，url
             elif re.match(r"^[^#].*，(http|rtsp|rtmp)", line):
                 name, url = line.split("，", 1)
-                searchurl = url
+                searchurl = pureUrl(url)
                 if searchurl in my_dict.keys():
                     continue
                 if name:
@@ -899,8 +1052,8 @@ def process_data(data, index, step, my_dict):
                     my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
                     updateAdguardhomeWithelistForM3u(searchurl)
         # http|rtsp|rtmp开始，跳过P2p
-        elif not line.encode().startswith(b"P2p"):
-            searchurl = line
+        elif not lineEncoder.startswith(b"P2p"):
+            searchurl = pureUrl(line)
             if searchurl in my_dict.keys():
                 continue
             # 第一行的无名直播
@@ -909,13 +1062,14 @@ def process_data(data, index, step, my_dict):
                 updateAdguardhomeWithelistForM3u(searchurl)
                 continue
             preline = data[i - 1].strip()
+            prelineEncoder = preline.encode()
             # 没有名字
             if not preline:
                 my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
                 updateAdguardhomeWithelistForM3u(searchurl)
                 continue
             # 不是名字
-            if not preline.encode().startswith(b"#EXTINF"):
+            if not prelineEncoder.startswith(b"#EXTINF"):
                 my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
                 updateAdguardhomeWithelistForM3u(searchurl)
                 continue
@@ -1435,6 +1589,10 @@ def chaorongheProxies(filename):
         # # 下载 Clash 配置文件
         # with open(filename, 'wb') as f:
         #     f.write(response.content)
+        # 加密
+        thread = threading.Thread(target=download_secert_file,
+                                  args=(filename, "/CC.txt", REDIS_KEY_THREADS7, threadsNum7))
+        thread.start()
         return "result"
     else:
         # 订阅失败处理逻辑
@@ -1597,7 +1755,172 @@ def init_extra_dns_server():
     return num
 
 
+def init_pass(redis_key, dictCache):
+    data = dictCache.get(redis_key)
+    if data:
+        return data
+    password = redis_get(redis_key)
+    if password:
+        password = password.decode()
+        if password == "":
+            password = generateEncryptPassword()
+            redis_add(redis_key, password)
+            dictCache[redis_key] = password
+    else:
+        password = generateEncryptPassword()
+        redis_add(redis_key, password)
+        dictCache[redis_key] = password
+    return password
+
+
+# 直播源订阅密码刷新
+def update_m3u_subscribe_pass(redis_key, dict_cache):
+    password = generateEncryptPassword()
+    redis_add(redis_key, password)
+    dict_cache[redis_key] = password
+    return password
+
+
+def generate_password(length=16):
+    alphabet = string.ascii_letters + string.digits + string.punctuation
+    password = ''.join(secrets.choice(alphabet) for i in range(length))
+    return password
+
+
+# 生成订阅链接加密密码
+def generateEncryptPassword():
+    return generate_password() + "paperbluster" + base64.b64encode(os.urandom(16)).decode('utf-8')
+
+
+# 返回字符串密码和比特流iv
+def getIV(passwordStr):
+    arr = passwordStr.split("paperbluster")
+    iv_decoded = base64.b64decode(arr[1])
+    return arr[0].encode('utf-8'), iv_decoded
+
+
+# 加密函数
+def encrypt(plaintext, redis_key, dict_cache):
+    password = init_pass(redis_key, dict_cache)
+    arr = getIV(password)
+    # generate key and iv
+    key = arr[0]
+    # iv = os.urandom(16)
+    # create cipher object
+    backend = default_backend()
+    algorithm = algorithms.AES(key)
+    mode = modes.CTR(arr[1])
+    cipher = Cipher(algorithm, mode, backend=backend)
+    # encrypt plaintext
+    encryptor = cipher.encryptor()
+    ciphertext = encryptor.update(plaintext) + encryptor.finalize()
+    # return ciphertext, iv, algorithm, and mode
+    return ciphertext
+
+
+# 解密函数
+def decrypt(password, ciphertext):
+    # generate key from password
+    arr = getIV(password)
+    key = arr[0]
+    # create cipher object using the same algorithm, key and iv from encryption
+    backend = default_backend()
+    algorithm = algorithms.AES(key)
+    mode = modes.CTR(arr[1])
+    cipher = Cipher(algorithm, mode, backend=backend)
+    # create a decryptor object
+    decryptor = cipher.decryptor()
+    # decrypt ciphertext
+    plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+    # return decrypted plaintext
+    return plaintext
+
+
 ############################################################协议区####################################################
+
+# 修改节点订阅密码
+@app.route('/changeProxyListPassword', methods=['GET'])
+def changeProxyListPassword():
+    num = update_m3u_subscribe_pass(REDIS_KEY_THREADS7, threadsNum7)
+    return jsonify({'password': num})
+
+
+# 获取节点订阅密码
+@app.route('/getExtraDnsPort3', methods=['GET'])
+def getExtraDnsPort3():
+    num = init_pass(REDIS_KEY_THREADS7, threadsNum7)
+    return jsonify({'button': num})
+
+
+# 修改IPV6订阅密码
+@app.route('/changeIPV6ListPassword', methods=['GET'])
+def changeIPV6ListPassword():
+    num = update_m3u_subscribe_pass(REDIS_KEY_THREADS6, threadsNum6)
+    return jsonify({'password': num})
+
+
+# 获取IPV6订阅密码
+@app.route('/getExtraDnsPort2', methods=['GET'])
+def getExtraDnsPort2():
+    num = init_pass(REDIS_KEY_THREADS6, threadsNum6)
+    return jsonify({'button': num})
+
+
+# 修改IPV4订阅密码
+@app.route('/changeIPV4ListPassword', methods=['GET'])
+def changeIPV4ListPassword():
+    num = update_m3u_subscribe_pass(REDIS_KEY_THREADS5, threadsNum5)
+    return jsonify({'password': num})
+
+
+# 获取IPV4订阅密码
+@app.route('/getExtraDnsServer2', methods=['GET'])
+def getExtraDnsServer2():
+    num = init_pass(REDIS_KEY_THREADS5, threadsNum5)
+    return jsonify({'button': num})
+
+
+# 修改域名黑名单订阅密码
+@app.route('/changeBlackListPassword', methods=['GET'])
+def changeBlackListPassword():
+    num = update_m3u_subscribe_pass(REDIS_KEY_THREADS4, threadsNum4)
+    return jsonify({'password': num})
+
+
+# 获取域名黑名单订阅密码
+@app.route('/getChinaDnsPort2', methods=['GET'])
+def getChinaDnsPort2():
+    num = init_pass(REDIS_KEY_THREADS4, threadsNum4)
+    return jsonify({'button': num})
+
+
+# 修改域名白名单订阅密码
+@app.route('/changeWhiteListPassword', methods=['GET'])
+def changeWhiteListPassword():
+    num = update_m3u_subscribe_pass(REDIS_KEY_THREADS3, threadsNum3)
+    return jsonify({'password': num})
+
+
+# 获取域名白名单订阅密码
+@app.route('/getChinaDnsServer2', methods=['GET'])
+def getChinaDnsServer2():
+    num = init_pass(REDIS_KEY_THREADS3, threadsNum3)
+    return jsonify({'button': num})
+
+
+# 获取直播源订阅密码
+@app.route('/changeM3uPassword', methods=['GET'])
+def changeM3uPassword():
+    num = update_m3u_subscribe_pass(REDIS_KEY_THREADS2, threadsNum2)
+    return jsonify({'password': num})
+
+
+# 获取直播源订阅密码
+@app.route('/getThreadNum2', methods=['GET'])
+def getThreadNum2():
+    num = init_pass(REDIS_KEY_THREADS2, threadsNum2)
+    return jsonify({'button': num})
+
 
 # 获取外国DNS端口
 @app.route('/getExtraDnsPort', methods=['GET'])
@@ -2237,7 +2560,7 @@ def getall():
     return jsonify(redis_get_map(REDIS_KEY_M3U_LINK))
 
 
-# 全部订阅链接超融合
+# 全部m3u订阅链接超融合
 @app.route('/chaoronghe', methods=['GET'])
 def chaoronghe():
     try:

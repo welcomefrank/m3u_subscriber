@@ -5,3 +5,5 @@ aiohttp==3.8.4
 pyyaml==6.0
 dnslib==0.9.23
 aiofiles==23.1.0
+chardet==5.1.0
+cryptography==40.0.1

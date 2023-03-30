@@ -26,8 +26,8 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# 暴露容器的端口
-EXPOSE 4395 5911
+# 暴露容器的端口 22771-web 22770-dns
+EXPOSE 22771 22770
 
 # 启动 Nginx 和 Python 应用程序
 CMD ["/bin/bash", "-c", "redis-server & python3 /app/main.py & python3 /app/dns.py & nginx -g 'daemon off;'"]

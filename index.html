@@ -39,20 +39,20 @@
             width: 45%
         }
 
-        .subUrl, .subUrl2, .subUrl3, .subUrl4, .subUrl5, .subUrl6, .subUrl8,.subUrl9,.subUrl10,#threads,#chinaDnsServer,#chinaDnsPort,#extraDnsServer,#extraDnsPort  {
+        .subUrl, .subUrl2, .subUrl3, .subUrl4, .subUrl5, .subUrl6, .subUrl8,.subUrl9,.subUrl10,.stubboninput  {
             width: 70%;
             background-color: #758a99;
             color: aliceblue;
             font-size: x-large;
         }
 
-        #threads,#chinaDnsServer,#chinaDnsPort,#extraDnsServer,#extraDnsPort {
+        .stubboninput {
             text-align: right;
             padding-top: 20px;
             padding-bottom: 20px;
          }
 
-        #threadsButton,#chinaDnsServerBtn,#chinaDnsPortBtn,#extraDnsServerBtn,#extraDnsPortBtn
+        .stubbonsave
         {
             padding: 20px 30px;
             background-color: #4CAF50;
@@ -90,8 +90,7 @@
         #download-json-btn6, #download-json-btn7, #upload-json-btn7, #upload-json-btn8, #add-row8, .subUrl8, .subname8, .save-button8, .delete-button8, #download-json-btn8, #removem3ulinks8
         ,#upload-json-btn9, #add-row9, .subUrl9, .subname9, .save-button9, .delete-button9, #download-json-btn9
         , #removem3ulinks9,#upload-json-btn10, #add-row10, .subUrl10, .subname10, .save-button10, .delete-button10
-        , #download-json-btn10, #removem3ulinks10,.dropdown,#proxy-model-switch,#proxy-model-switch2,.dropdown2,#threadsButton,#chinaDnsServerBtn,#chinaDnsPortBtn,#extraDnsServerBtn
-            ,#extraDnsPortBtn
+        , #download-json-btn10, #removem3ulinks10,.dropdown,#proxy-model-switch,#proxy-model-switch2,.dropdown2,.stubbonsave
         {
             font-size: x-large;
         }
@@ -119,7 +118,7 @@
             width: 25%;
         }
 
-        #input, #output,#threads,#chinaDnsServer,#chinaDnsPort,#extraDnsServer,#extraDnsPort {
+        #input, #output,.stubboninput {
             width: 90%;
             background-color: #758a99;
             color: aliceblue;
@@ -233,6 +232,10 @@
         <input type="radio" name="page" id="page13">
         <span>DNS分流器</span>
     </label>
+    <label>
+        <input type="radio" name="page" id="page14">
+        <span>订阅密码锁</span>
+    </label>
 </div>
 <div id="choice">
     <div id="page1" style="display: block;">
@@ -240,9 +243,11 @@
         <div style="float: left;width: 70%">
             <h3>后台默认24小时自动执行生成操作,同时触发有效直播源在后台缓慢检测</h3>
             <h3>M3U超融合直播源订阅地址:docker主机地址:端口/url/A.m3u</h3>
-            <h3>全部直播源: http://192.168.5.1:4395/url/A.m3u</h3>
-            <h3>有效直播源: http://192.168.5.1:4395/url/alive.m3u</h3>
-            <h3>adguardhome放行域名: http://192.168.5.1:4395/url/tvlist.txt</h3>
+            <h3>全部直播源-无加密: http://192.168.5.1:22771/url/A.m3u</h3>
+            <h3>全部直播源-加密: http://192.168.5.1:22771/url/AEN.txt</h3>
+            <h3>有效直播源-无加密: http://192.168.5.1:22771/url/alive.m3u</h3>
+            <h3>adguardhome放行域名-无加密: http://192.168.5.1:22771/url/tvlist.txt</h3>
+            <h3>adguardhome放行域名-加密: http://192.168.5.1:22771/url/TTADEN.txt</h3>
             <h3>上传文件导入合并M3U超融合备份</h3>
         </div>
         <div style="float: right;width: 30%">
@@ -361,10 +366,12 @@
         <div style="float: left;width: 70%">
             <h3>后台默认24小时自动执行生成操作</h3>
             <h3>超融合白名单订阅地址:参考M3U格式</h3>
-            <h3>停止生成adguardhome:http://192.168.5.1:4395/url/B.txt</h3>
-            <h3>dnsmasq:http://192.168.5.1:4395/url/BDnsmasq.conf</h3>
-            <h3>whitelist:http://192.168.5.1:4395/url/whiteList.txt</h3>
-            <h3>停止生成domain:http://192.168.5.1:4395/url/WhiteDomain.txt</h3>
+            <h3>停止生成adguardhome:http://192.168.5.1:22771/url/B.txt</h3>
+            <h3>dnsmasq-无加密:http://192.168.5.1:22771/url/BDnsmasq.conf</h3>
+            <h3>dnsmasq-加密:http://192.168.5.1:22771/url/DQEN.txt</h3>
+            <h3>whitelist-无加密:http://192.168.5.1:22771/url/whiteList.txt</h3>
+            <h3>whitelist-加密:http://192.168.5.1:22771/url/WTEN.txt</h3>
+            <h3>停止生成domain:http://192.168.5.1:22771/url/WhiteDomain.txt</h3>
             <h3>上传文件导入合并白名单订阅</h3>
         </div>
         <div style="width:100%">
@@ -399,9 +406,11 @@
         <div style="float: left;width: 70%">
             <h3>后台默认24小时自动执行生成操作</h3>
             <h3>超融合Adguardhome黑名单订阅地址:</h3>
-            <h3>停止生成http://192.168.5.1:4395/url/C.txt</h3>
-            <h3>http://192.168.5.1:4395/url/openclash-fallback-filter-domain.conf</h3>
-            <h3>http://192.168.5.1:4395/url/blackList.txt</h3>
+            <h3>停止生成http://192.168.5.1:22771/url/C.txt</h3>
+            <h3>OP-无加密:http://192.168.5.1:22771/url/openclash-fallback-filter-domain.conf</h3>
+            <h3>OP-加密:http://192.168.5.1:22771/url/OPPDEN.txt</h3>
+            <h3>黑名单-无加密:http://192.168.5.1:22771/url/blackList.txt</h3>
+            <h3>黑名单-加密:http://192.168.5.1:22771/url/BLEN.txt</h3>
             <h3>上传文件导入合并黑名单订阅</h3>
         </div>
         <div style="width:100%">
@@ -436,7 +445,8 @@
         <div style="float: left;width: 70%">
             <h3>后台默认24小时自动执行生成操作</h3>
             <h3>超融合ipv4订阅地址:参考m3u格式</h3>
-            <h3>http://192.168.5.1:4395/url/ipv4.txt</h3>
+            <h3>ipv4-无加密:http://192.168.5.1:22771/url/ipv4.txt</h3>
+            <h3>ipv4-加密:http://192.168.5.1:22771/url/VFEN.txt</h3>
             <h3>上传文件导入合并ipv4订阅</h3>
         </div>
         <div style="width:100%">
@@ -471,7 +481,8 @@
         <div style="float: left;width: 70%">
             <h3>后台默认24小时自动执行生成操作</h3>
             <h3>超融合ipv6订阅地址:参考m3u格式</h3>
-            <h3>http://192.168.5.1:4395/url/ipv6.txt</h3>
+            <h3>IPV6-无加密:http://192.168.5.1:22771/url/ipv6.txt</h3>
+            <h3>IPV6-加密:http://192.168.5.1:22771/url/VSEN.txt</h3>
             <h3>上传文件导入合并ipv6订阅</h3>
         </div>
         <div style="width:100%">
@@ -540,7 +551,8 @@
             <div style="float: left;width: 50%">
                 <h3>后台默认24小时自动执行生成操作</h3>
                 <h3>超融合节点订阅地址:参考m3u格式</h3>
-                <h3>http://192.168.5.1:4395/url/config.yaml</h3>
+                <h3>无加密:http://192.168.5.1:22771/url/config.yaml</h3>
+                <h3>加密:http://192.168.5.1:22771/url/CC.txt</h3>
                 <h3>上传文件导入合并节点订阅</h3>
             </div>
             <div style="width: 100%;display: flex;flex-direction: column;height: 100%">
@@ -638,7 +650,7 @@
         </div>
     </div>
     <div id="page13" style="display: none;">
-        <h1>DNS分流器</h1>
+        <h1>DNS分流器,监听22770端口</h1>
         <div style="float: left;width: 70%">
             <h3>设置分流并发线程,分流服务器</h3>
         </div>
@@ -646,36 +658,85 @@
             黑白名单并发检测线程数
         </div>
         <div style="width:100%">
-            <input type="text" id="threads"/>
-            <button id="threadsButton" onclick="saveData()">保存</button>
+            <input type="text" id="threads" class="stubboninput"/>
+            <button id="threadsButton" onclick="saveData()" class="stubbonsave">保存</button>
         </div>
         <div style="display: flex;width: 100%;">
             国内DNS服务器地址
         </div>
         <div style="width:100%">
-            <input type="text" id="chinaDnsServer"/>
-            <button id="chinaDnsServerBtn" onclick="saveChinaDnsServer()">保存</button>
+            <input type="text" id="chinaDnsServer" class="stubboninput"/>
+            <button id="chinaDnsServerBtn" onclick="saveChinaDnsServer()" class="stubbonsave">保存</button>
         </div>
         <div style="display: flex;width: 100%;">
             国内DNS服务器端口
         </div>
         <div style="width:100%">
-            <input type="text" id="chinaDnsPort"/>
-            <button id="chinaDnsPortBtn" onclick="saveChinaDnsPort()">保存</button>
+            <input type="text" id="chinaDnsPort" class="stubboninput"/>
+            <button id="chinaDnsPortBtn" onclick="saveChinaDnsPort()" class="stubbonsave">保存</button>
         </div>
         <div style="display: flex;width: 100%;">
             国外DNS服务器地址
         </div>
         <div style="width:100%">
-            <input type="text" id="extraDnsServer"/>
-            <button id="extraDnsServerBtn" onclick="saveExtraDnsServer()">保存</button>
+            <input type="text" id="extraDnsServer" class="stubboninput"/>
+            <button id="extraDnsServerBtn" onclick="saveExtraDnsServer()" class="stubbonsave">保存</button>
         </div>
         <div style="display: flex;width: 100%;">
             国外DNS服务器端口
         </div>
         <div style="width:100%">
-            <input type="text" id="extraDnsPort"/>
-            <button id="extraDnsPortBtn" onclick="saveExtraDnsPort()">保存</button>
+            <input type="text" id="extraDnsPort" class="stubboninput"/>
+            <button id="extraDnsPortBtn" onclick="saveExtraDnsPort()" class="stubbonsave">保存</button>
+        </div>
+    </div>
+    <div id="page14" style="display: none;">
+        <h1>订阅密码锁</h1>
+        <div style="float: left;width: 70%">
+            <h3>设置私有订阅的密码</h3>
+            <h3>可以通过密码订阅别人的私有订阅</h3>
+        </div>
+        <div style="display: flex;width: 100%;">
+            直播源订阅
+        </div>
+        <div style="width:100%">
+            <input type="text" id="threads2" class="stubboninput"/>
+            <button id="threadsButton2" onclick="changeM3uPassword()" class="stubbonsave">切换</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            域名白名单订阅
+        </div>
+        <div style="width:100%">
+            <input type="text" id="chinaDnsServer2" class="stubboninput"/>
+            <button id="chinaDnsServerBtn2" onclick="changeWhiteListPassword()" class="stubbonsave">切换</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            域名黑名单订阅
+        </div>
+        <div style="width:100%">
+            <input type="text" id="chinaDnsPort2" class="stubboninput"/>
+            <button id="chinaDnsPortBtn2" onclick="changeBlackListPassword()" class="stubbonsave">切换</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            ipv4订阅
+        </div>
+        <div style="width:100%">
+            <input type="text" id="extraDnsServer2" class="stubboninput"/>
+            <button id="extraDnsServerBtn2" onclick="changeIPV4ListPassword()" class="stubbonsave">切换</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            ipv6订阅
+        </div>
+        <div style="width:100%">
+            <input type="text" id="extraDnsPort2" class="stubboninput"/>
+            <button id="extraDnsPortBtn2" onclick="changeIPV6ListPassword()" class="stubbonsave">切换</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            节点订阅
+        </div>
+        <div style="width:100%">
+            <input type="text" id="extraDnsPort3" class="stubboninput"/>
+            <button id="extraDnsPortBtn3" onclick="changeProxyListPassword()" class="stubbonsave">切换</button>
         </div>
     </div>
 </div>
@@ -780,6 +841,71 @@
     // 外国DNS端口缓存
     var extraDnsPortcache = sessionStorage.getItem('extraDnsPort');
 
+    // 输入框显示直播源订阅加密密码
+    const threadNum2 = document.getElementById('threads2');
+    // 直播源订阅加密密码缓存
+    var threadsCache2 = sessionStorage.getItem('threads2');
+
+    // 输入框显示域名白名单订阅加密密码
+    const chinaDnsServer2 = document.getElementById('chinaDnsServer2');
+    // 域名白名单订阅加密密码缓存
+    var chinaDnsServercache2 = sessionStorage.getItem('chinaDnsServer2');
+
+    // 输入框显示域名黑名单订阅加密密码
+    const chinaDnsPort2 = document.getElementById('chinaDnsPort2');
+    // 域名黑名单订阅加密密码缓存
+    var chinaDnsPortcache2 = sessionStorage.getItem('chinaDnsPort2');
+
+    // 输入框显示IPV4订阅加密密码
+    const extraDnsServer2 = document.getElementById('extraDnsServer2');
+    // IPV4订阅加密密码缓存
+    var extraDnsServercache2 = sessionStorage.getItem('extraDnsServer2');
+
+    // 输入框显示IPV6订阅加密密码
+    const extraDnsPort2 = document.getElementById('extraDnsPort2');
+    // IPV6订阅加密密码缓存
+    var extraDnsPortcache2 = sessionStorage.getItem('extraDnsPort2');
+
+    // 输入框显示节点订阅加密密码
+    const extraDnsPort3 = document.getElementById('extraDnsPort3');
+    // 节点订阅加密密码缓存
+    var extraDnsPortcache3 = sessionStorage.getItem('extraDnsPort3');
+
+    function changeProxyListPassword(){
+        changepassword('/changeProxyListPassword','extraDnsPort3',extraDnsPort3)
+    }
+
+    function changeIPV6ListPassword(){
+        changepassword('/changeIPV6ListPassword','extraDnsPort2',extraDnsPort2)
+    }
+
+    function changeIPV4ListPassword(){
+        changepassword('/changeIPV4ListPassword','extraDnsServer2',extraDnsServer2)
+    }
+
+    function changeBlackListPassword(){
+        changepassword('/changeBlackListPassword','chinaDnsPort2',chinaDnsPort2)
+    }
+
+    function changeWhiteListPassword(){
+        changepassword('/changeWhiteListPassword','chinaDnsServer2',chinaDnsServer2)
+    }
+
+    function changeM3uPassword(){
+        changepassword('/changeM3uPassword','threads2',threadNum2)
+    }
+
+    function changepassword(requestPath, id, idVar) {
+        fetch(requestPath)
+            .then(response => response.json())
+            .then(data => {
+                    idVar.value = data.password;
+                    sessionStorage.setItem(id, data.password);
+                }
+            )
+        ;
+    }
+
     //修改外国DNS端口
     function saveExtraDnsPort() {
         saveDnsSetting('/saveExtraDnsPort','extraDnsPort',extraDnsPort)
@@ -825,6 +951,36 @@
         reloadDnsSetting(threadsCache,threadNum,'/getThreadNum','threads')
     }
 
+    //直播源订阅密码加载
+    function reloadThreadNum2() {
+        reloadDnsSetting(threadsCache2,threadNum2,'/getThreadNum2','threads2')
+    }
+
+     //域名白名单订阅密码加载
+    function reloadChinaDnsServer2() {
+        reloadDnsSetting(chinaDnsServercache2,chinaDnsServer2,'/getChinaDnsServer2','chinaDnsServer2')
+    }
+
+    //域名黑名单订阅密码加载
+    function reloadChinaDnsPort2() {
+        reloadDnsSetting(chinaDnsPortcache2,chinaDnsPort2,'/getChinaDnsPort2','chinaDnsPort2')
+    }
+
+    //IPV4订阅密码加载
+    function reloadExtraDnsServer2() {
+        reloadDnsSetting(extraDnsServercache2,extraDnsServer2,'/getExtraDnsServer2','extraDnsServer2')
+    }
+
+    //IPV6订阅密码加载
+    function reloadExtraDnsPort2() {
+        reloadDnsSetting(extraDnsPortcache2,extraDnsPort2,'/getExtraDnsPort2','extraDnsPort2')
+    }
+
+    //节点订阅密码加载
+    function reloadExtraDnsPort3() {
+        reloadDnsSetting(extraDnsPortcache3,extraDnsPort3,'/getExtraDnsPort3','extraDnsPort3')
+    }
+
         //修改线程数
     function saveData() {
         saveDnsSetting('/saveThreadS','threads',threadNum)
@@ -851,6 +1007,8 @@
         idVar.value = data;
         sessionStorage.setItem(id, data);
     }
+
+
 
 
     // 节点订阅-节点类型如果存在已选择按钮，则将该按钮设置为活动状态
@@ -1551,6 +1709,13 @@
             reloadExtraDnsServer()
             reloadExtraDnsPort()
             reloadChinaDnsPort()
+        }else if (selectedPage === pages[13].id) {
+            reloadThreadNum2()
+            reloadChinaDnsServer2()
+            reloadChinaDnsPort2()
+            reloadExtraDnsServer2()
+            reloadExtraDnsPort2()
+            reloadExtraDnsPort3()
         }
         if (selectedPage !== pages[1].id) {
             window.removeEventListener('scroll', handleScroll);
