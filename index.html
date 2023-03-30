@@ -865,12 +865,11 @@
 
     function reloadProxyModels(requestpath, value) {
         if (requestpath === '/getall10') {
-            while (list.firstChild) {
-                list.removeChild(list.firstChild);
-            }
             const li = document.createElement('li');
             li.textContent = value
-            list.appendChild(li);
+            if (!list.textContent.includes(value)) {
+                list.appendChild(li);
+            }
             // 监听下拉菜单项点击事件
             li.addEventListener('click', () => {
                 // 更新默认服务器
@@ -882,12 +881,11 @@
             });
         }
         if (requestpath === '/getall9') {
-            while (list2.firstChild) {
-                list2.removeChild(list2.firstChild);
-            }
             const li = document.createElement('li');
             li.textContent = value;
-            list2.appendChild(li);
+            if (!list2.textContent.includes(value)) {
+                list2.appendChild(li);
+            }
             // 监听下拉菜单项点击事件
             li.addEventListener('click', () => {
                 // 更新默认配置

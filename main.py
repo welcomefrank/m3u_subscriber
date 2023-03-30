@@ -216,7 +216,7 @@ async def download_url(session, url, value, sem):
         async with sem, session.get(url) as resp:  # 使用asyncio.Semaphore限制TCP连接的数量
             if resp.status == 200:
                 async with aiofiles.open('/alive.m3u', 'a') as f: # 异步的方式写入内容
-                    await f.write(f'{value}{url}n')
+                    await f.write(f'{value}{url}\n')
     except aiohttp.ClientSSLError as ssl_err:
         print(f"SSL Error occurred while downloading {url}: {ssl_err}")
     except Exception as e:
