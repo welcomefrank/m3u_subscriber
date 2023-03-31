@@ -12,17 +12,17 @@
 
 arm64:
 
-docker run -d --name m3usubscriber-4395 --restart unless-stopped -p --net=host  jkld310/m3usubscriber:latest  
+docker run -d --name m3usubscriber-22771 --restart unless-stopped -p --net=host  jkld310/m3usubscriber:latest  
 
 docker run -d --name m3usubscriber --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged jkld310/m3usubscriber:latest
 
-docker run -d --name m3usubscriber-4395 --restart unless-stopped --net=host -d jkld310/m3usubscriber:arm64v8
+docker run -d --name m3usubscriber-22771 --restart unless-stopped --net=host -d jkld310/m3usubscriber:arm64v8
 
 docker run -d --name m3usubscriber --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged jkld310/m3usubscriber:arm64v8
 
 x86/amd64:
 
-docker run -d --name m3usubscriber-4395 --restart unless-stopped --net=host -d jkld310/m3usubscriber:x86_64   
+docker run -d --name m3usubscriber-22771 --restart unless-stopped --net=host -d jkld310/m3usubscriber:x86_64   
 
 docker run -d --name m3usubscriber --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged jkld310/m3usubscriber:x86_64
 
@@ -30,15 +30,15 @@ docker run -d --name m3usubscriber --restart unless-stopped --net=host --memory=
 
 默认arm64架构:
 
-docker run -d --name m3usubscriber --restart unless-stopped -p 4395:4395 -p 5911:5911  jkld310/m3usubscriber:latest  
+docker run -d --name m3usubscriber --restart unless-stopped -p 22770:22770 -p 22771:22771  jkld310/m3usubscriber:latest  
 
 或者:
 
-docker run -d --name m3usubscriber --restart unless-stopped -p 4395:4395 -p 5911:5911  jkld310/m3usubscriber:arm64v8
+docker run -d --name m3usubscriber --restart unless-stopped -p 22770:22770 -p 22771:22771  jkld310/m3usubscriber:arm64v8
 
 adm64/x86_64架构:
 
-docker run -d --name m3usubscriber --restart unless-stopped -p 4395:4395 -p 5911:5911  jkld310/m3usubscriber:x86_64   
+docker run -d --name m3usubscriber --restart unless-stopped -p 22770:22770 -p 22771:22771  jkld310/m3usubscriber:x86_64   
 
 ### 非常高兴能为您介绍本工具所实现的各项功能：
 
@@ -74,7 +74,7 @@ docker run -d --name m3usubscriber --restart unless-stopped -p 4395:4395 -p 5911
 
 ##### 14-增加了基于redis的dns分流器，配合白名单和黑名单进行分流，转发7874端口(外国+中国域名漏网之鱼，可以使用openclash)，转发5336端口(大部分命中的中国域名，可以使用
 
-adguardhome)，dns监听端口-5911(在软路由dhcp/dns设置转发127.0.0.1#5911)，自用
+adguardhome)，dns监听端口-22770(在软路由dhcp/dns设置转发127.0.0.1#22770)，自用
 
 备注：dns分流器可以自己设置服务器和端口，建议使用host模式减少一层路由。
 
@@ -87,6 +87,8 @@ adguardhome)，dns监听端口-5911(在软路由dhcp/dns设置转发127.0.0.1#59
 同时adguardhome应该根据自己的网络状况调整最大ttl值，否则有些网站不能及时返回结果，
 
 我测试100兆电信需要设置20000才可以正常访问外部网站
+
+##### 15-增加了加密订阅功能，可以套娃订阅别人的加密订阅，在备注输入密码就可以自动解密加密文件下载
 
 ### 接下来，您只需要按照以下步骤即可使用本工具：
 
