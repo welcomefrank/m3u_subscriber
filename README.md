@@ -10,7 +10,7 @@
 
 #### 一、host模式:推荐使用，可以减少一层路由，并且不会导致dns出问题
 
-arm64:
+## arm64:
 
 docker run -d --name m3usubscriber-22771 --restart unless-stopped -p --net=host  jkld310/m3usubscriber:latest  
 
@@ -20,7 +20,7 @@ docker run -d --name m3usubscriber-22771 --restart unless-stopped --net=host -d 
 
 docker run -d --name m3usubscriber --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged jkld310/m3usubscriber:arm64v8
 
-x86/amd64:
+## x86/amd64:
 
 docker run -d --name m3usubscriber-22771 --restart unless-stopped --net=host -d jkld310/m3usubscriber:x86_64   
 
@@ -28,7 +28,7 @@ docker run -d --name m3usubscriber --restart unless-stopped --net=host --memory=
 
 #### 二、bridge模式:不推荐使用，目前这个模式会导致dns分流器异常
 
-默认arm64架构:
+## 默认arm64架构:
 
 docker run -d --name m3usubscriber --restart unless-stopped -p 22770:22770 -p 22771:22771  jkld310/m3usubscriber:latest  
 
@@ -36,7 +36,7 @@ docker run -d --name m3usubscriber --restart unless-stopped -p 22770:22770 -p 22
 
 docker run -d --name m3usubscriber --restart unless-stopped -p 22770:22770 -p 22771:22771  jkld310/m3usubscriber:arm64v8
 
-adm64/x86_64架构:
+## adm64/x86_64架构:
 
 docker run -d --name m3usubscriber --restart unless-stopped -p 22770:22770 -p 22771:22771  jkld310/m3usubscriber:x86_64   
 
