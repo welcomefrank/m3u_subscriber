@@ -536,7 +536,7 @@ def handle_request(sock, executor):
         print(f'handle_request error: {e}')
 
 
-# 考虑过线程池或者负载均衡，线程池需要多个端口不大合适，负载均衡似乎不错，但有点复杂，后期看看
+# 考虑过线程池或者负载均衡，线程池需要多个端口不大合适，负载均衡似乎不错，但有点复杂，后期看看22770
 if __name__ == '__main__':
     init_threads_num()
     init_china_dns_server()
