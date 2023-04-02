@@ -1,7 +1,7 @@
 # m3usubscriber
 ## m3u超融合
 
-一个偏离初心的工具箱，目前有直播源、白名单黑名单、节点订阅、dns分流器等功能，主要是为了方便自己的网上冲浪做的，并不是很好入手
+## 一个偏离初心的工具箱，目前有直播源订阅、直播源检测、白名单黑名单订阅、节点订阅、订阅合并、订阅加密、dns分流器等功能，主要是为了方便自己的网上冲浪做的，并不是很好入手
 
 
 ![image](https://raw.githubusercontent.com/paperbluster/m3u_subscriber/main/%E5%9B%BE%E7%89%871.png)
@@ -10,35 +10,35 @@
 
 #### 一、host模式:推荐使用，可以减少一层路由，并且不会导致dns出问题
 
-arm64:
+## arm64:
 
-docker run -d --name m3usubscriber-4395 --restart unless-stopped -p --net=host  jkld310/m3usubscriber:latest  
+docker run -d --name m3usubscriber-22771 --restart unless-stopped -p --net=host  jkld310/m3usubscriber:latest  
 
 docker run -d --name m3usubscriber --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged jkld310/m3usubscriber:latest
 
-docker run -d --name m3usubscriber-4395 --restart unless-stopped --net=host -d jkld310/m3usubscriber:arm64v8
+docker run -d --name m3usubscriber-22771 --restart unless-stopped --net=host -d jkld310/m3usubscriber:arm64v8
 
 docker run -d --name m3usubscriber --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged jkld310/m3usubscriber:arm64v8
 
-x86/amd64:
+## x86/amd64:
 
-docker run -d --name m3usubscriber-4395 --restart unless-stopped --net=host -d jkld310/m3usubscriber:x86_64   
+docker run -d --name m3usubscriber-22771 --restart unless-stopped --net=host -d jkld310/m3usubscriber:x86_64   
 
 docker run -d --name m3usubscriber --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged jkld310/m3usubscriber:x86_64
 
 #### 二、bridge模式:不推荐使用，目前这个模式会导致dns分流器异常
 
-默认arm64架构:
+## 默认arm64架构:
 
-docker run -d --name m3usubscriber --restart unless-stopped -p 4395:4395 -p 5911:5911  jkld310/m3usubscriber:latest  
+docker run -d --name m3usubscriber --restart unless-stopped -p 22770:22770 -p 22771:22771  jkld310/m3usubscriber:latest  
 
 或者:
 
-docker run -d --name m3usubscriber --restart unless-stopped -p 4395:4395 -p 5911:5911  jkld310/m3usubscriber:arm64v8
+docker run -d --name m3usubscriber --restart unless-stopped -p 22770:22770 -p 22771:22771  jkld310/m3usubscriber:arm64v8
 
-adm64/x86_64架构:
+## adm64/x86_64架构:
 
-docker run -d --name m3usubscriber --restart unless-stopped -p 4395:4395 -p 5911:5911  jkld310/m3usubscriber:x86_64   
+docker run -d --name m3usubscriber --restart unless-stopped -p 22770:22770 -p 22771:22771  jkld310/m3usubscriber:x86_64   
 
 ### 非常高兴能为您介绍本工具所实现的各项功能：
 
@@ -70,11 +70,11 @@ docker run -d --name m3usubscriber --restart unless-stopped -p 4395:4395 -p 5911
 
 12-添加了白名单、黑名单、ipv4\ipv6订阅，主要是拿来喂养openclash，自用
 
-##### 13-添加了类似acl4ssr的功能，测试效果比较弱鸡,自用
+#### 13-添加了类似acl4ssr的功能，测试效果比较弱鸡,自用
 
-##### 14-增加了基于redis的dns分流器，配合白名单和黑名单进行分流，转发7874端口(外国+中国域名漏网之鱼，可以使用openclash)，转发5336端口(大部分命中的中国域名，可以使用
+#### 14-增加了基于redis的dns分流器，配合白名单和黑名单进行分流，转发7874端口(外国+中国域名漏网之鱼，可以使用openclash)，转发5336端口(大部分命中的中国域名，可以使用
 
-adguardhome)，dns监听端口-5911(在软路由dhcp/dns设置转发127.0.0.1#5911)，自用
+adguardhome)，dns监听端口-22770(在软路由dhcp/dns设置转发127.0.0.1#22770)，自用
 
 备注：dns分流器可以自己设置服务器和端口，建议使用host模式减少一层路由。
 
@@ -87,6 +87,8 @@ adguardhome)，dns监听端口-5911(在软路由dhcp/dns设置转发127.0.0.1#59
 同时adguardhome应该根据自己的网络状况调整最大ttl值，否则有些网站不能及时返回结果，
 
 我测试100兆电信需要设置20000才可以正常访问外部网站
+
+#### 15-增加了加密订阅功能，可以套娃订阅别人的加密订阅，在备注输入密码就可以自动解密加密文件下载
 
 ### 接下来，您只需要按照以下步骤即可使用本工具：
 
