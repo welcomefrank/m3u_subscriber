@@ -52,7 +52,7 @@ threadsNum = {REDIS_KEY_THREADS: 100}
 
 # 中国DNS服务器主键
 REDIS_KEY_CHINA_DNS_SERVER = "chinadnsserver"
-chinadnsserver = {REDIS_KEY_CHINA_DNS_SERVER: "127.0.0.1"}
+chinadnsserver = {REDIS_KEY_CHINA_DNS_SERVER: ""}
 
 # 中国DNS端口主键
 REDIS_KEY_CHINA_DNS_PORT = "chinadnsport"
@@ -60,7 +60,7 @@ chinadnsport = {REDIS_KEY_CHINA_DNS_PORT: 5336}
 
 # 外国DNS服务器主键
 REDIS_KEY_EXTRA_DNS_SERVER = "extradnsserver"
-extradnsserver = {REDIS_KEY_EXTRA_DNS_SERVER: "127.0.0.1"}
+extradnsserver = {REDIS_KEY_EXTRA_DNS_SERVER: ""}
 
 # 外国DNS端口主键
 REDIS_KEY_EXTRA_DNS_PORT = "extradnsport"

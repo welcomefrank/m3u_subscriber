@@ -16,12 +16,10 @@ import aiohttp
 import aiofiles
 import redis
 import requests
-# import base64
 import time
 from urllib.parse import urlparse, unquote
 # import yaml
 from flask import Flask, jsonify, request, send_file, render_template
-
 
 import chardet
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -72,10 +70,58 @@ REDIS_KEY_PROXIES_SERVER = "proxiesserver"
 # 代理转换选择的服务器订阅:url,name
 REDIS_KEY_PROXIES_SERVER_CHOSEN = "proxiesserverchosen"
 
+# m3u密码
+REDIS_KEY_THREADS2 = "threadsnum2"
+threadsNum2 = {REDIS_KEY_THREADS2: ""}
+
+# 白名单密码
+REDIS_KEY_THREADS3 = "threadsnum3"
+threadsNum3 = {REDIS_KEY_THREADS3: ""}
+
+# 黑名单密码
+REDIS_KEY_THREADS4 = "threadsnum4"
+threadsNum4 = {REDIS_KEY_THREADS4: ""}
+
+# ipv4密码
+REDIS_KEY_THREADS5 = "threadsnum5"
+threadsNum5 = {REDIS_KEY_THREADS5: ""}
+
+# ipv6密码
+REDIS_KEY_THREADS6 = "threadsnum6"
+threadsNum6 = {REDIS_KEY_THREADS6: ""}
+
+# 节点订阅密码
+REDIS_KEY_THREADS7 = "threadsnum7"
+threadsNum7 = {REDIS_KEY_THREADS7: ""}
+
+# # gitee账号:用户名,仓库名字,path,access Token
+# REDIS_KEY_GITEE_ACCOUNT = "redisgiteeaccount"
+# gitee账号:用户名
+REDIS_KEY_GITEE_USERNAME = "redisgiteeusername"
+gitee_username = {REDIS_KEY_GITEE_USERNAME: ""}
+
+# gitee账号:仓库名字
+REDIS_KEY_GITEE_REPONAME = "redisgiteereponame"
+gitee_reponame = {REDIS_KEY_GITEE_REPONAME: ""}
+
+# gitee账号:仓库路径
+REDIS_KEY_GITEE_PATH = "redisgiteepath"
+gitee_path = {REDIS_KEY_GITEE_PATH: ""}
+
+# gitee账号:access token
+REDIS_KEY_GITEE_ACCESS_TOKEN = "redisgiteeaccestoken"
+gitee_access_token = {REDIS_KEY_GITEE_ACCESS_TOKEN: ""}
+
 allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_LINK, REDIS_KEY_WHITELIST_IPV4_LINK,
               REDIS_KEY_WHITELIST_IPV6_LINK, REDIS_KEY_PASSWORD_LINK, REDIS_KEY_PROXIES_LINK, REDIS_KEY_PROXIES_TYPE,
               REDIS_KEY_PROXIES_MODEL, REDIS_KEY_PROXIES_MODEL_CHOSEN, REDIS_KEY_PROXIES_SERVER,
-              REDIS_KEY_PROXIES_SERVER_CHOSEN]
+              REDIS_KEY_PROXIES_SERVER_CHOSEN, REDIS_KEY_GITEE_USERNAME, REDIS_KEY_THREADS2, REDIS_KEY_THREADS3,
+              REDIS_KEY_THREADS4, REDIS_KEY_GITEE_REPONAME, REDIS_KEY_GITEE_PATH, REDIS_KEY_GITEE_ACCESS_TOKEN,
+              REDIS_KEY_THREADS5, REDIS_KEY_THREADS6, REDIS_KEY_THREADS7]
+
+tmp_dict = {'username': 'jksjldggz', 'repo_name': 'type', 'path': '/',
+            'access_token': 'd2006e527547b9483406cf7d5d559055'}
+# redis_add_map(REDIS_KEY_GITEE_ACCOUNT, tmp_dict)
 
 # Adguardhome屏蔽前缀
 BLACKLIST_ADGUARDHOME_FORMATION = "240.0.0.0 "
@@ -128,40 +174,16 @@ REDIS_KEY_THREADS = "threadsnum"
 threadsNum = {REDIS_KEY_THREADS: 0}
 
 REDIS_KEY_CHINA_DNS_SERVER = "chinadnsserver"
-chinadnsserver = {REDIS_KEY_CHINA_DNS_SERVER: "127.0.0.1"}
+chinadnsserver = {REDIS_KEY_CHINA_DNS_SERVER: ""}
 
 REDIS_KEY_CHINA_DNS_PORT = "chinadnsport"
 chinadnsport = {REDIS_KEY_CHINA_DNS_PORT: 5336}
 
 REDIS_KEY_EXTRA_DNS_SERVER = "extradnsserver"
-extradnsserver = {REDIS_KEY_EXTRA_DNS_SERVER: "127.0.0.1"}
+extradnsserver = {REDIS_KEY_EXTRA_DNS_SERVER: ""}
 
 REDIS_KEY_EXTRA_DNS_PORT = "extradnsport"
 extradnsport = {REDIS_KEY_EXTRA_DNS_PORT: 7874}
-
-# m3u密码
-REDIS_KEY_THREADS2 = "threadsnum2"
-threadsNum2 = {REDIS_KEY_THREADS2: ""}
-
-# 白名单密码
-REDIS_KEY_THREADS3 = "threadsnum3"
-threadsNum3 = {REDIS_KEY_THREADS3: ""}
-
-# 黑名单密码
-REDIS_KEY_THREADS4 = "threadsnum4"
-threadsNum4 = {REDIS_KEY_THREADS4: ""}
-
-# ipv4密码
-REDIS_KEY_THREADS5 = "threadsnum5"
-threadsNum5 = {REDIS_KEY_THREADS5: ""}
-
-# ipv6密码
-REDIS_KEY_THREADS6 = "threadsnum6"
-threadsNum6 = {REDIS_KEY_THREADS6: ""}
-
-# 节点订阅密码
-REDIS_KEY_THREADS7 = "threadsnum7"
-threadsNum7 = {REDIS_KEY_THREADS7: ""}
 
 
 @app.route('/')
@@ -282,17 +304,22 @@ def check_file(m3u_dict):
 
 def checkbytes(url):
     if isinstance(url, bytes):
-        return decode_bytes(url).strip()
+        try:
+            return url.decode("utf-8").strip()
+        except:
+            return decode_bytes(url).strip()
     else:
         return url
 
 
 # 判断是否需要解密
 def checkToDecrydecrypt(url, redis_dict, m3u_string):
-    password = redis_dict.get(url).decode()
-    if password and password != "":
-        blankContent = decrypt(password, m3u_string)
-        return blankContent
+    password = redis_dict.get(url)
+    if password:
+        password = password.decode()
+        if password != "":
+            blankContent = decrypt(password, m3u_string)
+            return blankContent
     return m3u_string
 
 
@@ -300,8 +327,12 @@ def fetch_url(url, redis_dict):
     try:
         response = requests.get(url, timeout=5)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
-        m3u_string = response.text
+        # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
+        m3u_string = response.content
+        # 加密文件检测和解码
         m3u_string = checkToDecrydecrypt(url, redis_dict, m3u_string)
+        # 转换成字符串格式返回
+        m3u_string = checkbytes(m3u_string)
         m3u_string += "\n"
         # print(f"success to fetch URL: {url}")
         return m3u_string
@@ -314,7 +345,17 @@ def fetch_url(url, redis_dict):
     except requests.exceptions.Timeout:
         print("timeout error, try to get data with longer timeout:" + url)
     except requests.exceptions.RequestException as e:
-        print("other error: " + url, e)
+        url = url.decode('utf-8')
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
+        m3u_string = response.text
+        m3u_string = checkToDecrydecrypt(url, redis_dict, m3u_string)
+        m3u_string += "\n"
+        # print(f"success to fetch URL: {url}")
+        return m3u_string
+        # print("other error: " + url, e)
+    except:
+        pass
 
 
 def write_to_file(data, file):
@@ -477,6 +518,95 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
     return "result"
 
 
+# 检查文件是否已经存在于gitee仓库，存在的话删除旧数据
+def removeIfExist(username, repo_name, path, access_token, file_name):
+    url = f'https://gitee.com/api/v5/repos/{username}/{repo_name}/contents{path}'
+    headers = {'Authorization': f'token {access_token}'}
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        files = response.json()
+        for file in files:
+            if file['name'] == file_name:
+                # Delete the existing file
+                url = file['url']
+                sha = file['sha']
+                message = 'Delete existing file'
+                data = {'message': message, 'sha': sha}
+                response = requests.delete(url, headers=headers, json=data)
+                if response.status_code != 204:
+                    print(f'Failed to delete file. Status code: {response.status_code}')
+                else:
+                    print('Existing file deleted successfully.')
+
+
+# 上传新文件到gitee
+def uploadNewFileToGitee(username, repo_name, path, access_token, file_name):
+    # # 读取要上传的文件内容（bytes比特流）
+    with open(f'/{file_name}', 'rb') as f:
+        file_content = f.read()
+    # 构建API请求URL和headers
+    url = f'https://gitee.com/api/v5/repos/{username}/{repo_name}/contents{path}/{file_name}'
+    headers = {
+        'Content-Type': 'application/json;charset=UTF-8',
+        'Authorization': f'token {access_token}',
+    }
+    # 构建POST请求数据
+    data = {
+        'message': 'Upload a file',
+        'content': base64.b64encode(file_content).decode('utf-8'),
+    }
+    # 发送POST请求
+    response = requests.post(url, headers=headers, json=data)
+    # 处理响应结果
+    if response.status_code == 201:
+        print('File uploaded successfully!')
+    else:
+        print(f'Failed to upload file. Status code: {response.status_code}')
+
+
+def updateFileToGitee(file_name):
+    username = init_gitee(REDIS_KEY_GITEE_USERNAME, gitee_username)
+    repo_name = init_gitee(REDIS_KEY_GITEE_REPONAME, gitee_reponame)
+    path = init_gitee(REDIS_KEY_GITEE_PATH, gitee_path)
+    access_token = init_gitee(REDIS_KEY_GITEE_ACCESS_TOKEN, gitee_access_token)
+    removeIfExist(username, repo_name, path, access_token, file_name)
+    uploadNewFileToGitee(username, repo_name, path, access_token, file_name)
+
+
+# 定义线程数和任务队列,防止多线程提交数据到gitee产生竞争阻塞，最终导致数据丢失
+task_queue = queue.Queue()
+
+
+def worker_gitee():
+    while True:
+        # 从任务队列中获取一个任务
+        task = task_queue.get()
+        if task is None:
+            continue
+        # 执行上传文件操作
+        file_name = task
+        updateFileToGitee(file_name)
+
+
+# 定义线程数和任务队列,防止多线程提交数据到gitee产生竞争阻塞，最终导致数据丢失
+remove_queue = queue.Queue()
+
+
+def worker_remove():
+    while True:
+        # 从任务队列中获取一个任务
+        task = remove_queue.get()
+        if task is None:
+            continue
+        time.sleep(600)
+        # 执行上传文件操作
+        file_name = task
+        arr = file_name.split('|')
+        for file in arr:
+            if os.path.exists(file):
+                os.remove(file)
+
+
 # 把自己本地文件加密生成对应的加密文本
 def download_secert_file(fileName, secretFileName, redis_key, dict_cache):
     # 读取文件内容
@@ -484,6 +614,11 @@ def download_secert_file(fileName, secretFileName, redis_key, dict_cache):
         ciphertext = f.read()
     secretContent = encrypt(ciphertext, redis_key, dict_cache)
     thread_write_bytes_to_file(secretFileName, secretContent)
+    # 加密文件上传至gitee,
+    task_queue.put(os.path.basename(secretFileName))
+    # updateFileToGitee(os.path.basename(secretFileName))
+    # plaintext = decrypt(password, secretContent)
+    # thread_write_bytes_to_file("/解密文件.txt", plaintext)
 
 
 # 使用线程池把bytes流内容写入本地文件
@@ -1373,7 +1508,7 @@ def formatdata_multithread(data, num_threads):
 # def str_constructor(loader, node):
 #     return loader.construct_scalar(node)
 #
-#
+
 # def dict_constructor(loader, node):
 #     data = {}
 #     yield data
@@ -1387,6 +1522,8 @@ def formatdata_multithread(data, num_threads):
 #             else:
 #                 value = loader.construct_object(value_node)
 #                 data[key] = value
+
+
 #
 #
 # def multi_proxies_yaml(my_dict, yaml_data):
@@ -1441,6 +1578,8 @@ def formatdata_multithread(data, num_threads):
 #                     my_dict.append("- " + json.dumps(new_dict, ensure_ascii=False))
 #                 except:
 #                     pass
+#
+
 #
 #
 # def get_proxy_type(node):
@@ -1564,18 +1703,68 @@ def generateProxyConfig(urlStr):
     return params
 
 
+nameArr = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'z', 'x', 'c',
+           'v', 'b', 'n', 'm']
+
+
+def download_files_for_encryp_proxy(urls, redis_dict):
+    # 新生成的本地url
+    proxy_dict = {}
+    current_timestamp = int(time.time())
+    i = 0
+    round = 1
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        # 提交下载任务并获取future对象列表
+        future_to_url = {executor.submit(fetch_url, url, redis_dict): url for url in urls}
+        # 获取各个future对象的返回值并存储在字典中
+        for future in concurrent.futures.as_completed(future_to_url):
+            url = future_to_url[future]
+            try:
+                result = future.result()
+            except Exception as exc:
+                print('%r generated an exception: %s' % (url, exc))
+            else:
+                index = 0
+                middleStr = ""
+                if i > 0 and i % 25 == 0:
+                    round = round + 1
+                while index < round:
+                    middleStr += nameArr[i]
+                    index = index + 1
+                tmp_file = f"/{current_timestamp}{middleStr}.yaml"
+                with open(tmp_file, 'w'):
+                    pass
+                write_content_to_file(result.encode("utf-8"), tmp_file, 10)
+                proxy_dict["http://192.168.5.1:22771/url" + tmp_file] = tmp_file
+                i = i + 1
+    return proxy_dict
+
+
 def chaorongheProxies(filename):
     redis_dict = r.hgetall(REDIS_KEY_PROXIES_LINK)
     urlStr = ""
+    urlAes = []
     for key in redis_dict.keys():
+        url = key.decode('utf-8')
         if urlStr != "":
             urlStr += "|"
-        urlStr += key.decode('utf-8')
+        # 提取加密的订阅
+        password = redis_dict.get(key).decode()
+        if password and password != "":
+            urlAes.append(key)
+        else:
+            urlStr += url
+    remoteToLocalUrl = download_files_for_encryp_proxy(urlAes, redis_dict)
+    for key in remoteToLocalUrl.keys():
+        if urlStr != "":
+            urlStr += "|"
+        urlStr += key
     params = generateProxyConfig(urlStr)
     # 本地配置   urllib.parse.quote("/path/to/clash/config_template.yaml"
     # 网络配置   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online.ini"
     response = requests.get(getProxyServerChosen(), params=params, timeout=360)
     if response.status_code == 200:
+        # 合并加密下载的和普通的
         # 订阅成功处理逻辑
         # print(response.text)
         if os.path.exists(filename):
@@ -1590,11 +1779,22 @@ def chaorongheProxies(filename):
         thread = threading.Thread(target=download_secert_file,
                                   args=(filename, "/CC.txt", REDIS_KEY_THREADS7, threadsNum7))
         thread.start()
+        thread_remove(remoteToLocalUrl)
         return "result"
     else:
         # 订阅失败处理逻辑
         print("Error:", response.status_code, response.reason)
+        thread_remove(remoteToLocalUrl)
         return "empty"
+
+
+def thread_remove(remoteToLocalUrl):
+    url = ""
+    for key in remoteToLocalUrl.values():
+        if url != "":
+            url += "|"
+        url += key
+    remove_queue.put(url)
 
 
 # 线程池切分下载的内容写入本地
@@ -1660,6 +1860,7 @@ def init_threads_num():
             redis_add(REDIS_KEY_THREADS, num)
             threadsNum[REDIS_KEY_THREADS] = num
             redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 1)
+        threadsNum[REDIS_KEY_THREADS] = num
     else:
         num = 100
         redis_add(REDIS_KEY_THREADS, num)
@@ -1681,6 +1882,7 @@ def init_china_dns_port():
             redis_add(REDIS_KEY_CHINA_DNS_PORT, num)
             chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = num
             redis_add(REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG, 1)
+        chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = num
     else:
         num = 5336
         redis_add(REDIS_KEY_CHINA_DNS_PORT, num)
@@ -1702,6 +1904,7 @@ def init_extra_dns_port():
             redis_add(REDIS_KEY_EXTRA_DNS_PORT, num)
             extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = num
             redis_add(REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG, 1)
+        extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = num
     else:
         num = 7874
         redis_add(REDIS_KEY_EXTRA_DNS_PORT, num)
@@ -1723,6 +1926,7 @@ def init_china_dns_server():
             redis_add(REDIS_KEY_CHINA_DNS_SERVER, num)
             chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = num
             redis_add(REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG, 1)
+        chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = num
     else:
         num = "127.0.0.1"
         redis_add(REDIS_KEY_CHINA_DNS_SERVER, num)
@@ -1744,6 +1948,7 @@ def init_extra_dns_server():
             redis_add(REDIS_KEY_EXTRA_DNS_SERVER, num)
             extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = num
             redis_add(REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG, 1)
+        extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = num
     else:
         num = "127.0.0.1"
         redis_add(REDIS_KEY_EXTRA_DNS_SERVER, num)
@@ -1756,18 +1961,62 @@ def init_pass(redis_key, dictCache):
     data = dictCache.get(redis_key)
     if data:
         return data
-    password = redis_get(redis_key)
-    if password:
-        password = password.decode()
+    passwordDict = redis_get_map(redis_key)
+    if passwordDict:
+        password = passwordDict[redis_key]
         if password == "":
             password = generateEncryptPassword()
-            redis_add(redis_key, password)
+            tmp_dict = {}
+            tmp_dict[redis_key] = password
+            # 设定默认选择的模板
+            redis_add_map(redis_key, tmp_dict)
             dictCache[redis_key] = password
+        dictCache[redis_key] = password
+        return password
     else:
         password = generateEncryptPassword()
-        redis_add(redis_key, password)
+        tmp_dict = {}
+        tmp_dict[redis_key] = password
+        # 设定默认选择的模板
+        redis_add_map(redis_key, tmp_dict)
         dictCache[redis_key] = password
-    return password
+        return password
+
+
+# 获取gitee数据
+def init_gitee(redis_key, dictCache):
+    data = dictCache.get(redis_key)
+    if data:
+        return data
+    passwordDict = redis_get_map(redis_key)
+    if passwordDict:
+        password = passwordDict[redis_key]
+        if password == "":
+            password = ""
+            tmp_dict = {}
+            tmp_dict[redis_key] = password
+            # 设定默认选择的模板
+            redis_add_map(redis_key, tmp_dict)
+            dictCache[redis_key] = password
+        dictCache[redis_key] = password
+        return password
+    else:
+        password = ""
+        tmp_dict = {}
+        tmp_dict[redis_key] = password
+        # 设定默认选择的模板
+        redis_add_map(redis_key, tmp_dict)
+        dictCache[redis_key] = password
+        return password
+
+
+# gitee-修改数据
+def update_gitee(redis_key, dict_cache, value):
+    tmp_dict = {}
+    tmp_dict[redis_key] = value
+    # 设定默认选择的模板
+    redis_add_map(redis_key, tmp_dict)
+    dict_cache[redis_key] = value
 
 
 # 直播源订阅密码刷新
@@ -1796,7 +2045,7 @@ def getIV(passwordStr):
     return arr[0].encode('utf-8'), iv_decoded
 
 
-# 加密函数
+# 加密函数   # bytes ciphertext
 def encrypt(plaintext, redis_key, dict_cache):
     password = init_pass(redis_key, dict_cache)
     arr = getIV(password)
@@ -1815,7 +2064,7 @@ def encrypt(plaintext, redis_key, dict_cache):
     return ciphertext
 
 
-# 解密函数
+# 解密函数 str-password,bytes secretcont
 def decrypt(password, ciphertext):
     # generate key from password
     arr = getIV(password)
@@ -1827,13 +2076,75 @@ def decrypt(password, ciphertext):
     cipher = Cipher(algorithm, mode, backend=backend)
     # create a decryptor object
     decryptor = cipher.decryptor()
+    fuck = decryptor.update(ciphertext)
     # decrypt ciphertext
-    plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+    plaintext = fuck + decryptor.finalize()
     # return decrypted plaintext
     return plaintext
 
 
 ############################################################协议区####################################################
+
+
+# 修改gitee账户-access token
+@app.route('/saveGiteeAcessToken', methods=['POST'])
+def saveGiteeAcessToken():
+    data = request.json['selected_button']
+    update_gitee(REDIS_KEY_GITEE_ACCESS_TOKEN, gitee_access_token, data)
+    return "数据已经保存"
+
+
+# 获取gitee账户-access token
+@app.route('/getGiteeAcessToken', methods=['GET'])
+def getGiteeAcessToken():
+    num = init_gitee(REDIS_KEY_GITEE_ACCESS_TOKEN, gitee_access_token)
+    return jsonify({'button': num})
+
+
+# 修改gitee账户-仓库路径
+@app.route('/saveGiteePath', methods=['POST'])
+def saveGiteePath():
+    data = request.json['selected_button']
+    update_gitee(REDIS_KEY_GITEE_PATH, gitee_path, data)
+    return "数据已经保存"
+
+
+# 获取gitee账户-仓库路径
+@app.route('/getGiteePathCache', methods=['GET'])
+def getGiteePathCache():
+    num = init_gitee(REDIS_KEY_GITEE_PATH, gitee_path)
+    return jsonify({'button': num})
+
+
+# 修改gitee账户-仓库名字
+@app.route('/saveGiteeRePoname', methods=['POST'])
+def saveGiteeRePoname():
+    data = request.json['selected_button']
+    update_gitee(REDIS_KEY_GITEE_REPONAME, gitee_reponame, data)
+    return "数据已经保存"
+
+
+# 获取gitee账户-仓库名字
+@app.route('/getGiteeRePoname', methods=['GET'])
+def getGiteeRePoname():
+    num = init_gitee(REDIS_KEY_GITEE_REPONAME, gitee_reponame)
+    return jsonify({'button': num})
+
+
+# 修改gitee账户-用户名
+@app.route('/saveGiteeUsername', methods=['POST'])
+def saveGiteeUsername():
+    data = request.json['selected_button']
+    update_gitee(REDIS_KEY_GITEE_USERNAME, gitee_username, data)
+    return "数据已经保存"
+
+
+# 获取gitee账户-用户名
+@app.route('/getGiteeUsername', methods=['GET'])
+def getGiteeUsername():
+    num = init_gitee(REDIS_KEY_GITEE_USERNAME, gitee_username)
+    return jsonify({'button': num})
+
 
 # 修改节点订阅密码
 @app.route('/changeProxyListPassword', methods=['GET'])
@@ -2607,6 +2918,12 @@ if __name__ == '__main__':
     timer_thread5.start()
     timer_thread6 = threading.Thread(target=execute, args=('chaoronghe6', 10800))
     timer_thread6.start()
+    # 启动工作线程消费上传数据至gitee
+    t = threading.Thread(target=worker_gitee)
+    t.start()
+    # 启动工作线程消费上传数据至gitee
+    t2 = threading.Thread(target=worker_remove)
+    t2.start()
     try:
         app.run(debug=True, host='0.0.0.0', port=5000)
     finally:
@@ -2616,3 +2933,5 @@ if __name__ == '__main__':
         timer_thread4.join()
         timer_thread5.join()
         timer_thread6.join()
+        t.join()
+        t2.join()

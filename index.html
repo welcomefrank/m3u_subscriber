@@ -224,6 +224,10 @@
         <input type="radio" name="page" id="page14">
         <span>订阅密码锁</span>
     </label>
+    <label>
+        <input type="radio" name="page" id="page15">
+        <span>gitee同步账号</span>
+    </label>
 </div>
 <div id="choice">
     <div id="page1" style="display: block;">
@@ -727,6 +731,41 @@
             <button id="extraDnsPortBtn3" onclick="changeProxyListPassword()" class="stubbonsave">切换</button>
         </div>
     </div>
+        <div id="page15" style="display: none;">
+        <h1>gitee同步账号</h1>
+        <div style="float: left;width: 70%">
+            <h3>设置gitee账号、仓库、路径</h3>
+            <h3>同步上传加密订阅超融合文件</h3>
+        </div>
+        <div style="display: flex;width: 100%;">
+            用户名:username
+        </div>
+        <div style="width:100%">
+            <input type="text" id="giteeUsername" class="stubboninput"/>
+            <button id="threadsButton2" onclick="saveGiteeUsername()" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            仓库名:repo_name
+        </div>
+        <div style="width:100%">
+            <input type="text" id="giteeRePoname" class="stubboninput"/>
+            <button id="chinaDnsServerBtn2" onclick="saveGiteeRePoname()" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            路径:path
+        </div>
+        <div style="width:100%">
+            <input type="text" id="giteePath" class="stubboninput"/>
+            <button id="chinaDnsPortBtn2" onclick="saveGiteePath()" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            访问令牌:access_token
+        </div>
+        <div style="width:100%">
+            <input type="text" id="giteeAcessToken" class="stubboninput"/>
+            <button id="extraDnsServerBtn2" onclick="saveGiteeAcessToken()" class="stubbonsave">修改</button>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -859,6 +898,27 @@
     // 节点订阅加密密码缓存
     var extraDnsPortcache3 = sessionStorage.getItem('extraDnsPort3');
 
+    // 输入框显示gitee账号用户名
+    const giteeUsername = document.getElementById('giteeUsername');
+    // gitee账号用户名缓存
+    var giteeUsernameCache = sessionStorage.getItem('giteeUsername');
+
+    // 输入框显示gitee仓库名字
+    const giteeRePoname = document.getElementById('giteeRePoname');
+    // gitee仓库名字缓存
+    var giteeRePonameCache = sessionStorage.getItem('giteeRePoname');
+
+    // 输入框显示gitee仓库路径
+    const giteePath = document.getElementById('giteePath');
+    // gitee仓库路径缓存
+    var giteePathCache = sessionStorage.getItem('giteePath');
+
+    // 输入框显示gitee accestoken
+    const giteeAcessToken = document.getElementById('giteeAcessToken');
+    // gitee   accestoken
+    var giteeAcessTokenCache = sessionStorage.getItem('giteeAcessToken');
+
+
     function changeProxyListPassword(){
         changepassword('/changeProxyListPassword','extraDnsPort3',extraDnsPort3)
     }
@@ -898,6 +958,24 @@
     function saveExtraDnsPort() {
         saveDnsSetting('/saveExtraDnsPort','extraDnsPort',extraDnsPort)
     }
+
+    //修改GITEE用户名
+    function saveGiteeUsername() {
+        saveDnsSetting('/saveGiteeUsername','giteeUsername',giteeUsername)
+    }
+    //修改GITEE仓库名字
+    function saveGiteeRePoname() {
+        saveDnsSetting('/saveGiteeRePoname','giteeRePoname',giteeRePoname)
+    }
+    //修改GITEE仓库路径
+    function saveGiteePath() {
+        saveDnsSetting('/saveGiteePath','giteePath',giteePath)
+    }
+    //修改GITEE access token
+    function saveGiteeAcessToken() {
+        saveDnsSetting('/saveGiteeAcessToken','giteeAcessToken',giteeAcessToken)
+    }
+
 
     //外国DNS端口加载
     function reloadExtraDnsPort() {
@@ -967,6 +1045,26 @@
     //节点订阅密码加载
     function reloadExtraDnsPort3() {
         reloadDnsSetting(extraDnsPortcache3,extraDnsPort3,'/getExtraDnsPort3','extraDnsPort3')
+    }
+
+    //gitee账户用户名加载
+    function reloadGiteeUsername() {
+        reloadDnsSetting(giteeUsernameCache,giteeUsername,'/getGiteeUsername','giteeUsername')
+    }
+
+    //gitee仓库名字加载
+    function reloadGiteeRePoname() {
+        reloadDnsSetting(giteeRePonameCache,giteeRePoname,'/getGiteeRePoname','giteeRePoname')
+    }
+
+    //gitee仓库路径加载
+    function reloadGiteePathCache() {
+        reloadDnsSetting(giteePathCache,giteePath,'/getGiteePathCache','giteePath')
+    }
+
+    //gitee AcessToken加载
+    function reloadGiteeAcessToken() {
+        reloadDnsSetting(giteeAcessTokenCache,giteeAcessToken,'/getGiteeAcessToken','giteeAcessToken')
     }
 
         //修改线程数
@@ -1704,6 +1802,12 @@
             reloadExtraDnsServer2()
             reloadExtraDnsPort2()
             reloadExtraDnsPort3()
+        }
+        else if (selectedPage === pages[14].id) {
+            reloadGiteeUsername()
+            reloadGiteeRePoname()
+            reloadGiteePathCache()
+            reloadGiteeAcessToken()
         }
         if (selectedPage !== pages[1].id) {
             window.removeEventListener('scroll', handleScroll);
