@@ -182,7 +182,7 @@
     </label>
     <label>
         <input type="radio" name="page" id="page4">
-        <span>随机密码</span>
+        <span>离线工具</span>
     </label>
     <label>
         <input type="radio" name="page" id="page5">
@@ -228,6 +228,10 @@
         <input type="radio" name="page" id="page15">
         <span>gitee同步账号</span>
     </label>
+    <label>
+        <input type="radio" name="page" id="page16">
+        <span>M3U白名单</span>
+    </label>
 </div>
 <div id="choice">
     <div id="page1" style="display: block;">
@@ -238,6 +242,7 @@
             <h3>全部直播源-无加密: http://192.168.5.1:22771/url/A.m3u</h3>
             <h3>全部直播源-加密: http://192.168.5.1:22771/url/AEN.txt</h3>
             <h3>有效直播源-无加密: http://192.168.5.1:22771/url/alive.m3u</h3>
+            <h3>电视盒子专用-华语电视台-有效直播源-无加密: http://192.168.5.1:22771/url/healthm3u.txt</h3>
             <h3>adguardhome放行域名-无加密: http://192.168.5.1:22771/url/tvlist.txt</h3>
             <h3>adguardhome放行域名-加密: http://192.168.5.1:22771/url/TTADEN.txt</h3>
             <h3>上传文件导入合并M3U超融合备份</h3>
@@ -352,6 +357,15 @@
         <br>
         <textarea id="password-list" rows="10" readonly
                   style="width: 100%;background-color: #758a99;color: aliceblue"></textarea>
+        <br>
+        <h1>base64加密</h1>
+        <div>
+            <textarea id="input" rows="5" cols="50"></textarea><br/>
+            <button onclick="encode()">Encode</button>
+            <button onclick="decode()">Decode</button>
+            <br/>
+            <textarea id="output" rows="5" cols="50"></textarea>
+        </div>
     </div>
     <div id="page5" style="display: none;">
         <h1>域名白名单订阅:从网络下载白名单</h1>
@@ -731,7 +745,7 @@
             <button id="extraDnsPortBtn3" onclick="changeProxyListPassword()" class="stubbonsave">切换</button>
         </div>
     </div>
-        <div id="page15" style="display: none;">
+    <div id="page15" style="display: none;">
         <h1>gitee同步账号</h1>
         <div style="float: left;width: 70%">
             <h3>设置gitee账号、仓库、路径</h3>
@@ -764,6 +778,34 @@
         <div style="width:100%">
             <input type="text" id="giteeAcessToken" class="stubboninput"/>
             <button id="extraDnsServerBtn2" onclick="saveGiteeAcessToken()" class="stubbonsave">修改</button>
+        </div>
+    </div>
+    <div id="page16" style="display: none;">
+        <h1>M3U白名单</h1>
+        <div style="float: left;width: 70%">
+            <h3>上传文件导入合并M3U白名单</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn11" class="uploadjsonbtn" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row11" class="addNewSubscriber" style="width:100%">新增关键字</button>
+            </div>
+            <div>
+                <button id="download-json-btn11" class="button download-json-btn" style="width: 100%">导出关键字配置备份</button>
+            </div>
+            <button id="removem3ulinks11" class="button removeallSubscriber" onclick="removem3ulinks11()">删除全部关键字
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">关键字:过滤生成有效大陆直播源的判断依据
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table11" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -838,7 +880,7 @@
     // 线程数缓存
     var threadsCache = sessionStorage.getItem('threads');
 
-        // 节点订阅-服务器选择
+    // 节点订阅-服务器选择
     const proxymodelswitch = document.getElementById('proxy-model-switch');
     const dropdown = document.querySelector('.dropdown');
     const list = dropdown.querySelector('.dropdown-content');
@@ -918,29 +960,34 @@
     // gitee   accestoken
     var giteeAcessTokenCache = sessionStorage.getItem('giteeAcessToken');
 
+    const fileInput11 = document.getElementById('upload-json-btn11');
+    const addRowButton11 = document.getElementById('add-row11');
+    const inputTable11 = document.getElementById('input-table11');
+    const downloadBtn11 = document.getElementById('download-json-btn11');
+
 
     function changeProxyListPassword(){
-        changepassword('/changeProxyListPassword','extraDnsPort3',extraDnsPort3)
+        changepassword('/api/changeProxyListPassword','extraDnsPort3',extraDnsPort3)
     }
 
     function changeIPV6ListPassword(){
-        changepassword('/changeIPV6ListPassword','extraDnsPort2',extraDnsPort2)
+        changepassword('/api/changeIPV6ListPassword','extraDnsPort2',extraDnsPort2)
     }
 
     function changeIPV4ListPassword(){
-        changepassword('/changeIPV4ListPassword','extraDnsServer2',extraDnsServer2)
+        changepassword('/api/changeIPV4ListPassword','extraDnsServer2',extraDnsServer2)
     }
 
     function changeBlackListPassword(){
-        changepassword('/changeBlackListPassword','chinaDnsPort2',chinaDnsPort2)
+        changepassword('/api/changeBlackListPassword','chinaDnsPort2',chinaDnsPort2)
     }
 
     function changeWhiteListPassword(){
-        changepassword('/changeWhiteListPassword','chinaDnsServer2',chinaDnsServer2)
+        changepassword('/api/changeWhiteListPassword','chinaDnsServer2',chinaDnsServer2)
     }
 
     function changeM3uPassword(){
-        changepassword('/changeM3uPassword','threads2',threadNum2)
+        changepassword('/api/changeM3uPassword','threads2',threadNum2)
     }
 
     function changepassword(requestPath, id, idVar) {
@@ -956,120 +1003,120 @@
 
     //修改外国DNS端口
     function saveExtraDnsPort() {
-        saveDnsSetting('/saveExtraDnsPort','extraDnsPort',extraDnsPort)
+        saveDnsSetting('/api/saveExtraDnsPort','extraDnsPort',extraDnsPort)
     }
 
     //修改GITEE用户名
     function saveGiteeUsername() {
-        saveDnsSetting('/saveGiteeUsername','giteeUsername',giteeUsername)
+        saveDnsSetting('/api/saveGiteeUsername','giteeUsername',giteeUsername)
     }
     //修改GITEE仓库名字
     function saveGiteeRePoname() {
-        saveDnsSetting('/saveGiteeRePoname','giteeRePoname',giteeRePoname)
+        saveDnsSetting('/api/saveGiteeRePoname','giteeRePoname',giteeRePoname)
     }
     //修改GITEE仓库路径
     function saveGiteePath() {
-        saveDnsSetting('/saveGiteePath','giteePath',giteePath)
+        saveDnsSetting('/api/saveGiteePath','giteePath',giteePath)
     }
     //修改GITEE access token
     function saveGiteeAcessToken() {
-        saveDnsSetting('/saveGiteeAcessToken','giteeAcessToken',giteeAcessToken)
+        saveDnsSetting('/api/saveGiteeAcessToken','giteeAcessToken',giteeAcessToken)
     }
 
 
     //外国DNS端口加载
     function reloadExtraDnsPort() {
-        reloadDnsSetting(extraDnsPortcache,extraDnsPort,'/getExtraDnsPort','extraDnsPort')
+        reloadDnsSetting(extraDnsPortcache,extraDnsPort,'/api/getExtraDnsPort','extraDnsPort')
     }
 
     //修改外国DNS服务器
     function saveExtraDnsServer() {
-        saveDnsSetting('/saveExtraDnsServer','extraDnsServer',extraDnsServer)
+        saveDnsSetting('/api/saveExtraDnsServer','extraDnsServer',extraDnsServer)
     }
 
     //外国DNS服务器加载
     function reloadExtraDnsServer() {
-        reloadDnsSetting(extraDnsServercache,extraDnsServer,'/getExtraDnsServer','extraDnsServer')
+        reloadDnsSetting(extraDnsServercache,extraDnsServer,'/api/getExtraDnsServer','extraDnsServer')
     }
 
     //修改中国DNS端口
     function saveChinaDnsPort() {
-        saveDnsSetting('/savechinaDnsPort','chinaDnsPort',chinaDnsPort)
+        saveDnsSetting('/api/savechinaDnsPort','chinaDnsPort',chinaDnsPort)
     }
 
     //中国DNS端口加载
     function reloadChinaDnsPort() {
-        reloadDnsSetting(chinaDnsPortcache,chinaDnsPort,'/getChinaDnsPort','chinaDnsPort')
+        reloadDnsSetting(chinaDnsPortcache,chinaDnsPort,'/api/getChinaDnsPort','chinaDnsPort')
     }
 
     //修改中国DNS服务器
     function saveChinaDnsServer() {
-        saveDnsSetting('/savechinaDnsServer','chinaDnsServer',chinaDnsServer)
+        saveDnsSetting('/api/savechinaDnsServer','chinaDnsServer',chinaDnsServer)
     }
 
     //中国DNS服务器加载
     function reloadChinaDnsServer() {
-        reloadDnsSetting(chinaDnsServercache,chinaDnsServer,'/getChinaDnsServer','chinaDnsServer')
+        reloadDnsSetting(chinaDnsServercache,chinaDnsServer,'/api/getChinaDnsServer','chinaDnsServer')
     }
 
     //线程数加载
     function reloadThreadNum() {
-        reloadDnsSetting(threadsCache,threadNum,'/getThreadNum','threads')
+        reloadDnsSetting(threadsCache,threadNum,'/api/getThreadNum','threads')
     }
 
     //直播源订阅密码加载
     function reloadThreadNum2() {
-        reloadDnsSetting(threadsCache2,threadNum2,'/getThreadNum2','threads2')
+        reloadDnsSetting(threadsCache2,threadNum2,'/api/getThreadNum2','threads2')
     }
 
      //域名白名单订阅密码加载
     function reloadChinaDnsServer2() {
-        reloadDnsSetting(chinaDnsServercache2,chinaDnsServer2,'/getChinaDnsServer2','chinaDnsServer2')
+        reloadDnsSetting(chinaDnsServercache2,chinaDnsServer2,'/api/getChinaDnsServer2','chinaDnsServer2')
     }
 
     //域名黑名单订阅密码加载
     function reloadChinaDnsPort2() {
-        reloadDnsSetting(chinaDnsPortcache2,chinaDnsPort2,'/getChinaDnsPort2','chinaDnsPort2')
+        reloadDnsSetting(chinaDnsPortcache2,chinaDnsPort2,'/api/getChinaDnsPort2','chinaDnsPort2')
     }
 
     //IPV4订阅密码加载
     function reloadExtraDnsServer2() {
-        reloadDnsSetting(extraDnsServercache2,extraDnsServer2,'/getExtraDnsServer2','extraDnsServer2')
+        reloadDnsSetting(extraDnsServercache2,extraDnsServer2,'/api/getExtraDnsServer2','extraDnsServer2')
     }
 
     //IPV6订阅密码加载
     function reloadExtraDnsPort2() {
-        reloadDnsSetting(extraDnsPortcache2,extraDnsPort2,'/getExtraDnsPort2','extraDnsPort2')
+        reloadDnsSetting(extraDnsPortcache2,extraDnsPort2,'/api/getExtraDnsPort2','extraDnsPort2')
     }
 
     //节点订阅密码加载
     function reloadExtraDnsPort3() {
-        reloadDnsSetting(extraDnsPortcache3,extraDnsPort3,'/getExtraDnsPort3','extraDnsPort3')
+        reloadDnsSetting(extraDnsPortcache3,extraDnsPort3,'/api/getExtraDnsPort3','extraDnsPort3')
     }
 
     //gitee账户用户名加载
     function reloadGiteeUsername() {
-        reloadDnsSetting(giteeUsernameCache,giteeUsername,'/getGiteeUsername','giteeUsername')
+        reloadDnsSetting(giteeUsernameCache,giteeUsername,'/api/getGiteeUsername','giteeUsername')
     }
 
     //gitee仓库名字加载
     function reloadGiteeRePoname() {
-        reloadDnsSetting(giteeRePonameCache,giteeRePoname,'/getGiteeRePoname','giteeRePoname')
+        reloadDnsSetting(giteeRePonameCache,giteeRePoname,'/api/getGiteeRePoname','giteeRePoname')
     }
 
     //gitee仓库路径加载
     function reloadGiteePathCache() {
-        reloadDnsSetting(giteePathCache,giteePath,'/getGiteePathCache','giteePath')
+        reloadDnsSetting(giteePathCache,giteePath,'/api/getGiteePathCache','giteePath')
     }
 
     //gitee AcessToken加载
     function reloadGiteeAcessToken() {
-        reloadDnsSetting(giteeAcessTokenCache,giteeAcessToken,'/getGiteeAcessToken','giteeAcessToken')
+        reloadDnsSetting(giteeAcessTokenCache,giteeAcessToken,'/api/getGiteeAcessToken','giteeAcessToken')
     }
 
         //修改线程数
     function saveData() {
-        saveDnsSetting('/saveThreadS','threads',threadNum)
+        saveDnsSetting('/api/saveThreadS','threads',threadNum)
     }
 
     function reloadDnsSetting(targetcache, targetConst, requestpath, targetCacheName) {
@@ -1108,7 +1155,7 @@
 
 
     function reloadProxyModels(requestpath, value) {
-        if (requestpath === '/getall10') {
+        if (requestpath === '/api/getall10') {
             const li = document.createElement('li');
             li.textContent = value
             if (!list.textContent.includes(value)) {
@@ -1119,12 +1166,12 @@
                 // 更新默认服务器
                 proxymodelswitch.textContent = value;
                 // 发送数据到后端
-                sendData('/chooseProxyServer',value);
+                sendData('/api/chooseProxyServer',value);
                 // 隐藏下拉菜单
                 dropdown.classList.remove('active');
             });
         }
-        if (requestpath === '/getall9') {
+        if (requestpath === '/api/getall9') {
             const li = document.createElement('li');
             li.textContent = value;
             if (!list2.textContent.includes(value)) {
@@ -1135,7 +1182,7 @@
                 // 更新默认配置
                 proxymodelswitch2.textContent = value;
                 // 发送数据到后端
-                sendData('/chooseProxyModel',value);
+                sendData('/api/chooseProxyModel',value);
                 // 隐藏下拉菜单
                 dropdown2.classList.remove('active');
             });
@@ -1166,7 +1213,7 @@
 
     function reloadSelectedServer() {
         // 发送 GET 请求
-        fetch('/getSelectedServer')
+        fetch('/api/getSelectedServer')
             .then(response => response.json())  // 将响应体解析为 JSON 格式
             .then(data => {
                 // 更新服务器设置
@@ -1176,7 +1223,7 @@
 
     function reloadSelectedModel() {
         // 发送 GET 请求
-        fetch('/getSelectedModel')
+        fetch('/api/getSelectedModel')
             .then(response => response.json())  // 将响应体解析为 JSON 格式
             .then(data => {
                 // 更新模板配置
@@ -1187,7 +1234,7 @@
 
     function reloadSelectedButtonId() {
         // 发送 GET 请求
-        fetch('/getSelectedButtonId')
+        fetch('/api/getSelectedButtonId')
             .then(response => response.json())  // 将响应体解析为 JSON 格式
             .then(data => {
                 const buttonId = data.button;  // 查找 ID 匹配的用户信息
@@ -1211,7 +1258,7 @@
             // 将选择的按钮ID存储到 sessionStorage 中
             sessionStorage.setItem('selected-button-id', button.id);
             // 发送选择按钮的请求给后端
-            fetch('/chooseProxy', {
+            fetch('/api/chooseProxy', {
                 method: 'POST',
                 body: JSON.stringify({'selected_button': button.id}),
                 headers: {'Content-Type': 'application/json'}
@@ -1228,47 +1275,52 @@
 
     //超融合M3U-从数据库拉取订阅列表数据
     function reload() {
-        reloadBase('/getall',  inputTable)
+        reloadBase('/api/getall',  inputTable)
     }
 
     //超融合节点订阅-从数据库拉取订阅列表数据
     function reloadProxiesListLink() {
-        reloadBase('/getall8',  inputTable8)
+        reloadBase('/api/getall8',  inputTable8)
     }
 
     //超融合节点订阅远程配置-从数据库拉取订阅列表数据
     function reloadProxyModelListLink() {
-        reloadBase('/getall9',   inputTable9)
+        reloadBase('/api/getall9',   inputTable9)
     }
 
     //超融合节点订阅后端配置-从数据库拉取订阅列表数据
     function reloadProxyServerListLink() {
-        reloadBase('/getall10',  inputTable10)
+        reloadBase('/api/getall10',  inputTable10)
+    }
+
+    //M3U白名单-从数据库拉取关键字列表数据
+    function reloadM3uWhiteList() {
+        reloadBase('/api/getall11',  inputTable11)
     }
 
     //超融合ipv6-从数据库拉取订阅列表数据
     function reloadIpv6ListLink() {
-        reloadBase('/getall5',   inputTable5)
+        reloadBase('/api/getall5',   inputTable5)
     }
 
     //密码本-从数据库拉取密码列表数据
     function reloadPasswordList() {
-        reloadBase('/getall6',  inputTable6)
+        reloadBase('/api/getall6',  inputTable6)
     }
 
     //超融合ipv4-从数据库拉取订阅列表数据
     function reloadIpv4ListLink() {
-        reloadBase('/getall4', inputTable4)
+        reloadBase('/api/getall4', inputTable4)
     }
 
     //超融合白名单-从数据库拉取订阅列表数据
     function reloadWhiteListLink() {
-        reloadBase('/getall2',   inputTable2)
+        reloadBase('/api/getall2',   inputTable2)
     }
 
     //超融合黑名单-从数据库拉取订阅列表数据
     function reloadBlackListLink() {
-        reloadBase('/getall3',  inputTable3)
+        reloadBase('/api/getall3',  inputTable3)
     }
 
     //从数据库拉取订阅列表数据
@@ -1324,52 +1376,57 @@
 
     //保留订阅-白名单
     function saveInputValue2(inputValue, name) {
-        saveInputValuebase(inputValue, name, '/addnewm3u2')
+        saveInputValuebase(inputValue, name, '/api/addnewm3u2')
     }
 
     //保留订阅-黑名单
     function saveInputValue3(inputValue, name) {
-        saveInputValuebase(inputValue, name, '/addnewm3u3')
+        saveInputValuebase(inputValue, name, '/api/addnewm3u3')
     }
 
     //保留订阅-ipv4
     function saveInputValue4(inputValue, name) {
-        saveInputValuebase(inputValue, name, '/addnewm3u4')
+        saveInputValuebase(inputValue, name, '/api/addnewm3u4')
     }
 
     //保留订阅-ipv6
     function saveInputValue5(inputValue, name) {
-        saveInputValuebase(inputValue, name, '/addnewm3u5')
+        saveInputValuebase(inputValue, name, '/api/addnewm3u5')
     }
 
     //保留密码
     function saveInputValue6(inputValue, name) {
-        saveInputValuebase(inputValue, name, '/addnewm3u6')
+        saveInputValuebase(inputValue, name, '/api/addnewm3u6')
     }
 
     //保留节点订阅
     function saveInputValue8(inputValue, name) {
-        saveInputValuebase(inputValue, name, '/addnewm3u8')
+        saveInputValuebase(inputValue, name, '/api/addnewm3u8')
     }
 
     //保留订阅-节点远程配置
     function saveInputValue9(inputValue, name) {
-        saveInputValuebase(inputValue, name, '/addnewm3u9')
+        saveInputValuebase(inputValue, name, '/api/addnewm3u9')
     }
 
     //保留订阅-后端服务器配置
     function saveInputValue10(inputValue, name) {
-        saveInputValuebase(inputValue, name, '/addnewm3u10')
+        saveInputValuebase(inputValue, name, '/api/addnewm3u10')
+    }
+
+    //保留关键字-M3U白名单配置
+    function saveInputValue11(inputValue, name) {
+        saveInputValuebase(inputValue, name, '/api/addnewm3u11')
     }
 
     //永久列表-保留输入行数据
     function savem3uInputValue(url, info) {
-        saveInputValuebase(url, info, '/addm3udata')
+        saveInputValuebase(url, info, '/api/addm3udata')
     }
 
     //保留订阅-超融合
     function saveInputValue(inputValue, name) {
-        saveInputValuebase(inputValue, name, '/addnewm3u')
+        saveInputValuebase(inputValue, name, '/api/addnewm3u')
     }
 
     function saveInputValuebase(inputValue, name, requestpath) {
@@ -1390,52 +1447,57 @@
 
     //删除订阅-白名单
     function deleteInputRow2(row, inputValue) {
-        deleteInputRowBase(row, inputValue, '/deletewm3u2')
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u2')
     }
 
     //删除订阅-黑名单
     function deleteInputRow3(row, inputValue) {
-        deleteInputRowBase(row, inputValue, '/deletewm3u3')
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u3')
     }
 
     //删除订阅-ipv4
     function deleteInputRow4(row, inputValue) {
-        deleteInputRowBase(row, inputValue, '/deletewm3u4')
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u4')
     }
 
     //删除订阅-ipv6
     function deleteInputRow5(row, inputValue) {
-        deleteInputRowBase(row, inputValue, '/deletewm3u5')
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u5')
     }
 
     //删除密码
     function deleteInputRow6(row, inputValue) {
-        deleteInputRowBase(row, inputValue, '/deletewm3u6')
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u6')
     }
 
     //删除节点订阅
     function deleteInputRow8(row, inputValue) {
-        deleteInputRowBase(row, inputValue, '/deletewm3u8')
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u8')
     }
 
     //删除订阅-节点远程配置
     function deleteInputRow9(row, inputValue) {
-        deleteInputRowBase(row, inputValue, '/deletewm3u9')
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u9')
     }
 
     //删除订阅-节点后端服务器订阅
     function deleteInputRow10(row, inputValue) {
-        deleteInputRowBase(row, inputValue, '/deletewm3u10')
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u10')
+    }
+
+    //删除关键字-M3U白名单
+    function deleteInputRow11(row, inputValue) {
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u11')
     }
 
     //永久列表-删除输入行
     function deleteM3uInputRow(row, inputValue) {
-        deleteInputRowBase(row, inputValue, '/deletem3udata')
+        deleteInputRowBase(row, inputValue, '/api/deletem3udata')
     }
 
     //删除订阅-M3U
     function deleteInputRow(row, inputValue) {
-        deleteInputRowBase(row, inputValue, '/deletewm3u')
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u')
     }
 
     function deleteInputRowBase(row, inputValue, requestpath) {
@@ -1470,6 +1532,8 @@
         return window[methodName].apply(null, params)
     }
 
+    //m3u白名单-关键字列表里按钮监听
+    inputableAddEventListener(inputTable11,  'saveInputValue11', 'deleteInputRow11')
     //节点后端服务器订阅-订阅列表里按钮监听
     inputableAddEventListener(inputTable10,  'saveInputValue10', 'deleteInputRow10')
     //节点远程配置文件订阅-订阅列表里按钮监听
@@ -1513,26 +1577,28 @@
         });
     }
 
+    //m3u白名单-关键字-导入json配置
+    fileInputAddEventListenerBase(fileInput11, '/api/upload_json_file11')
     //节点订阅-后端地址配置订阅-导入json配置
-    fileInputAddEventListenerBase(fileInput10, '/upload_json_file10')
+    fileInputAddEventListenerBase(fileInput10, '/api/upload_json_file10')
     //节点订阅-远程配置订阅-导入json配置
-    fileInputAddEventListenerBase(fileInput9, '/upload_json_file9')
+    fileInputAddEventListenerBase(fileInput9, '/api/upload_json_file9')
     //节点订阅-导入json配置
-    fileInputAddEventListenerBase(fileInput8, '/upload_json_file8')
+    fileInputAddEventListenerBase(fileInput8, '/api/upload_json_file8')
     //一键导入全部json配置
-    fileInputAddEventListenerBase(fileInput7, '/upload_json_file7')
+    fileInputAddEventListenerBase(fileInput7, '/api/upload_json_file7')
     //密码本-导入json配置
-    fileInputAddEventListenerBase(fileInput6, '/upload_json_file6')
+    fileInputAddEventListenerBase(fileInput6, '/api/upload_json_file6')
     //中国ipv6-导入json配置
-    fileInputAddEventListenerBase(fileInput5, '/upload_json_file5')
+    fileInputAddEventListenerBase(fileInput5, '/api/upload_json_file5')
     //中国ipv4-导入json配置
-    fileInputAddEventListenerBase(fileInput4, '/upload_json_file4')
+    fileInputAddEventListenerBase(fileInput4, '/api/upload_json_file4')
     //白名单-导入json配置
-    fileInputAddEventListenerBase(fileInput2, '/upload_json_file2')
+    fileInputAddEventListenerBase(fileInput2, '/api/upload_json_file2')
     //黑名单-导入json配置
-    fileInputAddEventListenerBase(fileInput3, '/upload_json_file3')
+    fileInputAddEventListenerBase(fileInput3, '/api/upload_json_file3')
     //超融合-导入json配置
-    fileInputAddEventListenerBase(fileInput, '/upload_json_file')
+    fileInputAddEventListenerBase(fileInput, '/api/upload_json_file')
 
     function fileInputAddEventListenerBase(fileInputBase, requestPath) {
         fileInputBase.addEventListener('change', (event) => {
@@ -1558,47 +1624,47 @@
 
     // 超融合m3u-删除全部网络直播源订阅配置文件
     function removem3ulinks() {
-        removelinksBase('/removem3ulinks')
+        removelinksBase('/api/removem3ulinks')
     }
 
     // 超融合域名白名单-删除全部网络订阅配置文件
     function removem3ulinks2() {
-        removelinksBase('/removem3ulinks2')
+        removelinksBase('/api/removem3ulinks2')
     }
 
     // 超融合ipv4-删除全部网络订阅配置文件
     function removem3ulinks4() {
-        removelinksBase('/removem3ulinks4')
+        removelinksBase('/api/removem3ulinks4')
     }
 
     // 超融合节点-删除全部网络订阅配置文件
     function removem3ulinks5() {
-        removelinksBase('/removem3ulinks5')
+        removelinksBase('/api/removem3ulinks5')
     }
 
     // 超融合节点-删除全部网络订阅配置文件
     function removem3ulinks9() {
-        removelinksBase('/removem3ulinks9')
+        removelinksBase('/api/removem3ulinks9')
     }
 
     // 超融合节点-删除全部后端服务器配置文件
     function removem3ulinks10() {
-        removelinksBase('/removem3ulinks10')
+        removelinksBase('/api/removem3ulinks10')
     }
 
     // 超融合节点订阅-删除全部网络订阅配置文件
     function removem3ulinks8() {
-        removelinksBase('/removem3ulinks8')
+        removelinksBase('/api/removem3ulinks8')
     }
 
     // 密码本-删除全部密码配置文件
     function removem3ulinks6() {
-        removelinksBase('/removem3ulinks6')
+        removelinksBase('/api/removem3ulinks6')
     }
 
     // 超融合域名黑名单-删除全部网络订阅配置文件
     function removem3ulinks3() {
-        removelinksBase('/removem3ulinks3')
+        removelinksBase('/api/removem3ulinks3')
     }
 
     function removelinksBase(requestPath) {
@@ -1622,7 +1688,7 @@
 
     // 永久列表-删除全部本地m3u文件
     function removem3u() {
-        fetch('/removeallm3u')
+        fetch('/api/removeallm3u')
             .then(response => response.text()) // 将响应转化为字符串
             .then(data => {
                 if (data === 'success') {
@@ -1640,7 +1706,7 @@
         const file = event.target.files[0];
         var formData = new FormData();
         formData.append('file', file);
-        const response = await fetch('/upload_m3u_file', {
+        const response = await fetch('/api/upload_m3u_file', {
             method: 'POST',
             body: formData
         });
@@ -1661,7 +1727,7 @@
             alert('直播源为空');
         } else {
             const xhr = new XMLHttpRequest();
-            xhr.open('POST', '/savem3uarea');
+            xhr.open('POST', '/api/savem3uarea');
             xhr.setRequestHeader('Content-Type', 'application/json');
             xhr.onreadystatechange = function () {
                 if (xhr.readyState === XMLHttpRequest.DONE) {
@@ -1681,7 +1747,7 @@
     //永久列表-从数据库拉取全部直播源
     //获取数据
     function getData() {
-        return fetch('/getm3udata')
+        return fetch('/api/getm3udata')
             .then(response => response.json())
             .then(data => Object.entries(data))
             .catch(error => console.error(error));
@@ -1808,7 +1874,10 @@
             reloadGiteeRePoname()
             reloadGiteePathCache()
             reloadGiteeAcessToken()
+        } else if (selectedPage === pages[15].id) {
+            reloadM3uWhiteList()
         }
+
         if (selectedPage !== pages[1].id) {
             window.removeEventListener('scroll', handleScroll);
         }
@@ -1819,7 +1888,7 @@
     }
 
     // 超融合-工具-上传m3u文件-自动下载格式规整化的m3u文件
-    formsAddEventListener(forms[0], '/process-file', 'tmp.m3u', 'upload-m3u')
+    formsAddEventListener(forms[0], '/api/process-file', 'tmp.m3u', 'upload-m3u')
 
     // 上传文件处理后自动下载
     function formsAddEventListener(formtarget, requestpath, filename, uploadbtnId) {
@@ -1848,28 +1917,30 @@
         });
     }
 
+    // M3U白名单-导出订阅json配置
+    downloadBtnAddEventListenerBase(downloadBtn11, '/api/download_json_file11', 'temp_m3uwhitelist.json')
     // 超融合节点后端服务器订阅-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn10, '/download_json_file10', 'temp_proxyserverlistlink.json')
+    downloadBtnAddEventListenerBase(downloadBtn10, '/api/download_json_file10', 'temp_proxyserverlistlink.json')
     // 超融合节点远程配置订阅-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn9, '/download_json_file9', 'temp_proxyremotemodellistlink.json')
+    downloadBtnAddEventListenerBase(downloadBtn9, '/api/download_json_file9', 'temp_proxyremotemodellistlink.json')
     // 超融合节点订阅-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn8, '/download_json_file8', 'temp_proxieslistlink.json')
+    downloadBtnAddEventListenerBase(downloadBtn8, '/api/download_json_file8', 'temp_proxieslistlink.json')
     // 超融合M3U-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn, '/download_json_file', 'temp_m3ulink.json')
+    downloadBtnAddEventListenerBase(downloadBtn, '/api/download_json_file', 'temp_m3ulink.json')
     // 超融合域名白名单-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn2, '/download_json_file2', 'temp_whitelistlink.json')
+    downloadBtnAddEventListenerBase(downloadBtn2, '/api/download_json_file2', 'temp_whitelistlink.json')
     // 超融合域名黑名单-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn3, '/download_json_file3', 'temp_blacklistlink.json')
+    downloadBtnAddEventListenerBase(downloadBtn3, '/api/download_json_file3', 'temp_blacklistlink.json')
     // 超融合IPV4-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn4, '/download_json_file4', 'temp_ipv4listlink.json')
+    downloadBtnAddEventListenerBase(downloadBtn4, '/api/download_json_file4', 'temp_ipv4listlink.json')
     // 超融合IPV6-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn5, '/download_json_file5', 'temp_ipv6listlink.json')
+    downloadBtnAddEventListenerBase(downloadBtn5, '/api/download_json_file5', 'temp_ipv6listlink.json')
     // 密码本-导出json配置
-    downloadBtnAddEventListenerBase(downloadBtn6, '/download_json_file6', 'temp_passwordlist.json')
+    downloadBtnAddEventListenerBase(downloadBtn6, '/api/download_json_file6', 'temp_passwordlist.json')
     // 导出所有json配置
-    downloadBtnAddEventListenerBase(downloadBtn7, '/download_json_file7', 'allData.json')
+    downloadBtnAddEventListenerBase(downloadBtn7, '/api/download_json_file7', 'allData.json')
     // 永久列表-导出永久列表
-    downloadBtnAddEventListenerBase(downloadM3UBtn, '/download_m3u_file', 'temp_m3u.m3u')
+    downloadBtnAddEventListenerBase(downloadM3UBtn, '/api/download_m3u_file', 'temp_m3u.m3u')
 
     function downloadBtnAddEventListenerBase(downloadBtnBase, requestPath, jsonName) {
         downloadBtnBase.addEventListener('click', () => {
@@ -1890,6 +1961,8 @@
         });
     }
 
+    //M3U白名单-关键字-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton11, inputTable11)
     //节点订阅-后端地址配置-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton10, inputTable10)
     //节点订阅-远程配置-只添加一行列表，不存储数据
@@ -1944,32 +2017,32 @@
 
     //超融合-m3u
     function execute() {
-        executeBase('/chaoronghe')
+        executeBase('/api/chaoronghe')
     }
 
     //超融合-域名白名单
     function execute2() {
-        executeBase('/chaoronghe2')
+        executeBase('/api/chaoronghe2')
     }
 
     //超融合-域名黑名单
     function execute3() {
-        executeBase('/chaoronghe3')
+        executeBase('/api/chaoronghe3')
     }
 
     //超融合-ipv4
     function execute4() {
-        executeBase('/chaoronghe4')
+        executeBase('/api/chaoronghe4')
     }
 
     //超融合-ipv6
     function execute5() {
-        executeBase('/chaoronghe5')
+        executeBase('/api/chaoronghe5')
     }
 
     //超融合-节点订阅
     function execute6() {
-        executeBase('/chaoronghe6')
+        executeBase('/api/chaoronghe6')
     }
 
     function executeBase(requestPath) {
@@ -2039,6 +2112,17 @@
         outputTextArea.value = [...uniqueLines].join("\n");
     }
 
+    function encode() {
+        var input = document.getElementById("input").value;
+        var output = btoa(input);
+        document.getElementById("output").value = output;
+    }
+
+    function decode() {
+        var input = document.getElementById("input").value;
+        var output = atob(input);
+        document.getElementById("output").value = output;
+    }
 
 </script>
 </body>

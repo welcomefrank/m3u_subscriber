@@ -69,6 +69,8 @@ REDIS_KEY_PROXIES_MODEL_CHOSEN = "proxiesmodelchosen"
 REDIS_KEY_PROXIES_SERVER = "proxiesserver"
 # 代理转换选择的服务器订阅:url,name
 REDIS_KEY_PROXIES_SERVER_CHOSEN = "proxiesserverchosen"
+# m3u白名单:关键字,
+REDIS_KEY_M3U_WHITELIST = "m3uwhitelist"
 
 # m3u密码
 REDIS_KEY_THREADS2 = "threadsnum2"
@@ -117,10 +119,8 @@ allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_
               REDIS_KEY_PROXIES_MODEL, REDIS_KEY_PROXIES_MODEL_CHOSEN, REDIS_KEY_PROXIES_SERVER,
               REDIS_KEY_PROXIES_SERVER_CHOSEN, REDIS_KEY_GITEE_USERNAME, REDIS_KEY_THREADS2, REDIS_KEY_THREADS3,
               REDIS_KEY_THREADS4, REDIS_KEY_GITEE_REPONAME, REDIS_KEY_GITEE_PATH, REDIS_KEY_GITEE_ACCESS_TOKEN,
-              REDIS_KEY_THREADS5, REDIS_KEY_THREADS6, REDIS_KEY_THREADS7]
+              REDIS_KEY_THREADS5, REDIS_KEY_THREADS6, REDIS_KEY_THREADS7, REDIS_KEY_M3U_WHITELIST]
 
-tmp_dict = {'username': 'jksjldggz', 'repo_name': 'type', 'path': '/',
-            'access_token': 'd2006e527547b9483406cf7d5d559055'}
 # redis_add_map(REDIS_KEY_GITEE_ACCOUNT, tmp_dict)
 
 # Adguardhome屏蔽前缀
@@ -265,12 +265,23 @@ def execute(method_name, sleepSecond):
         time.sleep(sleepSecond)  # 等待24小时
 
 
+async def checkWriteHealthM3u(url):
+    name = tmp_url_tvg_name_dict.get(url)
+    if name:
+        async with aiofiles.open('/healthm3u.txt', 'a', encoding='utf-8') as f:  # 异步的方式写入内容
+            await f.write(f'{name},{url}\n')
+        del tmp_url_tvg_name_dict[url]
+    else:
+        return
+
+
 async def download_url(session, url, value, sem):
     try:
         async with sem, session.get(url) as resp:  # 使用asyncio.Semaphore限制TCP连接的数量
             if resp.status == 200:
-                async with aiofiles.open('/alive.m3u', 'a') as f:  # 异步的方式写入内容
+                async with aiofiles.open('/alive.m3u', 'a', encoding='utf-8') as f:  # 异步的方式写入内容
                     await f.write(f'{value}{url}\n')
+                await checkWriteHealthM3u(url)
     except aiohttp.ClientSSLError as ssl_err:
         print(f"SSL Error occurred while downloading {url}: {ssl_err}")
     except Exception as e:
@@ -296,6 +307,8 @@ def check_file(m3u_dict):
             return
         if os.path.exists("/alive.m3u"):
             os.remove("/alive.m3u")
+        if os.path.exists("/healthm3u.txt"):
+            os.remove("/healthm3u.txt")
             # 异步缓慢检测出有效链接
         asyncio.run(asynctask(m3u_dict))
     except:
@@ -307,7 +320,10 @@ def checkbytes(url):
         try:
             return url.decode("utf-8").strip()
         except:
-            return decode_bytes(url).strip()
+            try:
+                return url.decode("gbk").strip()
+            except:
+                return decode_bytes(url).strip()
     else:
         return url
 
@@ -338,19 +354,26 @@ def fetch_url(url, redis_dict):
         return m3u_string
     except requests.exceptions.SSLError:
         response = requests.get(url, timeout=5, verify=False)
-        m3u_string = response.text
+        response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
+        # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
+        m3u_string = response.content
+        # 加密文件检测和解码
         m3u_string = checkToDecrydecrypt(url, redis_dict, m3u_string)
-        m3u_string += "\n"
+        # 转换成字符串格式返回
+        m3u_string = checkbytes(m3u_string)
         return m3u_string
     except requests.exceptions.Timeout:
         print("timeout error, try to get data with longer timeout:" + url)
     except requests.exceptions.RequestException as e:
         url = url.decode('utf-8')
-        response = requests.get(url, timeout=5)
+        response = requests.get(url, timeout=5, verify=False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
-        m3u_string = response.text
+        # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
+        m3u_string = response.content
+        # 加密文件检测和解码
         m3u_string = checkToDecrydecrypt(url, redis_dict, m3u_string)
-        m3u_string += "\n"
+        # 转换成字符串格式返回
+        m3u_string = checkbytes(m3u_string)
         # print(f"success to fetch URL: {url}")
         return m3u_string
         # print("other error: " + url, e)
@@ -458,6 +481,7 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
     if ism3u:
         thread = threading.Thread(target=updateAdguardhomeWithelistForM3us, args=(results,))
         thread.start()
+        tmp_url_tvg_name_dict.clear()
     result = download_files(results, redis_dict)
     # 格式优化
     # my_dict = formattxt_multithread(result.split("\n"), 100)
@@ -592,19 +616,19 @@ def worker_gitee():
 remove_queue = queue.Queue()
 
 
-def worker_remove():
-    while True:
-        # 从任务队列中获取一个任务
-        task = remove_queue.get()
-        if task is None:
-            continue
-        time.sleep(600)
-        # 执行上传文件操作
-        file_name = task
-        arr = file_name.split('|')
-        for file in arr:
-            if os.path.exists(file):
-                os.remove(file)
+# def worker_remove():
+#     while True:
+#         # 从任务队列中获取一个任务
+#         task = remove_queue.get()
+#         if task is None:
+#             continue
+#         time.sleep(600)
+#         # 执行上传文件操作
+#         file_name = task
+#         arr = file_name.split('|')
+#         for file in arr:
+#             if os.path.exists(file):
+#                 os.remove(file)
 
 
 # 把自己本地文件加密生成对应的加密文本
@@ -655,6 +679,7 @@ def init_db():
     init_china_dns_server()
     init_extra_dns_server()
     init_extra_dns_port()
+    init_m3u_whitelist()
 
 
 # 初始化节点后端服务器
@@ -1069,12 +1094,14 @@ def decode_text(text):
 
 
 def decode_bytes(text):
-    # detect encoding of the byte string
-    result = chardet.detect(text)
-
-    # decode the string using detected encoding
-    decoded_text = text.decode(result['encoding'])
-    return decoded_text
+    try:
+        return text.decode().strip()
+    except:
+        # detect encoding of the byte string
+        result = chardet.detect(text)
+        # decode the string using detected encoding
+        decoded_text = text.decode(result['encoding'])
+        return decoded_text
 
 
 def pureUrl(s):
@@ -1142,6 +1169,22 @@ def format_data(data, index, step, my_dict):
                 continue
 
 
+# url,tvg-name
+tmp_url_tvg_name_dict = {}
+
+
+def is_all_english(s):
+    # 中文字符Unicode范围：[\u4e00-\u9fa5]
+    return not re.search('[\u4e00-\u9fa5]', s)
+
+
+def addChinaChannel(tvg_name, url):
+    for name in m3u_whitlist.keys():
+        if name in tvg_name:
+            tmp_url_tvg_name_dict[url] = tvg_name
+            return
+
+
 # 字符串内容处理-m3u
 def process_data(data, index, step, my_dict):
     end_index = min(index + step, len(data))
@@ -1165,9 +1208,11 @@ def process_data(data, index, step, my_dict):
                     continue
                 if name:
                     my_dict[searchurl] = update_epg_by_name(name)
+                    addChinaChannel(name, searchurl)
                     updateAdguardhomeWithelistForM3u(searchurl)
                     # my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
                 else:
+                    addChinaChannel(defalutname, searchurl)
                     my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
                     updateAdguardhomeWithelistForM3u(searchurl)
             # 匹配格式：频道，url
@@ -1178,10 +1223,12 @@ def process_data(data, index, step, my_dict):
                     continue
                 if name:
                     my_dict[searchurl] = update_epg_by_name(name)
+                    addChinaChannel(name, searchurl)
                     updateAdguardhomeWithelistForM3u(searchurl)
                     # my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
                 else:
                     my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
+                    addChinaChannel(defalutname, searchurl)
                     updateAdguardhomeWithelistForM3u(searchurl)
         # http|rtsp|rtmp开始，跳过P2p
         elif not lineEncoder.startswith(b"P2p"):
@@ -1191,6 +1238,7 @@ def process_data(data, index, step, my_dict):
             # 第一行的无名直播
             if i == 0 and index == 0:
                 my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
+                addChinaChannel(defalutname, searchurl)
                 updateAdguardhomeWithelistForM3u(searchurl)
                 continue
             preline = data[i - 1].strip()
@@ -1198,18 +1246,20 @@ def process_data(data, index, step, my_dict):
             # 没有名字
             if not preline:
                 my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
+                addChinaChannel(defalutname, searchurl)
                 updateAdguardhomeWithelistForM3u(searchurl)
                 continue
             # 不是名字
             if not prelineEncoder.startswith(b"#EXTINF"):
                 my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
+                addChinaChannel(defalutname, searchurl)
                 updateAdguardhomeWithelistForM3u(searchurl)
                 continue
             # 有裸名字或者#EXTINF开始但是没有tvg-name\tvg-id\group-title
             else:
                 # if not any(substring in line for substring in ["tvg-name", "tvg-id", "group-title"]):
                 # my_dict[searchurl] = f'{preline}\n'
-                my_dict[searchurl] = update_epg(preline)
+                my_dict[searchurl] = update_epg(preline, searchurl)
                 updateAdguardhomeWithelistForM3u(searchurl)
                 continue
 
@@ -1226,7 +1276,7 @@ def update_epg_by_name(tvg_name):
     return newStr
 
 
-def update_epg(s):
+def update_epg(s, searchurl):
     tvg_name = re.search(r'tvg-name="([^"]+)"', s)
     if tvg_name:
         tvg_name = tvg_name.group(1)
@@ -1256,8 +1306,10 @@ def update_epg(s):
             if tvg_name not in CHANNEL_GROUP:
                 CHANNEL_GROUP[tvg_name] = group_title
         newStr += f'tvg-name="{tvg_name}"\n'
+        addChinaChannel(tvg_name, searchurl)
         return newStr
     else:
+        addChinaChannel(defalutname, searchurl)
         return s
 
 
@@ -1789,12 +1841,14 @@ def chaorongheProxies(filename):
 
 
 def thread_remove(remoteToLocalUrl):
-    url = ""
+    # url = ""
     for key in remoteToLocalUrl.values():
-        if url != "":
-            url += "|"
-        url += key
-    remove_queue.put(url)
+        if os.path.exists(key):
+            os.remove(key)
+    #     if url != "":
+    #         url += "|"
+    #     url += key
+    # remove_queue.put(url)
 
 
 # 线程池切分下载的内容写入本地
@@ -2083,11 +2137,102 @@ def decrypt(password, ciphertext):
     return plaintext
 
 
+m3u_whitlist = {}
+
+
+# 初始化m3u白名单
+def init_m3u_whitelist():
+    global m3u_whitlist
+    dict = redis_get_map(REDIS_KEY_M3U_WHITELIST)
+    if not dict or len(dict) == 0:
+        dict = {'央视': '', '卫视': '', '中国': '', '新闻': '', '体育': '', '中央': '', '动漫': '', '电影': '',
+                '游戏': '', '卡通': '', '影院': '', '亚洲': '', '足球': '', '剧场': '', '东方': '', '纪实': '',
+                '黑莓': '', '综艺': '', '电竞': '', '教育': '', '都市': '', '看天下': '', '咪咕': '', '动画': '',
+                '华语': '', '影视': '', '自然': '', '科教': '', '动物': '', '凤凰': '', '生活': '', '中文': '',
+                '娱乐': '', '经济': '', '美食': '', '资讯': '', '财经': '', '电视': '', '健康': '', '养生': '',
+                '课堂': '', '全球大片': '',
+                '谍战': '', '三立': '', '台湾': '', '时尚': '', '旅游': '', '政务': '', '综合频道': '', '综合': '',
+                '民生': '', '农村': '', '人文': '', '外语': '', '法制': '', '幸福彩': '', '上视': '', '数码': '',
+                '家庭': '', '新视觉': '',
+                '汽车': '', '台视': '', '东森': '', '军旅': '', '纪录': '', '古装': '', '喜剧': '', '长城': '',
+                '香港': '', '金色频道': '', '环球电视': '',
+                '气象': '', '炫舞': '', '新华英文': '', '华数': '', '戏曲': '', '陶瓷': '', '少儿': '', '垂钓': '',
+                '时代': '', '休闲': '', '电视台': '',
+                '新闻频道': '', '文旅': '', '朝鲜': '', '三台电视': '', '汉语': '', '留学': '', '兵团': '', '科技': '',
+                '兵器': '', '音乐': '', '靓装': '',
+                '人間': '', '大愛電視': '', '緯來': '', '八大': '', '龍華戲劇台': '', '民视新闻': '', '东风37': '',
+                '中天': '', '鳯凰': '', '衛視': '', '天映': '', '亞旅': '', '星空': '', '翡翠臺': '', '华丽台': '',
+                '明珠台': '',
+                '八度空间': '', '华视': '', '民视': '', '中视': '', '纬来': '', 'ELTA体育': '', '體育': '', '運動': '',
+                '连续剧': '', '惊悚': '', '悬疑': '',
+                '科幻': '', '探索': '', '解密': '', '发现': '', '摄影': '', '车迷': '', '纯享': '', '七龍珠': '',
+                '海绵宝宝': '', '猫和老鼠': '',
+                '网球王子': '', '蜡笔小新': '', '海贼王': '', '中华小当家': '', '四驱兄弟': '', '成龍': '', '成龙': '',
+                '李连杰': '', '周星驰': '', '哆啦A梦': '',
+                '樱桃小丸子': '', '柯南': '', '犬夜叉': '', '乱马': '', '童年': '', '高达': '', '三国演义': '',
+                '守护甜心': '', '开心超人': '', '开心宝贝': '', '百变小樱': '',
+                '咱们裸熊': '', '林正英': '', '游戏王': '', '吴孟达': '', '刘德华': '', '周润发': '', '洪金宝': '',
+                '黄渤': '', '咏春': '', '黑帮': '', '古墓': '','臺灣':'',
+                '警匪': '', '功夫': '', '爱达': '', '波斯魅力台': '', '寰宇': '', '東森': '', '澳门莲花': '',
+                '天才衝衝衝': '', '有线新闻台': '', '臺視': '', '博斯': '', '龙华': '','龍華':'','愛爾達':'','民視':'','鳳凰':'',
+                '有線': '', '無綫': '', '靖天': '', '靖洋': '', '爱尔达': '', '全民最大党': '', 'cctv': '', 'NewTv': '',
+                'CCTV': '', 'SiTV': '', 'CGTN': '', 'CHC': '', '4K': '', 'TVBS': '', 'Love Nature': '', 'BesTV': '',
+                'HK': '', 'NewTV': '', 'BRTV': '', 'ELEVEN': '', 'TVB': '', 'Lifetime': '',
+                'GINX': '', 'Rollor': '',
+                'GlobalTrekker': '', 'LUXE TV': '', 'Fashion4K': '', 'Sport': '', 'Insight': '', 'Evenement': '',
+                'NASA': '', 'Clarity': '', 'discovery': '', 'hbo': '', 'eleven': '',
+                'NATURE': '', 'eva': ''
+            , 'TRAVELXP': '', 'DIGI': '', 'TRT': '', 'ODISEA': '', 'MUZZIK': '', 'BBC': '', 'SKY HIGH': '',
+                'Liberty': ''
+                }
+        redis_add_map(REDIS_KEY_M3U_WHITELIST, dict)
+        m3u_whitlist = dict.copy()
+    m3u_whitlist = dict.copy()
+
+
 ############################################################协议区####################################################
+
+# 导出m3u白名单配置
+@app.route('/api/download_json_file11', methods=['GET'])
+def download_json_file11():
+    return download_json_file_base(REDIS_KEY_M3U_WHITELIST, "/app/temp_m3uwhitelist.json",
+                                   "temp_m3uwhitelist.json")
+
+
+# 删除M3U白名单
+@app.route('/api/deletewm3u11', methods=['POST'])
+def deletewm3u11():
+    m3u_whitlist.clear()
+    return dellist(request, REDIS_KEY_M3U_WHITELIST)
+
+
+# 添加M3U白名单
+@app.route('/api/addnewm3u11', methods=['POST'])
+def addnewm3u11():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    m3u_whitlist[addurl] = name
+    return addlist(request, REDIS_KEY_M3U_WHITELIST)
+
+
+# 拉取全部m3u白名单配置
+@app.route('/api/getall11', methods=['GET'])
+def getall11():
+    if m3u_whitlist and len(m3u_whitlist.items()) > 0:
+        return jsonify(m3u_whitlist)
+    else:
+        init_m3u_whitelist()
+        return jsonify(m3u_whitlist)
+
+
+# 上传m3u白名单json文件
+@app.route('/api/upload_json_file11', methods=['POST'])
+def upload_json_file11():
+    return upload_json(request, REDIS_KEY_M3U_WHITELIST, "/tmp_data11.json")
 
 
 # 修改gitee账户-access token
-@app.route('/saveGiteeAcessToken', methods=['POST'])
+@app.route('/api/saveGiteeAcessToken', methods=['POST'])
 def saveGiteeAcessToken():
     data = request.json['selected_button']
     update_gitee(REDIS_KEY_GITEE_ACCESS_TOKEN, gitee_access_token, data)
@@ -2095,14 +2240,14 @@ def saveGiteeAcessToken():
 
 
 # 获取gitee账户-access token
-@app.route('/getGiteeAcessToken', methods=['GET'])
+@app.route('/api/getGiteeAcessToken', methods=['GET'])
 def getGiteeAcessToken():
     num = init_gitee(REDIS_KEY_GITEE_ACCESS_TOKEN, gitee_access_token)
     return jsonify({'button': num})
 
 
 # 修改gitee账户-仓库路径
-@app.route('/saveGiteePath', methods=['POST'])
+@app.route('/api/saveGiteePath', methods=['POST'])
 def saveGiteePath():
     data = request.json['selected_button']
     update_gitee(REDIS_KEY_GITEE_PATH, gitee_path, data)
@@ -2110,14 +2255,14 @@ def saveGiteePath():
 
 
 # 获取gitee账户-仓库路径
-@app.route('/getGiteePathCache', methods=['GET'])
+@app.route('/api/getGiteePathCache', methods=['GET'])
 def getGiteePathCache():
     num = init_gitee(REDIS_KEY_GITEE_PATH, gitee_path)
     return jsonify({'button': num})
 
 
 # 修改gitee账户-仓库名字
-@app.route('/saveGiteeRePoname', methods=['POST'])
+@app.route('/api/saveGiteeRePoname', methods=['POST'])
 def saveGiteeRePoname():
     data = request.json['selected_button']
     update_gitee(REDIS_KEY_GITEE_REPONAME, gitee_reponame, data)
@@ -2125,14 +2270,14 @@ def saveGiteeRePoname():
 
 
 # 获取gitee账户-仓库名字
-@app.route('/getGiteeRePoname', methods=['GET'])
+@app.route('/api/getGiteeRePoname', methods=['GET'])
 def getGiteeRePoname():
     num = init_gitee(REDIS_KEY_GITEE_REPONAME, gitee_reponame)
     return jsonify({'button': num})
 
 
 # 修改gitee账户-用户名
-@app.route('/saveGiteeUsername', methods=['POST'])
+@app.route('/api/saveGiteeUsername', methods=['POST'])
 def saveGiteeUsername():
     data = request.json['selected_button']
     update_gitee(REDIS_KEY_GITEE_USERNAME, gitee_username, data)
@@ -2140,105 +2285,105 @@ def saveGiteeUsername():
 
 
 # 获取gitee账户-用户名
-@app.route('/getGiteeUsername', methods=['GET'])
+@app.route('/api/getGiteeUsername', methods=['GET'])
 def getGiteeUsername():
     num = init_gitee(REDIS_KEY_GITEE_USERNAME, gitee_username)
     return jsonify({'button': num})
 
 
 # 修改节点订阅密码
-@app.route('/changeProxyListPassword', methods=['GET'])
+@app.route('/api/changeProxyListPassword', methods=['GET'])
 def changeProxyListPassword():
     num = update_m3u_subscribe_pass(REDIS_KEY_THREADS7, threadsNum7)
     return jsonify({'password': num})
 
 
 # 获取节点订阅密码
-@app.route('/getExtraDnsPort3', methods=['GET'])
+@app.route('/api/getExtraDnsPort3', methods=['GET'])
 def getExtraDnsPort3():
     num = init_pass(REDIS_KEY_THREADS7, threadsNum7)
     return jsonify({'button': num})
 
 
 # 修改IPV6订阅密码
-@app.route('/changeIPV6ListPassword', methods=['GET'])
+@app.route('/api/changeIPV6ListPassword', methods=['GET'])
 def changeIPV6ListPassword():
     num = update_m3u_subscribe_pass(REDIS_KEY_THREADS6, threadsNum6)
     return jsonify({'password': num})
 
 
 # 获取IPV6订阅密码
-@app.route('/getExtraDnsPort2', methods=['GET'])
+@app.route('/api/getExtraDnsPort2', methods=['GET'])
 def getExtraDnsPort2():
     num = init_pass(REDIS_KEY_THREADS6, threadsNum6)
     return jsonify({'button': num})
 
 
 # 修改IPV4订阅密码
-@app.route('/changeIPV4ListPassword', methods=['GET'])
+@app.route('/api/changeIPV4ListPassword', methods=['GET'])
 def changeIPV4ListPassword():
     num = update_m3u_subscribe_pass(REDIS_KEY_THREADS5, threadsNum5)
     return jsonify({'password': num})
 
 
 # 获取IPV4订阅密码
-@app.route('/getExtraDnsServer2', methods=['GET'])
+@app.route('/api/getExtraDnsServer2', methods=['GET'])
 def getExtraDnsServer2():
     num = init_pass(REDIS_KEY_THREADS5, threadsNum5)
     return jsonify({'button': num})
 
 
 # 修改域名黑名单订阅密码
-@app.route('/changeBlackListPassword', methods=['GET'])
+@app.route('/api/changeBlackListPassword', methods=['GET'])
 def changeBlackListPassword():
     num = update_m3u_subscribe_pass(REDIS_KEY_THREADS4, threadsNum4)
     return jsonify({'password': num})
 
 
 # 获取域名黑名单订阅密码
-@app.route('/getChinaDnsPort2', methods=['GET'])
+@app.route('/api/getChinaDnsPort2', methods=['GET'])
 def getChinaDnsPort2():
     num = init_pass(REDIS_KEY_THREADS4, threadsNum4)
     return jsonify({'button': num})
 
 
 # 修改域名白名单订阅密码
-@app.route('/changeWhiteListPassword', methods=['GET'])
+@app.route('/api/changeWhiteListPassword', methods=['GET'])
 def changeWhiteListPassword():
     num = update_m3u_subscribe_pass(REDIS_KEY_THREADS3, threadsNum3)
     return jsonify({'password': num})
 
 
 # 获取域名白名单订阅密码
-@app.route('/getChinaDnsServer2', methods=['GET'])
+@app.route('/api/getChinaDnsServer2', methods=['GET'])
 def getChinaDnsServer2():
     num = init_pass(REDIS_KEY_THREADS3, threadsNum3)
     return jsonify({'button': num})
 
 
 # 获取直播源订阅密码
-@app.route('/changeM3uPassword', methods=['GET'])
+@app.route('/api/changeM3uPassword', methods=['GET'])
 def changeM3uPassword():
     num = update_m3u_subscribe_pass(REDIS_KEY_THREADS2, threadsNum2)
     return jsonify({'password': num})
 
 
 # 获取直播源订阅密码
-@app.route('/getThreadNum2', methods=['GET'])
+@app.route('/api/getThreadNum2', methods=['GET'])
 def getThreadNum2():
     num = init_pass(REDIS_KEY_THREADS2, threadsNum2)
     return jsonify({'button': num})
 
 
 # 获取外国DNS端口
-@app.route('/getExtraDnsPort', methods=['GET'])
+@app.route('/api/getExtraDnsPort', methods=['GET'])
 def getExtraDnsPort():
     num = init_extra_dns_port()
     return jsonify({'button': num})
 
 
 # 修改外国DNS端口
-@app.route('/saveExtraDnsPort', methods=['POST'])
+@app.route('/api/saveExtraDnsPort', methods=['POST'])
 def saveExtraDnsPort():
     data = request.json['selected_button']
     redis_add(REDIS_KEY_EXTRA_DNS_PORT, int(data))
@@ -2248,14 +2393,14 @@ def saveExtraDnsPort():
 
 
 # 获取外国DNS服务器
-@app.route('/getExtraDnsServer', methods=['GET'])
+@app.route('/api/getExtraDnsServer', methods=['GET'])
 def getExtraDnsServer():
     num = init_extra_dns_server()
     return jsonify({'button': num})
 
 
 # 修改外国DNS服务器
-@app.route('/saveExtraDnsServer', methods=['POST'])
+@app.route('/api/saveExtraDnsServer', methods=['POST'])
 def saveExtraDnsServer():
     data = request.json['selected_button']
     if data == "":
@@ -2267,14 +2412,14 @@ def saveExtraDnsServer():
 
 
 # 获取中国DNS端口
-@app.route('/getChinaDnsPort', methods=['GET'])
+@app.route('/api/getChinaDnsPort', methods=['GET'])
 def getChinaDnsPort():
     num = init_china_dns_port()
     return jsonify({'button': num})
 
 
 # 修改中国DNS端口
-@app.route('/savechinaDnsPort', methods=['POST'])
+@app.route('/api/savechinaDnsPort', methods=['POST'])
 def savechinaDnsPort():
     data = request.json['selected_button']
     redis_add(REDIS_KEY_CHINA_DNS_PORT, int(data))
@@ -2284,14 +2429,14 @@ def savechinaDnsPort():
 
 
 # 获取中国DNS服务器
-@app.route('/getChinaDnsServer', methods=['GET'])
+@app.route('/api/getChinaDnsServer', methods=['GET'])
 def getChinaDnsServer():
     num = init_china_dns_server()
     return jsonify({'button': num})
 
 
 # 修改中国DNS服务器
-@app.route('/savechinaDnsServer', methods=['POST'])
+@app.route('/api/savechinaDnsServer', methods=['POST'])
 def savechinaDnsServer():
     data = request.json['selected_button']
     if data == "":
@@ -2303,14 +2448,14 @@ def savechinaDnsServer():
 
 
 # 获取黑白名单并发检测线程数
-@app.route('/getThreadNum', methods=['GET'])
+@app.route('/api/getThreadNum', methods=['GET'])
 def getThreadNum():
     num = init_threads_num()
     return jsonify({'button': num})
 
 
 # 修改黑白名单并发检测线程数
-@app.route('/saveThreadS', methods=['POST'])
+@app.route('/api/saveThreadS', methods=['POST'])
 def saveThreadS():
     data = request.json['selected_button']
     redis_add(REDIS_KEY_THREADS, min(int(data), 200))
@@ -2320,7 +2465,7 @@ def saveThreadS():
 
 
 # 选择目标转换的远程配置
-@app.route('/chooseProxyModel', methods=['POST'])
+@app.route('/api/chooseProxyModel', methods=['POST'])
 def chooseProxyModel():
     button = request.json.get('selected_button')
     dict = {}
@@ -2330,7 +2475,7 @@ def chooseProxyModel():
 
 
 # 选择目标转换的远程服务器
-@app.route('/chooseProxyServer', methods=['POST'])
+@app.route('/api/chooseProxyServer', methods=['POST'])
 def chooseProxyServer():
     button = request.json.get('selected_button')
     dict = {}
@@ -2340,12 +2485,19 @@ def chooseProxyServer():
 
 
 # 服务器启动时加载选择的配置
-@app.route('/getSelectedModel', methods=['GET'])
+@app.route('/api/getSelectedModel', methods=['GET'])
 def getSelectedModel():
     dict = redis_get_map(REDIS_KEY_PROXIES_MODEL_CHOSEN)
-    value = dict[REDIS_KEY_PROXIES_MODEL_CHOSEN]
-    if value:
-        return jsonify({'button': value})
+    if dict:
+        value = dict[REDIS_KEY_PROXIES_MODEL_CHOSEN]
+        if value:
+            return jsonify({'button': value})
+        else:
+            tmp_dict = {}
+            tmp_dict[REDIS_KEY_PROXIES_MODEL_CHOSEN] = "ACL4SSR_Online 默认版 分组比较全(本地离线模板)"
+            # 设定默认选择的模板
+            redis_add_map(REDIS_KEY_PROXIES_MODEL_CHOSEN, tmp_dict)
+            return jsonify({'button': tmp_dict[REDIS_KEY_PROXIES_MODEL_CHOSEN]})
     else:
         tmp_dict = {}
         tmp_dict[REDIS_KEY_PROXIES_MODEL_CHOSEN] = "ACL4SSR_Online 默认版 分组比较全(本地离线模板)"
@@ -2355,12 +2507,18 @@ def getSelectedModel():
 
 
 # 服务器启动时加载选择的服务器
-@app.route('/getSelectedServer', methods=['GET'])
+@app.route('/api/getSelectedServer', methods=['GET'])
 def getSelectedServer():
     dict = redis_get_map(REDIS_KEY_PROXIES_SERVER_CHOSEN)
-    value = dict[REDIS_KEY_PROXIES_SERVER_CHOSEN]
-    if value:
-        return jsonify({'button': value})
+    if dict:
+        value = dict[REDIS_KEY_PROXIES_SERVER_CHOSEN]
+        if value:
+            return jsonify({'button': value})
+        else:
+            tmp_dict = {}
+            tmp_dict[REDIS_KEY_PROXIES_SERVER_CHOSEN] = "bridge模式:本地服务器"
+            redis_add_map(REDIS_KEY_PROXIES_SERVER_CHOSEN, tmp_dict)
+            return jsonify({'button': tmp_dict[REDIS_KEY_PROXIES_SERVER_CHOSEN]})
     else:
         tmp_dict = {}
         tmp_dict[REDIS_KEY_PROXIES_SERVER_CHOSEN] = "bridge模式:本地服务器"
@@ -2369,19 +2527,19 @@ def getSelectedServer():
 
 
 # 拉取列表-代理模板
-@app.route('/reloadProxyModels', methods=['GET'])
+@app.route('/api/reloadProxyModels', methods=['GET'])
 def reloadProxyModels():
     return jsonify(redis_get_map(REDIS_KEY_PROXIES_SERVER))
 
 
 # 上传节点后端服务器json文件
-@app.route('/upload_json_file10', methods=['POST'])
+@app.route('/api/upload_json_file10', methods=['POST'])
 def upload_json_file10():
     return upload_json(request, REDIS_KEY_PROXIES_SERVER, "/tmp_data10.json")
 
 
 # 删除全部节点后端服务器配置
-@app.route('/removem3ulinks10', methods=['GET'])
+@app.route('/api/removem3ulinks10', methods=['GET'])
 def removem3ulinks10():
     redis_del_map(REDIS_KEY_PROXIES_SERVER)
     redis_del_map(REDIS_KEY_PROXIES_SERVER_CHOSEN)
@@ -2390,14 +2548,14 @@ def removem3ulinks10():
 
 
 # 导出节点远程订阅配置
-@app.route('/download_json_file10', methods=['GET'])
+@app.route('/api/download_json_file10', methods=['GET'])
 def download_json_file10():
     return download_json_file_base(REDIS_KEY_PROXIES_SERVER, "/app/temp_proxyserverlistlink.json",
                                    "temp_proxyserverlistlink.json")
 
 
 # 删除节点远程后端服务器订阅
-@app.route('/deletewm3u10', methods=['POST'])
+@app.route('/api/deletewm3u10', methods=['POST'])
 def deletewm3u10():
     returnJson = dellist(request, REDIS_KEY_PROXIES_SERVER)
     setRandomValueChosen(REDIS_KEY_PROXIES_SERVER, REDIS_KEY_PROXIES_SERVER_CHOSEN)
@@ -2405,19 +2563,19 @@ def deletewm3u10():
 
 
 # 添加节点后端订阅
-@app.route('/addnewm3u10', methods=['POST'])
+@app.route('/api/addnewm3u10', methods=['POST'])
 def addnewm3u10():
     return addlist(request, REDIS_KEY_PROXIES_SERVER)
 
 
 # 拉取全部后端服务器配置
-@app.route('/getall10', methods=['GET'])
+@app.route('/api/getall10', methods=['GET'])
 def getall10():
     return jsonify(redis_get_map(REDIS_KEY_PROXIES_SERVER))
 
 
 # 删除全部节点远程配置订阅
-@app.route('/removem3ulinks9', methods=['GET'])
+@app.route('/api/removem3ulinks9', methods=['GET'])
 def removem3ulinks9():
     redis_del_map(REDIS_KEY_PROXIES_MODEL)
     redis_del_map(REDIS_KEY_PROXIES_MODEL_CHOSEN)
@@ -2426,14 +2584,14 @@ def removem3ulinks9():
 
 
 # 导出节点远程订阅配置
-@app.route('/download_json_file9', methods=['GET'])
+@app.route('/api/download_json_file9', methods=['GET'])
 def download_json_file9():
     return download_json_file_base(REDIS_KEY_PROXIES_MODEL, "/app/temp_proxyremotemodellistlink.json",
                                    "temp_proxyremotemodellistlink.json")
 
 
 # 删除节点远程配置订阅
-@app.route('/deletewm3u9', methods=['POST'])
+@app.route('/api/deletewm3u9', methods=['POST'])
 def deletewm3u9():
     returnJson = dellist(request, REDIS_KEY_PROXIES_MODEL)
     setRandomValueChosen(REDIS_KEY_PROXIES_MODEL, REDIS_KEY_PROXIES_MODEL_CHOSEN)
@@ -2441,32 +2599,32 @@ def deletewm3u9():
 
 
 # 添加节点远程配置订阅
-@app.route('/addnewm3u9', methods=['POST'])
+@app.route('/api/addnewm3u9', methods=['POST'])
 def addnewm3u9():
     return addlist(request, REDIS_KEY_PROXIES_MODEL)
 
 
 # 拉取全部节点订阅远程配置
-@app.route('/getall9', methods=['GET'])
+@app.route('/api/getall9', methods=['GET'])
 def getall9():
     return jsonify(redis_get_map(REDIS_KEY_PROXIES_MODEL))
 
 
 # 上传节点远程配置json文件
-@app.route('/upload_json_file9', methods=['POST'])
+@app.route('/api/upload_json_file9', methods=['POST'])
 def upload_json_file9():
     return upload_json(request, REDIS_KEY_PROXIES_MODEL, "/tmp_data9.json")
 
 
 # 服务器启动时加载选择的节点类型id
-@app.route('/getSelectedButtonId', methods=['GET'])
+@app.route('/api/getSelectedButtonId', methods=['GET'])
 def getSelectedButtonId():
     button = getProxyButton()
     return jsonify({'button': button})
 
 
 # 选择目标转换的节点类型id
-@app.route('/chooseProxy', methods=['POST'])
+@app.route('/api/chooseProxy', methods=['POST'])
 def chooseProxy():
     button = request.json.get('selected_button')
     dict = {}
@@ -2476,39 +2634,39 @@ def chooseProxy():
 
 
 # 删除全部节点订阅
-@app.route('/removem3ulinks8', methods=['GET'])
+@app.route('/api/removem3ulinks8', methods=['GET'])
 def removem3ulinks8():
     redis_del_map(REDIS_KEY_PROXIES_LINK)
     return "success"
 
 
 # 删除节点订阅
-@app.route('/deletewm3u8', methods=['POST'])
+@app.route('/api/deletewm3u8', methods=['POST'])
 def deletewm3u8():
     return dellist(request, REDIS_KEY_PROXIES_LINK)
 
 
 # 添加节点订阅
-@app.route('/addnewm3u8', methods=['POST'])
+@app.route('/api/addnewm3u8', methods=['POST'])
 def addnewm3u8():
     return addlist(request, REDIS_KEY_PROXIES_LINK)
 
 
 # 拉取全部节点订阅
-@app.route('/getall8', methods=['GET'])
+@app.route('/api/getall8', methods=['GET'])
 def getall8():
     return jsonify(redis_get_map(REDIS_KEY_PROXIES_LINK))
 
 
 # 导出节点订阅配置
-@app.route('/download_json_file8', methods=['GET'])
+@app.route('/api/download_json_file8', methods=['GET'])
 def download_json_file8():
     return download_json_file_base(REDIS_KEY_PROXIES_LINK, "/app/temp_proxieslistlink.json",
                                    "temp_proxieslistlink.json")
 
 
 # 全部节点订阅链接超融合
-@app.route('/chaoronghe6', methods=['GET'])
+@app.route('/api/chaoronghe6', methods=['GET'])
 def chaoronghe6():
     try:
         return chaorongheProxies('/config.yaml')
@@ -2517,19 +2675,19 @@ def chaoronghe6():
 
 
 # 上传节点配置json文件
-@app.route('/upload_json_file8', methods=['POST'])
+@app.route('/api/upload_json_file8', methods=['POST'])
 def upload_json_file8():
     return upload_json(request, REDIS_KEY_PROXIES_LINK, "/tmp_data8.json")
 
 
 # 一键上传全部配置集合文件
-@app.route('/upload_json_file7', methods=['POST'])
+@app.route('/api/upload_json_file7', methods=['POST'])
 def upload_json_file7():
     return upload_oneKey_json(request, "/tmp_data7.json")
 
 
 # 一键导出全部配置
-@app.route('/download_json_file7', methods=['GET'])
+@app.route('/api/download_json_file7', methods=['GET'])
 def download_json_file7():
     # 生成JSON文件数据
     json_data = generate_multi_json_string(allListArr)
@@ -2543,52 +2701,52 @@ def download_json_file7():
 
 
 # 删除密码
-@app.route('/deletewm3u6', methods=['POST'])
+@app.route('/api/deletewm3u6', methods=['POST'])
 def deletewm3u6():
     return dellist(request, REDIS_KEY_PASSWORD_LINK)
 
 
 # 添加密码
-@app.route('/addnewm3u6', methods=['POST'])
+@app.route('/api/addnewm3u6', methods=['POST'])
 def addnewm3u6():
     return addlist(request, REDIS_KEY_PASSWORD_LINK)
 
 
 # 导出密码配置
-@app.route('/download_json_file6', methods=['GET'])
+@app.route('/api/download_json_file6', methods=['GET'])
 def download_json_file6():
     return download_json_file_base(REDIS_KEY_PASSWORD_LINK, "/app/temp_passwordlist.json",
                                    "temp_passwordlist.json")
 
 
 # 拉取全部密码
-@app.route('/getall6', methods=['GET'])
+@app.route('/api/getall6', methods=['GET'])
 def getall6():
     return jsonify(redis_get_map(REDIS_KEY_PASSWORD_LINK))
 
 
 # 删除全部密码
-@app.route('/removem3ulinks6', methods=['GET'])
+@app.route('/api/removem3ulinks6', methods=['GET'])
 def removem3ulinks6():
     redis_del_map(REDIS_KEY_PASSWORD_LINK)
     return "success"
 
 
 # 上传密码本配置集合文件
-@app.route('/upload_json_file6', methods=['POST'])
+@app.route('/api/upload_json_file6', methods=['POST'])
 def upload_json_file6():
     return upload_json(request, REDIS_KEY_PASSWORD_LINK, "/tmp_data6.json")
 
 
 # 删除全部ipv6订阅链接
-@app.route('/removem3ulinks5', methods=['GET'])
+@app.route('/api/removem3ulinks5', methods=['GET'])
 def removem3ulinks5():
     redis_del_map(REDIS_KEY_WHITELIST_IPV6_LINK)
     return "success"
 
 
 # 全部ipv6订阅链接超融合
-@app.route('/chaoronghe5', methods=['GET'])
+@app.route('/api/chaoronghe5', methods=['GET'])
 def chaoronghe5():
     try:
         return chaorongheBase(REDIS_KEY_WHITELIST_IPV6_LINK, 'process_data_abstract6',
@@ -2598,57 +2756,57 @@ def chaoronghe5():
 
 
 # 导出ipv6订阅配置
-@app.route('/download_json_file5', methods=['GET'])
+@app.route('/api/download_json_file5', methods=['GET'])
 def download_json_file5():
     return download_json_file_base(REDIS_KEY_WHITELIST_IPV6_LINK, "/app/temp_ipv6listlink.json",
                                    "temp_ipv6listlink.json")
 
 
 # 拉取全部ipv6订阅
-@app.route('/getall5', methods=['GET'])
+@app.route('/api/getall5', methods=['GET'])
 def getall5():
     return jsonify(redis_get_map(REDIS_KEY_WHITELIST_IPV6_LINK))
 
 
 # 删除ipv6订阅
-@app.route('/deletewm3u5', methods=['POST'])
+@app.route('/api/deletewm3u5', methods=['POST'])
 def deletewm3u5():
     return dellist(request, REDIS_KEY_WHITELIST_IPV6_LINK)
 
 
 # 添加ipv6订阅
-@app.route('/addnewm3u5', methods=['POST'])
+@app.route('/api/addnewm3u5', methods=['POST'])
 def addnewm3u5():
     return addlist(request, REDIS_KEY_WHITELIST_IPV6_LINK)
 
 
 # 上传中国ipv6订阅配置集合文件
-@app.route('/upload_json_file5', methods=['POST'])
+@app.route('/api/upload_json_file5', methods=['POST'])
 def upload_json_file5():
     return upload_json(request, REDIS_KEY_WHITELIST_IPV6_LINK, "/tmp_data5.json")
 
 
 # 删除ipv4订阅
-@app.route('/deletewm3u4', methods=['POST'])
+@app.route('/api/deletewm3u4', methods=['POST'])
 def deletewm3u4():
     return dellist(request, REDIS_KEY_WHITELIST_IPV4_LINK)
 
 
 # 添加ipv4订阅
-@app.route('/addnewm3u4', methods=['POST'])
+@app.route('/api/addnewm3u4', methods=['POST'])
 def addnewm3u4():
     return addlist(request, REDIS_KEY_WHITELIST_IPV4_LINK)
 
 
 # 删除全部ipv4订阅链接
-@app.route('/removem3ulinks4', methods=['GET'])
+@app.route('/api/removem3ulinks4', methods=['GET'])
 def removem3ulinks4():
     redis_del_map(REDIS_KEY_WHITELIST_IPV4_LINK)
     return "success"
 
 
 # 全部ipv4订阅链接超融合
-@app.route('/chaoronghe4', methods=['GET'])
+@app.route('/api/chaoronghe4', methods=['GET'])
 def chaoronghe4():
     try:
         return chaorongheBase(REDIS_KEY_WHITELIST_IPV4_LINK, 'process_data_abstract5',
@@ -2658,26 +2816,26 @@ def chaoronghe4():
 
 
 # 导出ipv4订阅配置
-@app.route('/download_json_file4', methods=['GET'])
+@app.route('/api/download_json_file4', methods=['GET'])
 def download_json_file4():
     return download_json_file_base(REDIS_KEY_WHITELIST_IPV4_LINK, "/app/temp_ipv4listlink.json",
                                    "temp_ipv4listlink.json")
 
 
 # 拉取全部ipv4订阅
-@app.route('/getall4', methods=['GET'])
+@app.route('/api/getall4', methods=['GET'])
 def getall4():
     return jsonify(redis_get_map(REDIS_KEY_WHITELIST_IPV4_LINK))
 
 
 # 上传中国ipv4订阅配置集合文件
-@app.route('/upload_json_file4', methods=['POST'])
+@app.route('/api/upload_json_file4', methods=['POST'])
 def upload_json_file4():
     return upload_json(request, REDIS_KEY_WHITELIST_IPV4_LINK, "/tmp_data4.json")
 
 
 # 全部域名黑名单订阅链接超融合
-@app.route('/chaoronghe3', methods=['GET'])
+@app.route('/api/chaoronghe3', methods=['GET'])
 def chaoronghe3():
     try:
         return chaorongheBase(REDIS_KEY_BLACKLIST_LINK, 'process_data_abstract7',
@@ -2690,57 +2848,57 @@ def chaoronghe3():
 
 
 # 删除全部白名单源订阅链接
-@app.route('/removem3ulinks3', methods=['GET'])
+@app.route('/api/removem3ulinks3', methods=['GET'])
 def removem3ulinks3():
     redis_del_map(REDIS_KEY_BLACKLIST_LINK)
     return "success"
 
 
 # 导出域名黑名单订阅配置
-@app.route('/download_json_file3', methods=['GET'])
+@app.route('/api/download_json_file3', methods=['GET'])
 def download_json_file3():
     return download_json_file_base(REDIS_KEY_BLACKLIST_LINK, "/app/temp_blacklistlink.json", "temp_blacklistlink.json")
 
 
 # 删除黑名单订阅
-@app.route('/deletewm3u3', methods=['POST'])
+@app.route('/api/deletewm3u3', methods=['POST'])
 def deletewm3u3():
     return dellist(request, REDIS_KEY_BLACKLIST_LINK)
 
 
 # 添加黑名单订阅
-@app.route('/addnewm3u3', methods=['POST'])
+@app.route('/api/addnewm3u3', methods=['POST'])
 def addnewm3u3():
     return addlist(request, REDIS_KEY_BLACKLIST_LINK)
 
 
 # 拉取全部黑名单订阅
-@app.route('/getall3', methods=['GET'])
+@app.route('/api/getall3', methods=['GET'])
 def getall3():
     return jsonify(redis_get_map(REDIS_KEY_BLACKLIST_LINK))
 
 
 # 上传黑名单订阅配置集合文件
-@app.route('/upload_json_file3', methods=['POST'])
+@app.route('/api/upload_json_file3', methods=['POST'])
 def upload_json_file3():
     return upload_json(request, REDIS_KEY_BLACKLIST_LINK, "/tmp_data3.json")
 
 
 # 删除全部白名单源订阅链接
-@app.route('/removem3ulinks2', methods=['GET'])
+@app.route('/api/removem3ulinks2', methods=['GET'])
 def removem3ulinks2():
     redis_del_map(REDIS_KEY_WHITELIST_LINK)
     return "success"
 
 
 # 导出域名白名单订阅配置
-@app.route('/download_json_file2', methods=['GET'])
+@app.route('/api/download_json_file2', methods=['GET'])
 def download_json_file2():
     return download_json_file_base(REDIS_KEY_WHITELIST_LINK, "/app/temp_whitelistlink.json", "temp_whitelistlink.json")
 
 
 # 全部域名白名单订阅链接超融合
-@app.route('/chaoronghe2', methods=['GET'])
+@app.route('/api/chaoronghe2', methods=['GET'])
 def chaoronghe2():
     try:
         # chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract4',
@@ -2754,45 +2912,45 @@ def chaoronghe2():
 
 
 # 拉取全部白名单订阅
-@app.route('/getall2', methods=['GET'])
+@app.route('/api/getall2', methods=['GET'])
 def getall2():
     return jsonify(redis_get_map(REDIS_KEY_WHITELIST_LINK))
 
 
 # 添加白名单订阅
-@app.route('/addnewm3u2', methods=['POST'])
+@app.route('/api/addnewm3u2', methods=['POST'])
 def addnewm3u2():
     return addlist(request, REDIS_KEY_WHITELIST_LINK)
 
 
 # 删除白名单订阅
-@app.route('/deletewm3u2', methods=['POST'])
+@app.route('/api/deletewm3u2', methods=['POST'])
 def deletewm3u2():
     return dellist(request, REDIS_KEY_WHITELIST_LINK)
 
 
 # 上传白名单订阅配置集合文件
-@app.route('/upload_json_file2', methods=['POST'])
+@app.route('/api/upload_json_file2', methods=['POST'])
 def upload_json_file2():
     return upload_json(request, REDIS_KEY_WHITELIST_LINK, "/tmp_data2.json")
 
 
 # 删除全部本地直播源
-@app.route('/removeallm3u', methods=['GET'])
+@app.route('/api/removeallm3u', methods=['GET'])
 def removeallm3u():
     redis_del_map(REDIS_KEY_M3U_DATA)
     return "success"
 
 
 # 删除全部直播源订阅链接
-@app.route('/removem3ulinks', methods=['GET'])
+@app.route('/api/removem3ulinks', methods=['GET'])
 def removem3ulinks():
     redis_del_map(REDIS_KEY_M3U_LINK)
     return "success"
 
 
 # 导出本地永久直播源
-@app.route('/download_m3u_file', methods=['GET'])
+@app.route('/api/download_m3u_file', methods=['GET'])
 def download_m3u_file():
     my_dict = redis_get_map(REDIS_KEY_M3U_DATA)
     distribute_data(my_dict, "/app/temp_m3u.m3u", 10)
@@ -2801,7 +2959,7 @@ def download_m3u_file():
 
 
 # 手动上传m3u文件把直播源保存到数据库
-@app.route('/upload_m3u_file', methods=['POST'])
+@app.route('/api/upload_m3u_file', methods=['POST'])
 def upload_m3u_file():
     file = request.files['file']
     # file_content = file.read().decode('utf-8')
@@ -2814,7 +2972,7 @@ def upload_m3u_file():
 
 
 # 删除直播源
-@app.route('/deletem3udata', methods=['POST'])
+@app.route('/api/deletem3udata', methods=['POST'])
 def deletem3udata():
     # 获取 HTML 页面发送的 POST 请求参数
     deleteurl = request.json.get('deleteurl')
@@ -2823,7 +2981,7 @@ def deletem3udata():
 
 
 # 添加直播源
-@app.route('/addm3udata', methods=['POST'])
+@app.route('/api/addm3udata', methods=['POST'])
 def addm3udata():
     # 获取 HTML 页面发送的 POST 请求参数
     addurl = request.json.get('addurl')
@@ -2834,13 +2992,13 @@ def addm3udata():
 
 
 # 拉取全部本地直播源
-@app.route('/getm3udata', methods=['GET'])
+@app.route('/api/getm3udata', methods=['GET'])
 def getm3udata():
     return jsonify(redis_get_map(REDIS_KEY_M3U_DATA))
 
 
 # 添加直播源到本地
-@app.route('/savem3uarea', methods=['POST'])
+@app.route('/api/savem3uarea', methods=['POST'])
 def savem3uarea():
     # 获取 HTML 页面发送的 POST 请求参数
     m3utext = request.json.get('m3utext')
@@ -2851,25 +3009,25 @@ def savem3uarea():
 
 
 # 添加直播源订阅
-@app.route('/addnewm3u', methods=['POST'])
+@app.route('/api/addnewm3u', methods=['POST'])
 def addnewm3u():
     return addlist(request, REDIS_KEY_M3U_LINK)
 
 
 # 删除直播源订阅
-@app.route('/deletewm3u', methods=['POST'])
+@app.route('/api/deletewm3u', methods=['POST'])
 def deletewm3u():
     return dellist(request, REDIS_KEY_M3U_LINK)
 
 
 # 拉取全部直播源订阅
-@app.route('/getall', methods=['GET'])
+@app.route('/api/getall', methods=['GET'])
 def getall():
     return jsonify(redis_get_map(REDIS_KEY_M3U_LINK))
 
 
 # 全部m3u订阅链接超融合
-@app.route('/chaoronghe', methods=['GET'])
+@app.route('/api/chaoronghe', methods=['GET'])
 def chaoronghe():
     try:
         return chaorongheBase(REDIS_KEY_M3U_LINK, 'process_data_abstract', REDIS_KEY_M3U_DATA,
@@ -2879,19 +3037,19 @@ def chaoronghe():
 
 
 # 导出直播源订阅配置
-@app.route('/download_json_file', methods=['GET'])
+@app.route('/api/download_json_file', methods=['GET'])
 def download_json_file():
     return download_json_file_base(REDIS_KEY_M3U_LINK, "/app/temp_m3ulink.json", "temp_m3ulink.json")
 
 
 # 上传直播源订阅配置集合文件
-@app.route('/upload_json_file', methods=['POST'])
+@app.route('/api/upload_json_file', methods=['POST'])
 def upload_json_file():
     return upload_json(request, REDIS_KEY_M3U_LINK, "/tmp_data.json")
 
 
 # 手动上传m3u文件格式化统一转换
-@app.route('/process-file', methods=['POST'])
+@app.route('/api/process-file', methods=['POST'])
 def process_file():
     file = request.files['file']
     # file_content = file.read().decode('utf-8')
@@ -2906,32 +3064,26 @@ def process_file():
 
 if __name__ == '__main__':
     init_db()
-    timer_thread1 = threading.Thread(target=execute, args=('chaoronghe', 86400))
+    timer_thread1 = threading.Thread(target=execute, args=('chaoronghe', 86400), daemon=True)
     timer_thread1.start()
-    timer_thread2 = threading.Thread(target=execute, args=('chaoronghe2', 86400))
+    timer_thread2 = threading.Thread(target=execute, args=('chaoronghe2', 86400), daemon=True)
     timer_thread2.start()
-    timer_thread3 = threading.Thread(target=execute, args=('chaoronghe3', 86400))
+    timer_thread3 = threading.Thread(target=execute, args=('chaoronghe3', 86400), daemon=True)
     timer_thread3.start()
-    timer_thread4 = threading.Thread(target=execute, args=('chaoronghe4', 86400))
+    timer_thread4 = threading.Thread(target=execute, args=('chaoronghe4', 86400), daemon=True)
     timer_thread4.start()
-    timer_thread5 = threading.Thread(target=execute, args=('chaoronghe5', 86400))
+    timer_thread5 = threading.Thread(target=execute, args=('chaoronghe5', 86400), daemon=True)
     timer_thread5.start()
-    timer_thread6 = threading.Thread(target=execute, args=('chaoronghe6', 10800))
+    timer_thread6 = threading.Thread(target=execute, args=('chaoronghe6', 10800), daemon=True)
     timer_thread6.start()
     # 启动工作线程消费上传数据至gitee
-    t = threading.Thread(target=worker_gitee)
+    t = threading.Thread(target=worker_gitee, daemon=True)
     t.start()
     # 启动工作线程消费上传数据至gitee
-    t2 = threading.Thread(target=worker_remove)
-    t2.start()
+    # t2 = threading.Thread(target=worker_remove, daemon=True)
+    # t2.start()
+
     try:
         app.run(debug=True, host='0.0.0.0', port=5000)
     finally:
-        timer_thread1.join()
-        timer_thread2.join()
-        timer_thread3.join()
-        timer_thread4.join()
-        timer_thread5.join()
-        timer_thread6.join()
-        t.join()
-        t2.join()
+        print("close")
