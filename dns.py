@@ -5,7 +5,6 @@ import threading
 import time
 import dnslib
 import redis
-import ipaddress
 
 r = redis.Redis(host='localhost', port=6379)
 # 白名单总命中缓存规则，数据中等，是实际命中的规则缓存
@@ -24,10 +23,6 @@ black_list_tmp_policy = {}
 black_list_tmp_cache = {}
 white_list_nameserver_policy = {}
 black_list_policy = {}
-ipv4_list = {}
-
-ipv4_list_tmp_cache = {}
-ipv4_list_tmp_policy = {}
 
 # china   api.ttt.sh
 ipCheckDomian = ["ip.skk.moe", "ip.swcdn.skk.moe", "api.ipify.org",
@@ -130,19 +125,6 @@ def inBlackListCache(domain_name_str):
     return False
 
 
-# 检测域名是否在未知缓存里，是-True,不是-False
-def inUnkownCache(domain_name_str):
-    # 命中未知域名缓存，直接丢给5335
-    for unkown in unkown_list_tmp_cache.keys():
-        # 新域名在缓存里有类似域名
-        if unkown in domain_name_str:
-            return True
-        # 缓存域名在新域名里有匹配
-        if domain_name_str in unkown:
-            return True
-    return False
-
-
 # 检测域名是否在记录的白名单域名缓存  是-true  不是-false
 def inWhiteListCache(domain_name_str):
     for recordThiteDomain in white_list_tmp_cache.keys():
@@ -168,45 +150,6 @@ def inWhiteListPolicyCache(domain_name_str):
             white_list_tmp_cache[domain_name_str] = ""
             return True
     return False
-
-
-def check_domain_inIpv4ListPolicy(ip, ipv4_list_chunk):
-    for key in ipv4_list_chunk:
-        if ip in ipaddress.IPv4Network(key):
-            ipv4_list_tmp_cache[ip] = ""
-            ipv4_list_tmp_policy[key] = ""
-            return True
-
-
-# 判断域名ip是否归属中国大陆
-def is_china_domain(domain):
-    # 解析域名为IP地址
-    try:
-        ip_address = ipaddress.IPv4Address(socket.gethostbyname(domain))
-    except socket.gaierror:
-        return False
-    # 判断IP地址是否是私有IP地址
-    if ip_address.is_private:
-        return False
-    if len(ipv4_list) == 0:
-        initIpv4List()
-    # 判断IP地址是否在中国大陆IP段中
-    maxThread = 100
-    items = sorted(ipv4_list.keys())
-    length = len(items)
-    # 计算每个线程处理的数据大小
-    chunk_size = math.ceil(length / maxThread)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=maxThread) as executor:
-        futures = []
-        for i in range(maxThread):
-            start_index = i * chunk_size
-            end_index = min(start_index + chunk_size, length)
-            black_list_chunk = items[start_index:end_index]
-            future = executor.submit(check_domain_inIpv4ListPolicy, black_list_chunk)
-            futures.append(future)
-            if future.result():
-                return True
-        return False
 
 
 # 检测域名是否在全部黑名单域名策略  是-true  不是-false
@@ -295,10 +238,6 @@ def stupidThink(domain_name):
     return sub_domains
 
 
-# 白名单中国大陆IPV4下载数据
-REDIS_KEY_WHITELIST_IPV4_DATA = "whitelistipv4data"
-
-
 # 外国判断  1  1  1  1   0   1   0    0
 # 中国判断  1     0      0       1
 # 直接信任黑名单规则
@@ -360,12 +299,6 @@ def initBlackList():
         black_list_policy.update(blacklist)
 
 
-def initIpv4List():
-    ipv4list = redis_get_map(REDIS_KEY_WHITELIST_IPV4_DATA)
-    if ipv4list and len(ipv4list) > 0:
-        ipv4_list.update(ipv4list)
-
-
 # redis增加和修改
 def redis_add(key, value):
     r.set(key, value)
@@ -379,7 +312,6 @@ def redis_get(key):
 # 0-数据未更新 1-数据已更新 max-所有服务器都更新完毕(有max个服务器做负载均衡)
 REDIS_KEY_UPDATE_WHITE_LIST_FLAG = "updatewhitelistflag"
 REDIS_KEY_UPDATE_BLACK_LIST_FLAG = "updateblacklistflag"
-#REDIS_KEY_UPDATE_IPV4_LIST_FLAG = "updateipv4listflag"
 REDIS_KEY_UPDATE_THREAD_NUM_FLAG = "updatethreadnumflag"
 REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG = "updatechinadnsserverflag"
 REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG = "updatechinadnsportflag"
@@ -412,8 +344,6 @@ def init(sleepSecond):
             initWhiteList()
         if needUpdate(REDIS_KEY_UPDATE_BLACK_LIST_FLAG):
             initBlackList()
-        # if needUpdate(REDIS_KEY_UPDATE_IPV4_LIST_FLAG):
-        #     initIpv4List()
         if needUpdate(REDIS_KEY_UPDATE_THREAD_NUM_FLAG):
             init_threads_num()
         if needUpdate(REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG):
@@ -511,7 +441,7 @@ def dns_query(data):
     # 向DNS服务器发送请求
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.settimeout(15)
+        sock.settimeout(58)
         sock.sendto(data, (dns_server, port))
         # 接收DNS服务器的响应
         response, addr = sock.recvfrom(4096)
@@ -536,24 +466,23 @@ def handle_request(sock, executor):
         print(f'handle_request error: {e}')
 
 
-# 考虑过线程池或者负载均衡，线程池需要多个端口不大合适，负载均衡似乎不错，但有点复杂，后期看看22770
-if __name__ == '__main__':
+def main():
     init_threads_num()
     init_china_dns_server()
     init_china_dns_port()
     init_extra_dns_server()
     init_extra_dns_port()
-    timer_thread1 = threading.Thread(target=init, args=(10,))
+    timer_thread1 = threading.Thread(target=init, args=(10,), daemon=True)
     timer_thread1.start()
     try:
         # 创建一个线程池对象
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
             # 创建一个UDP socket
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 sock.bind(('0.0.0.0', 22770))
                 # 设置等待时长为30s
-                sock.settimeout(30)
+                sock.settimeout(60)
                 # 开始接收客户端的DNS请求
                 try:
                     while True:
@@ -569,5 +498,22 @@ if __name__ == '__main__':
                 print(f'socket error: {e}')
     except:
         pass
-    finally:
-        timer_thread1.join()
+
+
+# 考虑过线程池或者负载均衡，线程池需要多个端口不大合适，负载均衡似乎不错，但有点复杂，后期看看22770
+if __name__ == '__main__':
+    start = False
+    while True:
+        # 检查Redis连接状态
+        if not r.ping():
+            # 关闭旧连接
+            r.close()
+            # 创建新的Redis连接
+            r = redis.Redis(host='localhost', port=6379)
+            print('!!!!!!!!!!!!!!!!!!!!!!!Redis is not ready dns.py\n')
+        else:
+            print('!!!!!!!!!!!!!!!!!!!!!!!Redis is ready dns.py\n')
+            start = True
+            break
+    if start:
+        main()

@@ -20,8 +20,14 @@ COPY requirements.txt /app/requirements.txt
 #    apt-get clean && \
 #    rm -rf /var/lib/apt/lists/*
 
+#RUN apt-get update && \
+#    apt-get install -y python3-pip redis-server && \
+#    pip3 install --no-cache-dir -r /app/requirements.txt && \
+#    apt-get clean && \
+#    rm -rf /var/lib/apt/lists/*
+
 RUN apt-get update && \
-    apt-get install -y python3-pip redis-server && \
+    apt-get install -yqq --no-install-recommends python3-pip redis-server && \
     pip3 install --no-cache-dir -r /app/requirements.txt && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -30,4 +36,6 @@ RUN apt-get update && \
 EXPOSE 22771 22770
 
 # 启动 Nginx 和 Python 应用程序
-CMD ["/bin/bash", "-c", "redis-server & python3 /app/main.py & python3 /app/dns.py & nginx -g 'daemon off;'"]
+CMD ["/bin/bash", "-c", "redis-server & python3 /app/dns.py & python3 /app/main.py & nginx -g 'daemon off;'"]
+#CMD ["/bin/bash", "-c", "redis-server && python3 /app/main.py && python3 /app/dns.py && nginx -g 'daemon off;'"]
+

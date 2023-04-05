@@ -10,6 +10,7 @@ import math
 import os
 import queue
 import re
+import subprocess
 import threading
 from concurrent.futures import ThreadPoolExecutor
 import aiohttp
@@ -71,6 +72,8 @@ REDIS_KEY_PROXIES_SERVER = "proxiesserver"
 REDIS_KEY_PROXIES_SERVER_CHOSEN = "proxiesserverchosen"
 # m3u白名单:关键字,
 REDIS_KEY_M3U_WHITELIST = "m3uwhitelist"
+# m3u黑名单:关键字,
+REDIS_KEY_M3U_BLACKLIST = "m3ublacklist"
 
 # m3u密码
 REDIS_KEY_THREADS2 = "threadsnum2"
@@ -114,12 +117,18 @@ gitee_path = {REDIS_KEY_GITEE_PATH: ""}
 REDIS_KEY_GITEE_ACCESS_TOKEN = "redisgiteeaccestoken"
 gitee_access_token = {REDIS_KEY_GITEE_ACCESS_TOKEN: ""}
 
+# 有缓存的redis备份字典key
+# cachedictkey = [REDIS_KEY_GITEE_ACCESS_TOKEN, REDIS_KEY_GITEE_PATH, REDIS_KEY_GITEE_REPONAME, REDIS_KEY_GITEE_USERNAME,
+#                 REDIS_KEY_THREADS7, REDIS_KEY_THREADS6, REDIS_KEY_THREADS5, REDIS_KEY_THREADS4, REDIS_KEY_THREADS3,
+#                 REDIS_KEY_THREADS2]
+# 全部有redis备份字典key
 allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_LINK, REDIS_KEY_WHITELIST_IPV4_LINK,
               REDIS_KEY_WHITELIST_IPV6_LINK, REDIS_KEY_PASSWORD_LINK, REDIS_KEY_PROXIES_LINK, REDIS_KEY_PROXIES_TYPE,
               REDIS_KEY_PROXIES_MODEL, REDIS_KEY_PROXIES_MODEL_CHOSEN, REDIS_KEY_PROXIES_SERVER,
               REDIS_KEY_PROXIES_SERVER_CHOSEN, REDIS_KEY_GITEE_USERNAME, REDIS_KEY_THREADS2, REDIS_KEY_THREADS3,
               REDIS_KEY_THREADS4, REDIS_KEY_GITEE_REPONAME, REDIS_KEY_GITEE_PATH, REDIS_KEY_GITEE_ACCESS_TOKEN,
-              REDIS_KEY_THREADS5, REDIS_KEY_THREADS6, REDIS_KEY_THREADS7, REDIS_KEY_M3U_WHITELIST]
+              REDIS_KEY_THREADS5, REDIS_KEY_THREADS6, REDIS_KEY_THREADS7, REDIS_KEY_M3U_WHITELIST,
+              REDIS_KEY_M3U_BLACKLIST]
 
 # redis_add_map(REDIS_KEY_GITEE_ACCOUNT, tmp_dict)
 
@@ -171,7 +180,7 @@ REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG = "updateextradnsserverflag"
 REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG = "updateextradnsportflag"
 
 REDIS_KEY_THREADS = "threadsnum"
-threadsNum = {REDIS_KEY_THREADS: 0}
+threadsNum = {REDIS_KEY_THREADS: 100}
 
 REDIS_KEY_CHINA_DNS_SERVER = "chinadnsserver"
 chinadnsserver = {REDIS_KEY_CHINA_DNS_SERVER: ""}
@@ -184,6 +193,9 @@ extradnsserver = {REDIS_KEY_EXTRA_DNS_SERVER: ""}
 
 REDIS_KEY_EXTRA_DNS_PORT = "extradnsport"
 extradnsport = {REDIS_KEY_EXTRA_DNS_PORT: 7874}
+
+REDIS_KEY_IP = "ip"
+ip = {REDIS_KEY_IP: ""}
 
 
 @app.route('/')
@@ -255,7 +267,6 @@ def upload_json(request, rediskey, filename):
 
 def execute(method_name, sleepSecond):
     while True:
-        # 获取方法对象
         method = globals().get(method_name)
         # 判断方法是否存在
         if not method:
@@ -268,8 +279,8 @@ def execute(method_name, sleepSecond):
 async def checkWriteHealthM3u(url):
     name = tmp_url_tvg_name_dict.get(url)
     if name:
-        async with aiofiles.open('/healthm3u.txt', 'a', encoding='utf-8') as f:  # 异步的方式写入内容
-            await f.write(f'{name},{url}\n')
+        async with aiofiles.open('/healthm3u.m3u', 'a', encoding='utf-8') as f:  # 异步的方式写入内容
+            await f.write(f'{name}{url}\n')
         del tmp_url_tvg_name_dict[url]
     else:
         return
@@ -307,8 +318,9 @@ def check_file(m3u_dict):
             return
         if os.path.exists("/alive.m3u"):
             os.remove("/alive.m3u")
-        if os.path.exists("/healthm3u.txt"):
-            os.remove("/healthm3u.txt")
+
+        if os.path.exists("/healthm3u.m3u"):
+            os.remove("/healthm3u.m3u")
             # 异步缓慢检测出有效链接
         asyncio.run(asynctask(m3u_dict))
     except:
@@ -317,13 +329,7 @@ def check_file(m3u_dict):
 
 def checkbytes(url):
     if isinstance(url, bytes):
-        try:
-            return url.decode("utf-8").strip()
-        except:
-            try:
-                return url.decode("gbk").strip()
-            except:
-                return decode_bytes(url).strip()
+        return decode_bytes(url).strip()
     else:
         return url
 
@@ -439,11 +445,17 @@ def addlist(request, rediskey):
     return jsonify({'addresult': "add success"})
 
 
-def writeTvList():
-    distribute_data(white_list_adguardhome, "/tvlist.txt", 10)
+# update 开启m3u域名白名单加密文件上传gitee
+# secretfile 开启m3u域名白名单生成加密文件
+def writeTvList(fileName, secretfilename):
+    distribute_data(white_list_adguardhome, fileName, 10)
     white_list_adguardhome.clear()
+    download_secert_file(fileName, secretfilename, REDIS_KEY_THREADS2,
+                         threadsNum2)
 
 
+# whitelist-加密上传   switch11
+# whitelist-加密生成   switch12
 def writeOpenclashNameServerPolicy():
     if white_list_nameserver_policy and len(white_list_nameserver_policy) > 0:
         # 更新redis数据库白名单
@@ -478,6 +490,7 @@ def updateAdguardhomeWithelistForM3us(urls):
 def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
     results, redis_dict = redis_get_map_keys(redisKeyLink)
     ism3u = processDataMethodName == 'process_data_abstract'
+    # 生成直播源域名-无加密
     if ism3u:
         thread = threading.Thread(target=updateAdguardhomeWithelistForM3us, args=(results,))
         thread.start()
@@ -491,45 +504,50 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         return "empty"
     old_dict = redis_get_map(redisKeyData)
     my_dict.update(old_dict)
-    redis_add_map(redisKeyData, my_dict)
-    # 是m3u的情况要维护一下adguardhome，放行直播源域名
-    if ism3u:
-        # 同步方法写出全部配置
-        thread = threading.Thread(target=writeTvList)
-        thread.start()
     # 同步方法写出全部配置
     distribute_data(my_dict, fileName, 10)
+    redis_add_map(redisKeyData, my_dict)
     if ism3u:
+        # 生成直播源域名-无加密
+        thread = threading.Thread(target=writeTvList,
+                                  args=("/tvlist.txt", '/TTADEN.txt'))
         # 神速直播源有效性检测
+        thread2 = threading.Thread(target=check_file, args=(my_dict,))
+        # logo,group更新
         redis_add_map(REDIS_KEY_M3U_EPG_LOGO, CHANNEL_LOGO)
         redis_add_map(REDIS_KEY_M3U_EPG_GROUP, CHANNEL_GROUP)
-        thread = threading.Thread(target=check_file, args=(my_dict,))
+        # 开启直播源加密:
         # 加密全部直播源
-        thread2 = threading.Thread(target=download_secert_file,
+        thread3 = threading.Thread(target=download_secert_file,
                                    args=(fileName, "/AEN.txt", REDIS_KEY_THREADS2, threadsNum2))
-        thread.start()
         thread2.start()
+        thread.start()
+        thread3.start()
+    # 域名白名单
     if processDataMethodName == 'process_data_abstract3':
-        # 生成白名单顺便写入redis
+        # whitelist,白名单域名写入redis
         thread = threading.Thread(target=writeOpenclashNameServerPolicy)
-        # 加密
+        # 生成dnsmasq加密
         thread2 = threading.Thread(target=download_secert_file,
-                                   args=(fileName, "/DQEN.txt", REDIS_KEY_THREADS3, threadsNum3))
+                                   args=(
+                                       fileName, "/DQEN.txt", REDIS_KEY_THREADS3, threadsNum3))
         thread.start()
         thread2.start()
+    # 域名黑名单
     if processDataMethodName == 'process_data_abstract7':
-        # 生成黑名单顺便写入redis
+        # blackList.txt
         thread = threading.Thread(target=writeBlackList)
-        # 加密
+        # 加密openclash-fallback-filter-domain.conf
         thread2 = threading.Thread(target=download_secert_file,
-                                   args=(fileName, "/OPPDEN.txt", REDIS_KEY_THREADS4, threadsNum4))
+                                   args=(
+                                       fileName, "/OPPDEN.txt", REDIS_KEY_THREADS4, threadsNum4))
         thread.start()
         thread2.start()
-    # 暂时没有意义,ip数据太大了
+    # ipv4
     if processDataMethodName == 'process_data_abstract5':
-        # 通知dns服务器更新内存
+        # 通知dns服务器更新内存,不给dns分流器使用，数据太大了
         # redis_add(REDIS_KEY_UPDATE_IPV4_LIST_FLAG, 1)
-        # 加密
+        # ipv4-加密
         thread = threading.Thread(target=download_secert_file,
                                   args=(fileName, "/VFEN.txt", REDIS_KEY_THREADS5, threadsNum5))
         thread.start()
@@ -593,8 +611,14 @@ def updateFileToGitee(file_name):
     repo_name = init_gitee(REDIS_KEY_GITEE_REPONAME, gitee_reponame)
     path = init_gitee(REDIS_KEY_GITEE_PATH, gitee_path)
     access_token = init_gitee(REDIS_KEY_GITEE_ACCESS_TOKEN, gitee_access_token)
-    removeIfExist(username, repo_name, path, access_token, file_name)
-    uploadNewFileToGitee(username, repo_name, path, access_token, file_name)
+    try:
+        removeIfExist(username, repo_name, path, access_token, file_name)
+    except:
+        pass
+    try:
+        uploadNewFileToGitee(username, repo_name, path, access_token, file_name)
+    except:
+        pass
 
 
 # 定义线程数和任务队列,防止多线程提交数据到gitee产生竞争阻塞，最终导致数据丢失
@@ -612,37 +636,24 @@ def worker_gitee():
         updateFileToGitee(file_name)
 
 
-# 定义线程数和任务队列,防止多线程提交数据到gitee产生竞争阻塞，最终导致数据丢失
-remove_queue = queue.Queue()
-
-
-# def worker_remove():
-#     while True:
-#         # 从任务队列中获取一个任务
-#         task = remove_queue.get()
-#         if task is None:
-#             continue
-#         time.sleep(600)
-#         # 执行上传文件操作
-#         file_name = task
-#         arr = file_name.split('|')
-#         for file in arr:
-#             if os.path.exists(file):
-#                 os.remove(file)
-
-
 # 把自己本地文件加密生成对应的加密文本
 def download_secert_file(fileName, secretFileName, redis_key, dict_cache):
-    # 读取文件内容
-    with open(fileName, 'rb') as f:
-        ciphertext = f.read()
-    secretContent = encrypt(ciphertext, redis_key, dict_cache)
-    thread_write_bytes_to_file(secretFileName, secretContent)
-    # 加密文件上传至gitee,
-    task_queue.put(os.path.basename(secretFileName))
-    # updateFileToGitee(os.path.basename(secretFileName))
-    # plaintext = decrypt(password, secretContent)
-    # thread_write_bytes_to_file("/解密文件.txt", plaintext)
+    try:
+        # 读取文件内容
+        with open(fileName, 'rb') as f:
+            ciphertext = f.read()
+        secretContent = encrypt(ciphertext, redis_key, dict_cache)
+        thread_write_bytes_to_file(secretFileName, secretContent)
+        # 加密文件上传gitee:
+        # 加密文件上传至gitee,
+        task_queue.put(os.path.basename(secretFileName))
+        # updateFileToGitee(os.path.basename(secretFileName))
+        # plaintext = decrypt(password, secretContent)
+        # thread_write_bytes_to_file("/解密文件.txt", plaintext)
+    except FileNotFoundError:
+        print(f"File not found: {fileName}")
+    except:
+        pass
 
 
 # 使用线程池把bytes流内容写入本地文件
@@ -680,6 +691,8 @@ def init_db():
     init_extra_dns_server()
     init_extra_dns_port()
     init_m3u_whitelist()
+    init_IP()
+    # init_function_dict()
 
 
 # 初始化节点后端服务器
@@ -1063,45 +1076,55 @@ def updateAdguardhomeWithelistForM3u(url):
 def decode_text(text):
     try:
         # detect encoding of the string
-        result = chardet.detect(text.encode())
+        result = chardet.detect(text)
         # decode the string using detected encoding
-        decoded_text = text.encode(result['encoding']).decode('utf-8')
+        decoded_text = text.decode(result['encoding']).strip()
+        return decoded_text
+    except (UnicodeDecodeError, KeyError):
+        pass
+
+    try:
+        result = text.encode('ascii').decode('utf-8', 'ignore')
+        return result
+    except UnicodeEncodeError:
+        pass
+
+    try:
+        result = text.encode('cp936').decode('utf-8', 'ignore')
+        return result
+    except UnicodeEncodeError:
+        pass
+
+    # try to decode using UTF-8 encoding
+    try:
+        decoded_text = text.decode('utf-8')
         return decoded_text
     except UnicodeDecodeError:
         pass
+
+    # try to decode using GBK encoding
     try:
-        result = text.encode('ascii', 'ignore')  # 将 Unicode 字符串转换为 Windows 系统默认编码（GB18030）的字节串
-        return result.decode('utf-8')
-    except UnicodeDecodeError:
-        pass
-    try:
-        result = text.encode('cp936', 'ignore')  # 将 Unicode 字符串转换为 Windows 系统默认编码（GB18030）的字节串
-        return result.decode('utf-8')
-    except UnicodeDecodeError:
-        pass
-    # 尝试使用 UTF-8 编码方式进行解码
-    try:
-        decoded_text = text.encode('utf-8').decode('utf-8')
-        return decoded_text
-    except UnicodeDecodeError:
-        pass
-    # 尝试使用 GBK 编码方式进行解码
-    try:
-        decoded_text = text.encode('gbk').decode('gbk')
+        decoded_text = text.decode('gbk')
         return decoded_text
     except UnicodeDecodeError:
         pass
 
 
 def decode_bytes(text):
-    try:
-        return text.decode().strip()
-    except:
-        # detect encoding of the byte string
-        result = chardet.detect(text)
-        # decode the string using detected encoding
-        decoded_text = text.decode(result['encoding'])
-        return decoded_text
+    # define a list of possible encodings
+    encodings = ['utf-8', 'gbk', 'iso-8859-1', 'ascii', 'cp936', 'big5', 'shift_jis', 'koi8-r']
+
+    # try each encoding until one works
+    for encoding in encodings:
+        try:
+            return text.decode(encoding).strip()
+        except (TypeError, UnicodeDecodeError):
+            continue
+
+    # if none of the above worked, use chardet to detect the encoding
+    result = chardet.detect(text)
+    decoded_text = text.decode(result['encoding']).strip()
+    return decoded_text
 
 
 def pureUrl(s):
@@ -1109,9 +1132,8 @@ def pureUrl(s):
     return result
 
 
-# 上传文件bytes格式规整
+# 上传m3u文件bytes格式规整
 def format_data(data, index, step, my_dict):
-    defalutname = "佚名"
     end_index = min(index + step, len(data))
     for i in range(index, end_index):
         # print(type(data[i]))
@@ -1131,18 +1153,18 @@ def format_data(data, index, step, my_dict):
                 if searchurl in my_dict.keys():
                     continue
                 if name:
-                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
+                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}",{name}\n'
                 else:
-                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
+                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}",{defalutname}\n'
             elif re.match(r"^[^#].*，(http|rtsp|rtmp)", line):
                 name, url = line.split("，", 1)
                 searchurl = pureUrl(url)
                 if searchurl in my_dict.keys():
                     continue
                 if name:
-                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
+                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}",{name}\n'
                 else:
-                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
+                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}",{defalutname}\n'
         # http开始
         else:
             # 去重复
@@ -1151,21 +1173,28 @@ def format_data(data, index, step, my_dict):
                 continue
             # 第一行的无名直播
             if i == 0 and index == 0:
-                my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
+                my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}",{defalutname}\n'
                 continue
-            preline = decode_bytes(data[i] - 1).strip()
+            preline = decode_bytes(data[i - 1]).strip()
             # preline = data[i - 1].decode("utf-8").strip()
             # 没有名字
             if not preline:
-                my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
+                my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}",{defalutname}\n'
                 continue
             # 不是名字
             if not preline.startswith("#EXTINF"):
-                my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
+                try:
+                    last_comma_index = preline.rfind(",")
+                    if last_comma_index == -1:
+                        raise ValueError("字符串中不存在逗号")
+                    tvg_name = preline[last_comma_index + 1:].strip()
+                except Exception as e:
+                    tvg_name = defalutname
+                my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{tvg_name}",{tvg_name}\n'
                 continue
             # 有名字
             else:
-                my_dict[searchurl] = f'{preline}\n'
+                my_dict[searchurl] = update_epg_nope(preline)
                 continue
 
 
@@ -1173,19 +1202,14 @@ def format_data(data, index, step, my_dict):
 tmp_url_tvg_name_dict = {}
 
 
-def is_all_english(s):
-    # 中文字符Unicode范围：[\u4e00-\u9fa5]
-    return not re.search('[\u4e00-\u9fa5]', s)
-
-
-def addChinaChannel(tvg_name, url):
+def addChinaChannel(tvg_name, url, fullName):
     for name in m3u_whitlist.keys():
         if name in tvg_name:
-            tmp_url_tvg_name_dict[url] = tvg_name
+            tmp_url_tvg_name_dict[url] = fullName
             return
 
 
-# 字符串内容处理-m3u
+# 超融合-直播源字符串内容处理-m3u
 def process_data(data, index, step, my_dict):
     end_index = min(index + step, len(data))
     for i in range(index, end_index):
@@ -1207,13 +1231,15 @@ def process_data(data, index, step, my_dict):
                 if searchurl in my_dict.keys():
                     continue
                 if name:
-                    my_dict[searchurl] = update_epg_by_name(name)
-                    addChinaChannel(name, searchurl)
+                    fullName = update_epg_by_name(name)
+                    my_dict[searchurl] = fullName
+                    addChinaChannel(name, searchurl, fullName)
                     updateAdguardhomeWithelistForM3u(searchurl)
                     # my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
                 else:
-                    addChinaChannel(defalutname, searchurl)
-                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
+                    fullName = f'#EXTINF:-1  tvg-name="{defalutname}",{defalutname}\n'
+                    my_dict[searchurl] = fullName
+                    addChinaChannel(defalutname, searchurl, fullName)
                     updateAdguardhomeWithelistForM3u(searchurl)
             # 匹配格式：频道，url
             elif re.match(r"^[^#].*，(http|rtsp|rtmp)", line):
@@ -1222,13 +1248,15 @@ def process_data(data, index, step, my_dict):
                 if searchurl in my_dict.keys():
                     continue
                 if name:
-                    my_dict[searchurl] = update_epg_by_name(name)
-                    addChinaChannel(name, searchurl)
+                    fullName = update_epg_by_name(name)
+                    my_dict[searchurl] = fullName
+                    addChinaChannel(name, searchurl, fullName)
                     updateAdguardhomeWithelistForM3u(searchurl)
                     # my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
                 else:
-                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
-                    addChinaChannel(defalutname, searchurl)
+                    fullName = f'#EXTINF:-1  tvg-name="{defalutname}",{defalutname}\n'
+                    my_dict[searchurl] = fullName
+                    addChinaChannel(defalutname, searchurl, fullName)
                     updateAdguardhomeWithelistForM3u(searchurl)
         # http|rtsp|rtmp开始，跳过P2p
         elif not lineEncoder.startswith(b"P2p"):
@@ -1237,22 +1265,32 @@ def process_data(data, index, step, my_dict):
                 continue
             # 第一行的无名直播
             if i == 0 and index == 0:
-                my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
-                addChinaChannel(defalutname, searchurl)
+                fullName = f'#EXTINF:-1  tvg-name="{defalutname}",{defalutname}\n'
+                my_dict[searchurl] = fullName
+                addChinaChannel(defalutname, searchurl, fullName)
                 updateAdguardhomeWithelistForM3u(searchurl)
                 continue
             preline = data[i - 1].strip()
             prelineEncoder = preline.encode()
             # 没有名字
             if not preline:
-                my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
-                addChinaChannel(defalutname, searchurl)
+                fullName = f'#EXTINF:-1  tvg-name="{defalutname}",{defalutname}\n'
+                my_dict[searchurl] = fullName
+                addChinaChannel(defalutname, searchurl, fullName)
                 updateAdguardhomeWithelistForM3u(searchurl)
                 continue
             # 不是名字
             if not prelineEncoder.startswith(b"#EXTINF"):
-                my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}"\n'
-                addChinaChannel(defalutname, searchurl)
+                try:
+                    last_comma_index = preline.rfind(",")
+                    if last_comma_index == -1:
+                        raise ValueError("字符串中不存在逗号")
+                    tvg_name = preline[last_comma_index + 1:].strip()
+                except Exception as e:
+                    tvg_name = defalutname
+                fullName = f'#EXTINF:-1  tvg-name="{tvg_name}",{tvg_name}\n'
+                my_dict[searchurl] = fullName
+                addChinaChannel(tvg_name, searchurl, fullName)
                 updateAdguardhomeWithelistForM3u(searchurl)
                 continue
             # 有裸名字或者#EXTINF开始但是没有tvg-name\tvg-id\group-title
@@ -1272,17 +1310,25 @@ def update_epg_by_name(tvg_name):
     group_title = CHANNEL_GROUP.get(tvg_name)
     if group_title is not None and group_title != "":
         newStr += f'group-title="{group_title}"  '
-    newStr += f'tvg-name="{tvg_name}"\n'
+    newStr += f'tvg-name="{tvg_name}",{tvg_name}\n'
     return newStr
 
 
-def update_epg(s, searchurl):
-    tvg_name = re.search(r'tvg-name="([^"]+)"', s)
-    if tvg_name:
-        tvg_name = tvg_name.group(1)
-    else:
+def update_epg_nope(s):
+    try:
         last_comma_index = s.rfind(",")
+        if last_comma_index == -1:
+            raise ValueError("字符串中不存在逗号")
         tvg_name = s[last_comma_index + 1:].strip()
+    except Exception as e:
+        try:
+            tvg_name = re.search(r'tvg-name="([^"]+)"', s)
+            if tvg_name is None:
+                raise ValueError("未找到 tvg-name 属性")
+            tvg_name = tvg_name.group(1)
+        except Exception as e:
+            # 处理异常
+            tvg_name = ""
     if tvg_name != "":
         newStr = "#EXTINF:-1 "
         tvg_id = re.search(r'tvg-id="([^"]+)"', s)
@@ -1305,12 +1351,55 @@ def update_epg(s, searchurl):
             newStr += f'group-title="{group_title}"  '
             if tvg_name not in CHANNEL_GROUP:
                 CHANNEL_GROUP[tvg_name] = group_title
-        newStr += f'tvg-name="{tvg_name}"\n'
-        addChinaChannel(tvg_name, searchurl)
+        newStr += f'tvg-name="{tvg_name}",{tvg_name}\n'
         return newStr
     else:
-        addChinaChannel(defalutname, searchurl)
-        return s
+        return f'{s}\n'
+
+
+def update_epg(s, searchurl):
+    try:
+        last_comma_index = s.rfind(",")
+        if last_comma_index == -1:
+            raise ValueError("字符串中不存在逗号")
+        tvg_name = s[last_comma_index + 1:].strip()
+    except Exception as e:
+        try:
+            tvg_name = re.search(r'tvg-name="([^"]+)"', s)
+            if tvg_name is None:
+                raise ValueError("未找到 tvg-name 属性")
+            tvg_name = tvg_name.group(1)
+        except Exception as e:
+            # 处理异常
+            tvg_name = ""
+    if tvg_name != "":
+        newStr = "#EXTINF:-1 "
+        tvg_id = re.search(r'tvg-id="([^"]+)"', s)
+        tvg_id = tvg_id.group(1) if tvg_id else ''
+        if tvg_id != "":
+            newStr += f'tvg-id="{tvg_id}" '
+        tvg_logo = re.search(r'tvg-logo="([^"]+)"', s)
+        tvg_logo = tvg_logo.group(1) if tvg_logo else ''
+        if tvg_logo == "":
+            tvg_logo = CHANNEL_LOGO.get(tvg_name)
+        if tvg_logo is not None and tvg_logo != "":
+            newStr += f'tvg-logo="{tvg_logo}" '
+            if tvg_name not in CHANNEL_LOGO:
+                CHANNEL_LOGO[tvg_name] = tvg_logo
+        group_title = re.search(r'group-title="([^"]+)"', s)
+        group_title = group_title.group(1) if group_title else ''
+        if group_title == "":
+            group_title = CHANNEL_GROUP.get(tvg_name)
+        if group_title is not None and group_title != "":
+            newStr += f'group-title="{group_title}"  '
+            if tvg_name not in CHANNEL_GROUP:
+                CHANNEL_GROUP[tvg_name] = group_title
+        newStr += f'tvg-name="{tvg_name}",{tvg_name}\n'
+        addChinaChannel(tvg_name, searchurl, newStr)
+        return newStr
+    else:
+        addChinaChannel(defalutname, searchurl, f'{s}\n')
+        return f'{s}\n'
 
 
 def generate_json_string(mapname):
@@ -1345,6 +1434,7 @@ def upload_oneKey_json(request, filename):
             json_dict = json.load(f)
         for cachekey, valuedict in json_dict.items():
             redis_add_map(cachekey, valuedict)
+            importToReloadCache(cachekey, valuedict)
         os.remove(filename)
         return jsonify({'success': True})
     except Exception as e:
@@ -1760,6 +1850,7 @@ nameArr = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', 'a', 's', 'd', 'f',
 
 
 def download_files_for_encryp_proxy(urls, redis_dict):
+    ip = init_IP()
     # 新生成的本地url
     proxy_dict = {}
     current_timestamp = int(time.time())
@@ -1787,7 +1878,7 @@ def download_files_for_encryp_proxy(urls, redis_dict):
                 with open(tmp_file, 'w'):
                     pass
                 write_content_to_file(result.encode("utf-8"), tmp_file, 10)
-                proxy_dict["http://192.168.5.1:22771/url" + tmp_file] = tmp_file
+                proxy_dict[f"http://{ip}:22771/url" + tmp_file] = tmp_file
                 i = i + 1
     return proxy_dict
 
@@ -1827,7 +1918,6 @@ def chaorongheProxies(filename):
         # # 下载 Clash 配置文件
         # with open(filename, 'wb') as f:
         #     f.write(response.content)
-        # 加密
         thread = threading.Thread(target=download_secert_file,
                                   args=(filename, "/CC.txt", REDIS_KEY_THREADS7, threadsNum7))
         thread.start()
@@ -2172,17 +2262,18 @@ def init_m3u_whitelist():
                 '樱桃小丸子': '', '柯南': '', '犬夜叉': '', '乱马': '', '童年': '', '高达': '', '三国演义': '',
                 '守护甜心': '', '开心超人': '', '开心宝贝': '', '百变小樱': '',
                 '咱们裸熊': '', '林正英': '', '游戏王': '', '吴孟达': '', '刘德华': '', '周润发': '', '洪金宝': '',
-                '黄渤': '', '咏春': '', '黑帮': '', '古墓': '','臺灣':'',
+                '黄渤': '', '咏春': '', '黑帮': '', '古墓': '', '臺灣': '',
                 '警匪': '', '功夫': '', '爱达': '', '波斯魅力台': '', '寰宇': '', '東森': '', '澳门莲花': '',
-                '天才衝衝衝': '', '有线新闻台': '', '臺視': '', '博斯': '', '龙华': '','龍華':'','愛爾達':'','民視':'','鳳凰':'',
+                '天才衝衝衝': '', '有线新闻台': '', '臺視': '', '博斯': '', '龙华': '', '龍華': '', '愛爾達': '',
+                '民視': '', '鳳凰': '',
                 '有線': '', '無綫': '', '靖天': '', '靖洋': '', '爱尔达': '', '全民最大党': '', 'cctv': '', 'NewTv': '',
-                'CCTV': '', 'SiTV': '', 'CGTN': '', 'CHC': '', '4K': '', 'TVBS': '', 'Love Nature': '', 'BesTV': '',
-                'HK': '', 'NewTV': '', 'BRTV': '', 'ELEVEN': '', 'TVB': '', 'Lifetime': '',
+                'CCTV': '', 'SiTV': '', 'CGTN': '', 'CHC': '', 'TVBS': '', 'Love Nature': '', 'BesTV': '',
+                'NewTV': '', 'BRTV': '', 'ELEVEN': '', 'TVB': '', 'Lifetime': '',
                 'GINX': '', 'Rollor': '',
                 'GlobalTrekker': '', 'LUXE TV': '', 'Fashion4K': '', 'Sport': '', 'Insight': '', 'Evenement': '',
                 'NASA': '', 'Clarity': '', 'discovery': '', 'hbo': '', 'eleven': '',
                 'NATURE': '', 'eva': ''
-            , 'TRAVELXP': '', 'DIGI': '', 'TRT': '', 'ODISEA': '', 'MUZZIK': '', 'BBC': '', 'SKY HIGH': '',
+            , 'TRAVELXP': '', 'ODISEA': '', 'MUZZIK': '', 'SKY HIGH': '',
                 'Liberty': ''
                 }
         redis_add_map(REDIS_KEY_M3U_WHITELIST, dict)
@@ -2190,7 +2281,134 @@ def init_m3u_whitelist():
     m3u_whitlist = dict.copy()
 
 
+# 获取软路由主路由ip
+def getMasterIp():
+    # 获取宿主机IP地址
+    host_ip = '192.168.5.1'
+    return host_ip
+
+
+# 外国DNS服务器获取
+def init_IP():
+    data = ip.get(REDIS_KEY_IP)
+    if data:
+        return data
+    num = redis_get(REDIS_KEY_IP)
+    if num:
+        num = num.decode()
+        if num == "":
+            num = getMasterIp()
+            redis_add(REDIS_KEY_IP, num)
+            ip[REDIS_KEY_IP] = num
+        ip[REDIS_KEY_IP] = num
+    else:
+        num = getMasterIp()
+        redis_add(REDIS_KEY_IP, num)
+        ip[REDIS_KEY_IP] = num
+    return num
+
+
+def importToReloadCache(cachekey, dict):
+    if cachekey == REDIS_KEY_GITEE_ACCESS_TOKEN:
+        global gitee_access_token
+        gitee_access_token.clear()
+        gitee_access_token = dict.copy()
+    elif cachekey == REDIS_KEY_GITEE_PATH:
+        global gitee_path
+        gitee_path.clear()
+        gitee_path = dict.copy()
+    elif cachekey == REDIS_KEY_GITEE_REPONAME:
+        global gitee_reponame
+        gitee_reponame.clear()
+        gitee_reponame = dict.copy()
+    elif cachekey == REDIS_KEY_GITEE_USERNAME:
+        global gitee_username
+        gitee_username.clear()
+        gitee_username = dict.copy()
+    elif cachekey == REDIS_KEY_THREADS7:
+        global threadsNum7
+        threadsNum7.clear()
+        threadsNum7 = dict.copy()
+    elif cachekey == REDIS_KEY_THREADS6:
+        global threadsNum6
+        threadsNum6.clear()
+        threadsNum6 = dict.copy()
+    elif cachekey == REDIS_KEY_THREADS5:
+        global threadsNum5
+        threadsNum5.clear()
+        threadsNum5 = dict.copy()
+    elif cachekey == REDIS_KEY_THREADS4:
+        global threadsNum4
+        threadsNum4.clear()
+        threadsNum4 = dict.copy()
+    elif cachekey == REDIS_KEY_THREADS3:
+        global threadsNum3
+        threadsNum3.clear()
+        threadsNum3 = dict.copy()
+    elif cachekey == REDIS_KEY_THREADS2:
+        global threadsNum2
+        threadsNum2.clear()
+        threadsNum2 = dict.copy()
+
+
 ############################################################协议区####################################################
+
+# # 查询功能开启状态
+# @app.route("/api/getSwitchstate", methods=['POST'])
+# def getSwitchstate():
+#     id = request.json['id']
+#     try:
+#         if id in function_dict:
+#             status = function_dict[id]
+#             return jsonify({"checkresult": status})
+#         else:
+#             dict = redis_get_map(REDIS_KEY_FUNCTION_DICT)
+#             status = dict[id]
+#             if status:
+#                 return jsonify({"checkresult": status})
+#             else:
+#                 dict[id] = 1
+#                 redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
+#                 return jsonify({"checkresult": 1})
+#     except:
+#         dict = redis_get_map(REDIS_KEY_FUNCTION_DICT)
+#         if id in dict:
+#             status = dict[id]
+#             function_dict[id] = int(status)
+#             return jsonify({"checkresult": status})
+#         else:
+#             dict[id] = 1
+#             redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
+#             return jsonify({"checkresult": 1})
+#
+#
+# # 切换功能开关
+# @app.route('/api/switchstate', methods=['POST'])
+# def switchFunction():
+#     state = request.json['state']
+#     id = request.json['id']
+#     function_dict[id] = int(state)
+#     redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
+#     return 'success'
+
+
+# 获取主机IP
+@app.route('/api/getIP', methods=['GET'])
+def getIP():
+    num = init_IP()
+    return jsonify({'button': num})
+
+
+# 修改主机IP
+@app.route('/api/changeIP', methods=['POST'])
+def changeIP():
+    data = request.json['selected_button']
+    if data == "":
+        data = getMasterIp()
+    redis_add(REDIS_KEY_IP, data)
+    ip[REDIS_KEY_IP] = data
+    return "数据已经保存"
+
 
 # 导出m3u白名单配置
 @app.route('/api/download_json_file11', methods=['GET'])
@@ -2458,8 +2676,8 @@ def getThreadNum():
 @app.route('/api/saveThreadS', methods=['POST'])
 def saveThreadS():
     data = request.json['selected_button']
-    redis_add(REDIS_KEY_THREADS, min(int(data), 200))
-    threadsNum[REDIS_KEY_THREADS] = min(int(data), 200)
+    redis_add(REDIS_KEY_THREADS, min(int(data), 100))
+    threadsNum[REDIS_KEY_THREADS] = min(int(data), 100)
     redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 1)
     return "数据已经保存"
 
@@ -3062,7 +3280,7 @@ def process_file():
     return send_file("tmp.m3u", as_attachment=True)
 
 
-if __name__ == '__main__':
+def main():
     init_db()
     timer_thread1 = threading.Thread(target=execute, args=('chaoronghe', 86400), daemon=True)
     timer_thread1.start()
@@ -3079,11 +3297,25 @@ if __name__ == '__main__':
     # 启动工作线程消费上传数据至gitee
     t = threading.Thread(target=worker_gitee, daemon=True)
     t.start()
-    # 启动工作线程消费上传数据至gitee
-    # t2 = threading.Thread(target=worker_remove, daemon=True)
-    # t2.start()
-
     try:
         app.run(debug=True, host='0.0.0.0', port=5000)
     finally:
         print("close")
+
+
+if __name__ == '__main__':
+    start = False
+    while True:
+        # 检查Redis连接状态
+        if not r.ping():
+            # 关闭旧连接
+            r.close()
+            # 创建新的Redis连接
+            r = redis.Redis(host='localhost', port=6379)
+            print('!!!!!!!!!!!!!!!!!!!!!!!Redis is not ready main.py\n')
+        else:
+            print('!!!!!!!!!!!!!!!!!!!!!!!Redis is ready main.py\n')
+            start = True
+            break
+    if start:
+        main()
