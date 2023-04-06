@@ -10,8 +10,6 @@
 
 #### 一、host模式:推荐使用，可以减少一层路由，利好dns分流器
 
-## arm64:
-
 ## 普通:一般用下面的就可以
 
 docker run -d --name m3usubscriber -v /mnt/redis/redis.conf:/etc/redis/redis.conf --restart unless-stopped --net=host -d jkld310/m3usubscriber:latest
