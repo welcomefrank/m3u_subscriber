@@ -180,7 +180,7 @@ REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG = "updateextradnsserverflag"
 REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG = "updateextradnsportflag"
 
 REDIS_KEY_THREADS = "threadsnum"
-threadsNum = {REDIS_KEY_THREADS: 100}
+threadsNum = {REDIS_KEY_THREADS: 10}
 
 REDIS_KEY_CHINA_DNS_SERVER = "chinadnsserver"
 chinadnsserver = {REDIS_KEY_CHINA_DNS_SERVER: ""}
@@ -2676,8 +2676,8 @@ def getThreadNum():
 @app.route('/api/saveThreadS', methods=['POST'])
 def saveThreadS():
     data = request.json['selected_button']
-    redis_add(REDIS_KEY_THREADS, min(int(data), 100))
-    threadsNum[REDIS_KEY_THREADS] = min(int(data), 100)
+    redis_add(REDIS_KEY_THREADS, min(int(data), 10))
+    threadsNum[REDIS_KEY_THREADS] = min(int(data), 10)
     redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 1)
     return "数据已经保存"
 
