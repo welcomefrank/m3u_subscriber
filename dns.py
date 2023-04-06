@@ -440,7 +440,7 @@ def dns_query(data):
     # 向DNS服务器发送请求
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.settimeout(58)
+        sock.settimeout(28)
         sock.sendto(data, (dns_server, port))
         # 接收DNS服务器的响应
         response, addr = sock.recvfrom(4096)
@@ -475,13 +475,13 @@ def main():
     timer_thread1.start()
     try:
         # 创建一个线程池对象
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             # 创建一个UDP socket
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 sock.bind(('0.0.0.0', 22770))
                 # 设置等待时长为30s
-                sock.settimeout(60)
+                sock.settimeout(30)
                 # 开始接收客户端的DNS请求
                 try:
                     while True:

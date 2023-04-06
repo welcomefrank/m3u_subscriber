@@ -10,7 +10,9 @@ COPY nginx.conf /etc/nginx/nginx.conf
 # 将Python依赖包复制到容器中
 COPY requirements.txt /app/requirements.txt
 RUN apt-get update && \
-    apt-get install -yqq --no-install-recommends python3-pip redis-server && \
+    apt-get install -yqq --no-install-recommends python3-pip redis-server tzdata && \
+    ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Asia/Shanghai" > /etc/timezone && \
     pip3 install --no-cache-dir -r /app/requirements.txt && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
