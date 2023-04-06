@@ -39,7 +39,6 @@ ipCheckDomian = ["ip.skk.moe", "ip.swcdn.skk.moe", "api.ipify.org",
 # 没有命中则white_list_nameserver_policy，查到则更新white_list_tmp_policy，white_list_tmp_cache，再转发5336
 # 没有命中则更新unkown_list_tmp_cache，转发给127.0.0.1#5335
 
-HOST_IP = "0.0.0.0"
 
 # 并发检测白名单黑名单线程数主键
 REDIS_KEY_THREADS = "threadsnum"
