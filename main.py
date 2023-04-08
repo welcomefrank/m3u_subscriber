@@ -10,7 +10,7 @@ import math
 import os
 import queue
 import re
-import subprocess
+# import subprocess
 import threading
 from concurrent.futures import ThreadPoolExecutor
 import aiohttp
@@ -74,6 +74,10 @@ REDIS_KEY_PROXIES_SERVER_CHOSEN = "proxiesserverchosen"
 REDIS_KEY_M3U_WHITELIST = "m3uwhitelist"
 # m3u黑名单:关键字,
 REDIS_KEY_M3U_BLACKLIST = "m3ublacklist"
+# 简易DNS域名白名单
+REDIS_KEY_DNS_SIMPLE_WHITELIST = "dnssimplewhitelist"
+# 简易DNS域名黑名单
+REDIS_KEY_DNS_SIMPLE_BLACKLIST = "dnssimpleblacklist"
 
 # m3u密码
 REDIS_KEY_THREADS2 = "threadsnum2"
@@ -128,7 +132,7 @@ allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_
               REDIS_KEY_PROXIES_SERVER_CHOSEN, REDIS_KEY_GITEE_USERNAME, REDIS_KEY_THREADS2, REDIS_KEY_THREADS3,
               REDIS_KEY_THREADS4, REDIS_KEY_GITEE_REPONAME, REDIS_KEY_GITEE_PATH, REDIS_KEY_GITEE_ACCESS_TOKEN,
               REDIS_KEY_THREADS5, REDIS_KEY_THREADS6, REDIS_KEY_THREADS7, REDIS_KEY_M3U_WHITELIST,
-              REDIS_KEY_M3U_BLACKLIST]
+              REDIS_KEY_M3U_BLACKLIST, REDIS_KEY_DNS_SIMPLE_WHITELIST, REDIS_KEY_DNS_SIMPLE_BLACKLIST]
 
 # redis_add_map(REDIS_KEY_GITEE_ACCOUNT, tmp_dict)
 
@@ -178,9 +182,11 @@ REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG = "updatechinadnsserverflag"
 REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG = "updatechinadnsportflag"
 REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG = "updateextradnsserverflag"
 REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG = "updateextradnsportflag"
+REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG = "updatesimplewhitelistflag"
+REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG = "updatesimpleblacklistflag"
 
 REDIS_KEY_THREADS = "threadsnum"
-threadsNum = {REDIS_KEY_THREADS: 10}
+threadsNum = {REDIS_KEY_THREADS: 1000}
 
 REDIS_KEY_CHINA_DNS_SERVER = "chinadnsserver"
 chinadnsserver = {REDIS_KEY_CHINA_DNS_SERVER: ""}
@@ -193,6 +199,12 @@ extradnsserver = {REDIS_KEY_EXTRA_DNS_SERVER: ""}
 
 REDIS_KEY_EXTRA_DNS_PORT = "extradnsport"
 extradnsport = {REDIS_KEY_EXTRA_DNS_PORT: 7874}
+
+REDIS_KEY_DNS_QUERY_NUM = "dnsquerynum"
+dnsquerynum = {REDIS_KEY_DNS_QUERY_NUM: 150}
+
+REDIS_KEY_DNS_TIMEOUT = "dnstimeout"
+dnstimeout = {REDIS_KEY_DNS_TIMEOUT: 20}
 
 REDIS_KEY_IP = "ip"
 ip = {REDIS_KEY_IP: ""}
@@ -461,7 +473,7 @@ def writeOpenclashNameServerPolicy():
         # 更新redis数据库白名单
         redis_add_map(REDIS_KEY_WHITE_DOMAINS, white_list_nameserver_policy)
         # 通知dns服务器更新内存
-        redis_add(REDIS_KEY_UPDATE_WHITE_LIST_FLAG, 1)
+        # redis_add(REDIS_KEY_UPDATE_WHITE_LIST_FLAG, 1)
         distribute_data(white_list_nameserver_policy, "/whiteList.txt", 10)
         white_list_nameserver_policy.clear()
         # 白名单加密
@@ -947,17 +959,22 @@ def process_data_domain_openclash_fallbackfilter(data, index, step, my_dict):
             my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
         # 判断是不是域名
         elif re.match(domain_regex, line):
-            my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+            # 全部使用通配符+.可以匹配所有子域名包括自身，适合openclash-fallback-filter配置外国域名组
+            # my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
             if not lineEncoder.startswith(b"www"):
+                # 自用dns分流器外国域名，只取最高父域名
                 updateBlackList(line)
                 my_dict[
                     OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "+." + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
             else:
                 updateBlackList((lineEncoder.substring(4)).decode())
+                my_dict[
+                    OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "+." + (
+                        lineEncoder.substring(4)).decode() + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
         # 判断是不是*.域名
         elif re.match(wildcard_regex, line):
             updateBlackList((lineEncoder.substring(2)).decode())
-            my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line[2:] + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+            # my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line[2:] + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
             my_dict[
                 OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "+." + line[2:] + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
         elif lineEncoder.startswith(b"."):
@@ -1040,21 +1057,45 @@ def process_data_domain_dnsmasq(data, index, step, my_dict):
         line = data[i].strip()
         if not line:
             continue
-        # 判断是不是域名或者*.域名
-        if re.match(domain_regex, line) or re.match(wildcard_regex, line):
-            my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
-            if re.match(domain_regex, line):
-                updateOpenclashNameServerPolicy(line)
+        # 普通域名
+        if re.match(domain_regex, line):
             lineEncoder = line.encode()
-            if lineEncoder.startswith((b"*.", b"+.")):
-                updateOpenclashNameServerPolicy((lineEncoder.substring(2)).decode())
+            # www域名
             if lineEncoder.startswith(b"www."):
+                # 自用dns分流器使用的父类域名白名单
                 updateOpenclashNameServerPolicy((lineEncoder.substring(4)).decode())
-            if not lineEncoder.startswith((b"www", b".", b"*")):
-                my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + "*." + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
-            if lineEncoder.startswith(b"."):
-                updateOpenclashNameServerPolicy((lineEncoder.substring(1)).encode())
-                my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + "*" + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
+                # openclash-dnsmasq域名全部使用通配符+.
+                my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + '+.' + (
+                    lineEncoder.substring(4)).decode() + BLACKLIST_DNSMASQ_FORMATION_right] = ""
+            else:
+                updateOpenclashNameServerPolicy(line)
+                my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + '+.' + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
+        # *.域名
+        elif re.match(wildcard_regex, line):
+            lineEncoder = line.encode()
+            updateOpenclashNameServerPolicy((lineEncoder.substring(2)).decode())
+            my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + '+' + (
+                lineEncoder.substring(1)).decode() + BLACKLIST_DNSMASQ_FORMATION_right] = ""
+        # +.域名
+        elif re.match(wildcard_regex2, line):
+            lineEncoder = line.encode()
+            updateOpenclashNameServerPolicy((lineEncoder.substring(2)).decode())
+            my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
+        # # 判断是不是域名或者*.域名
+        # if re.match(domain_regex, line) or re.match(wildcard_regex, line):
+        #     my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
+        #     if re.match(domain_regex, line):
+        #         updateOpenclashNameServerPolicy(line)
+        #     lineEncoder = line.encode()
+        #     if lineEncoder.startswith((b"*.", b"+.")):
+        #         updateOpenclashNameServerPolicy((lineEncoder.substring(2)).decode())
+        #     if lineEncoder.startswith(b"www."):
+        #         updateOpenclashNameServerPolicy((lineEncoder.substring(4)).decode())
+        #     if not lineEncoder.startswith((b"www", b".", b"*")):
+        #         my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + "*." + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
+        #     if lineEncoder.startswith(b"."):
+        #         updateOpenclashNameServerPolicy((lineEncoder.substring(1)).encode())
+        #         my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + "*" + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
 
 
 def updateOpenclashNameServerPolicy(url):
@@ -2000,16 +2041,56 @@ def init_threads_num():
     if num:
         num = int(num.decode())
         if num == 0:
-            num = 100
+            num = 1000
             redis_add(REDIS_KEY_THREADS, num)
             threadsNum[REDIS_KEY_THREADS] = num
             redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 1)
         threadsNum[REDIS_KEY_THREADS] = num
     else:
-        num = 100
+        num = 1000
         redis_add(REDIS_KEY_THREADS, num)
         threadsNum[REDIS_KEY_THREADS] = num
         redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 1)
+    return num
+
+
+# dns并发查询数获取
+def init_dns_timeout():
+    data = dnstimeout.get(REDIS_KEY_DNS_TIMEOUT)
+    if data and data > 0:
+        return data
+    num = redis_get(REDIS_KEY_DNS_TIMEOUT)
+    if num:
+        num = int(num.decode())
+        if num == 0:
+            num = 20
+            redis_add(REDIS_KEY_DNS_TIMEOUT, num)
+            dnstimeout[REDIS_KEY_DNS_TIMEOUT] = num
+        dnstimeout[REDIS_KEY_DNS_TIMEOUT] = num
+    else:
+        num = 20
+        redis_add(REDIS_KEY_DNS_TIMEOUT, num)
+        dnstimeout[REDIS_KEY_DNS_TIMEOUT] = num
+    return num
+
+
+# dns并发查询数获取
+def init_dns_query_num():
+    data = dnsquerynum.get(REDIS_KEY_DNS_QUERY_NUM)
+    if data and data > 0:
+        return data
+    num = redis_get(REDIS_KEY_DNS_QUERY_NUM)
+    if num:
+        num = int(num.decode())
+        if num == 0:
+            num = 150
+            redis_add(REDIS_KEY_DNS_QUERY_NUM, num)
+            dnsquerynum[REDIS_KEY_DNS_QUERY_NUM] = num
+        dnsquerynum[REDIS_KEY_DNS_QUERY_NUM] = num
+    else:
+        num = 150
+        redis_add(REDIS_KEY_DNS_QUERY_NUM, num)
+        dnsquerynum[REDIS_KEY_DNS_QUERY_NUM] = num
     return num
 
 
@@ -2351,6 +2432,16 @@ def importToReloadCache(cachekey, dict):
         threadsNum2 = dict.copy()
 
 
+# 提取一级域名
+def stupidThink(domain_name):
+    sub_domains = ['.'.join(domain_name.split('.')[i:]) for i in range(len(domain_name.split('.')) - 1)]
+    return sub_domains[-1]
+    # sub_domains = []
+    # for i in range(len(domain_name.split('.')) - 1):
+    #     sub_domains.append('.'.join(domain_name.split('.')[i:]))
+    # return sub_domains[len(sub_domains) - 1]
+
+
 ############################################################协议区####################################################
 
 # # 查询功能开启状态
@@ -2391,6 +2482,133 @@ def importToReloadCache(cachekey, dict):
 #     redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
 #     return 'success'
 
+# 修改DNS并发查询数量
+@app.route('/api/savetimeout', methods=['POST'])
+def savetimeout():
+    data = request.json['selected_button']
+    redis_add(REDIS_KEY_DNS_TIMEOUT, int(data))
+    dnstimeout[REDIS_KEY_DNS_TIMEOUT] = int(data)
+    return "数据已经保存"
+
+
+# DNS并发查询数
+@app.route('/api/gettimeout', methods=['GET'])
+def gettimeout():
+    num = init_dns_timeout()
+    return jsonify({'button': num})
+
+
+# 修改DNS并发查询数量
+@app.route('/api/savequeryThreadNum', methods=['POST'])
+def savequeryThreadNum():
+    data = request.json['selected_button']
+    redis_add(REDIS_KEY_DNS_QUERY_NUM, int(data))
+    dnsquerynum[REDIS_KEY_DNS_QUERY_NUM] = int(data)
+    return "数据已经保存"
+
+
+# 获取DNS并发查询数量
+@app.route('/api/getQueryThreadNum', methods=['GET'])
+def getQueryThreadNum():
+    num = init_dns_query_num()
+    return jsonify({'button': num})
+
+
+# 删除全部简易DNS黑名单
+@app.route('/api/removem3ulinks13', methods=['GET'])
+def removem3ulinks13():
+    redis_del_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST)
+    redis_add(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG, 1)
+    return "success"
+
+
+# 导出简易DNS黑名单配置
+@app.route('/api/download_json_file13', methods=['GET'])
+def download_json_file13():
+    return download_json_file_base(REDIS_KEY_DNS_SIMPLE_BLACKLIST, "/app/temp_dnssimpleblacklist.json",
+                                   "temp_dnssimpleblacklist.json")
+
+
+# 删除DNS简易黑名单
+@app.route('/api/deletewm3u13', methods=['POST'])
+def deletewm3u13():
+    redis_add(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG, 1)
+    return dellist(request, REDIS_KEY_DNS_SIMPLE_BLACKLIST)
+
+
+# 添加DNS简易黑名单
+@app.route('/api/addnewm3u13', methods=['POST'])
+def addnewm3u13():
+    redis_add(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG, 1)
+    # 获取 HTML 页面发送的 POST 请求参数
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    name = stupidThink(name)
+    my_dict = {addurl: name}
+    redis_add_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST, my_dict)
+    return jsonify({'addresult': "add success"})
+
+
+# 拉取全部DNS简易黑名单
+@app.route('/api/getall13', methods=['GET'])
+def getall13():
+    return jsonify(redis_get_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST))
+
+
+# 上传简易DNS黑名单json文件
+@app.route('/api/upload_json_file13', methods=['POST'])
+def upload_json_file13():
+    redis_add(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG, 1)
+    return upload_json(request, REDIS_KEY_DNS_SIMPLE_BLACKLIST, "/tmp_data13.json")
+
+
+# 删除全部简易DNS白名单
+@app.route('/api/removem3ulinks12', methods=['GET'])
+def removem3ulinks12():
+    redis_del_map(REDIS_KEY_DNS_SIMPLE_WHITELIST)
+    redis_add(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG, 1)
+    return "success"
+
+
+# 导出简易DNS白名单配置
+@app.route('/api/download_json_file12', methods=['GET'])
+def download_json_file12():
+    return download_json_file_base(REDIS_KEY_DNS_SIMPLE_WHITELIST, "/app/temp_dnssimplewhitelist.json",
+                                   "temp_dnssimplewhitelist.json")
+
+
+# 删除DNS简易白名单
+@app.route('/api/deletewm3u12', methods=['POST'])
+def deletewm3u12():
+    redis_add(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG, 1)
+    return dellist(request, REDIS_KEY_DNS_SIMPLE_WHITELIST)
+
+
+# 添加DNS简易白名单
+@app.route('/api/addnewm3u12', methods=['POST'])
+def addnewm3u12():
+    redis_add(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG, 1)
+    # 获取 HTML 页面发送的 POST 请求参数
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    name = stupidThink(name)
+    my_dict = {addurl: name}
+    redis_add_map(REDIS_KEY_DNS_SIMPLE_WHITELIST, my_dict)
+    return jsonify({'addresult': "add success"})
+
+
+# 拉取全部DNS简易白名单
+@app.route('/api/getall12', methods=['GET'])
+def getall12():
+    return jsonify(redis_get_map(REDIS_KEY_DNS_SIMPLE_WHITELIST))
+
+
+# 上传简易DNS白名单json文件
+@app.route('/api/upload_json_file12', methods=['POST'])
+def upload_json_file12():
+    redis_add(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG, 1)
+    return upload_json(request, REDIS_KEY_DNS_SIMPLE_WHITELIST, "/tmp_data12.json")
+
 
 # 获取主机IP
 @app.route('/api/getIP', methods=['GET'])
@@ -2420,8 +2638,17 @@ def download_json_file11():
 # 删除M3U白名单
 @app.route('/api/deletewm3u11', methods=['POST'])
 def deletewm3u11():
-    m3u_whitlist.clear()
+    deleteurl = request.json.get('deleteurl')
+    del m3u_whitlist[deleteurl]
     return dellist(request, REDIS_KEY_M3U_WHITELIST)
+
+
+# 删除全部M3U白名单
+@app.route('/api/removem3ulinks11', methods=['GET'])
+def removem3ulinks11():
+    m3u_whitlist.clear()
+    redis_del_map(REDIS_KEY_M3U_WHITELIST)
+    return "success"
 
 
 # 添加M3U白名单
@@ -2676,8 +2903,8 @@ def getThreadNum():
 @app.route('/api/saveThreadS', methods=['POST'])
 def saveThreadS():
     data = request.json['selected_button']
-    redis_add(REDIS_KEY_THREADS, min(int(data), 10))
-    threadsNum[REDIS_KEY_THREADS] = min(int(data), 10)
+    redis_add(REDIS_KEY_THREADS, min(int(data), 1000))
+    threadsNum[REDIS_KEY_THREADS] = min(int(data), 1000)
     redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 1)
     return "数据已经保存"
 

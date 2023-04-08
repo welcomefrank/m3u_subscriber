@@ -280,6 +280,18 @@
         <input type="radio" name="page" id="page17">
         <span>主机ip</span>
     </label>
+    <label>
+        <input type="radio" name="page" id="page18">
+        <span>功能开关</span>
+    </label>
+    <label>
+        <input type="radio" name="page" id="page19">
+        <span>简易DNS分流白名单</span>
+    </label>
+    <label>
+        <input type="radio" name="page" id="page20">
+        <span>简易DNS分流黑名单</span>
+    </label>
 </div>
 <div id="choice">
     <div id="page1" style="display: block;">
@@ -705,11 +717,26 @@
     </div>
     <div id="page13" style="display: none;">
         <h1>DNS分流器,监听22770端口</h1>
+        <h3>修改了下面参数需要重启容器使其配置生效</h3>
         <div style="float: left;width: 70%">
-            <h3>设置分流并发线程,分流服务器</h3>
+            <h3>设置分流并发线程,分流服务器,端口,超时</h3>
         </div>
         <div style="display: flex;width: 100%;">
-            黑白名单并发检测线程数
+            DNS分流并发查询数(上限1000)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="queryThreadNum" class="stubboninput"/>
+            <button id="queryThreadNumButton" onclick="saveQueryThreadNum()" class="stubbonsave">保存</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            通信超时时间(单位:秒)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="timeout" class="stubboninput"/>
+            <button id="timeoutButton" onclick="saveTimeout()" class="stubbonsave">保存</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            DNS分流单个查询并发检测黑白名单数据线程数(上限1000)
         </div>
         <div style="width:100%">
             <input type="text" id="threads" class="stubboninput"/>
@@ -963,6 +990,68 @@
             </div>
         </div>
     </div>
+    <div id="page19" style="display: none;">
+        <h1>简易DNS分流白名单</h1>
+        <div style="float: left;width: 70%">
+            <h3>填写个人日常使用的白名单域名一级域名，比如:bilibili.com，bilivideo.com</h3>
+            <h3>这里的数据不建议特别多,根据个人网络冲浪习惯设置</h3>
+            <h3>该规则优先于DNS白名单订阅的全部域名规则</h3>
+            <h3>上传文件导入合并简易DNS分流白名单</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn12" class="uploadjsonbtn" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row12" class="addNewSubscriber" style="width:100%">新增关键字</button>
+            </div>
+            <div>
+                <button id="download-json-btn12" class="button download-json-btn" style="width: 100%">导出配置备份</button>
+            </div>
+            <button id="removem3ulinks12" class="button removeallSubscriber" onclick="removem3ulinks12()">删除全部域名
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">简易白名单域名:一、二级域名
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table12" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="page20" style="display: none;">
+        <h1>简易DNS分流黑名单</h1>
+        <div style="float: left;width: 70%">
+            <h3>填写个人日常使用的黑名单域名一级域名，比如:youtube.com，twitter.com</h3>
+            <h3>这里的数据不建议特别多,根据个人网络冲浪习惯设置</h3>
+            <h3>该规则优先于DNS黑名单订阅的全部域名规则</h3>
+            <h3>上传文件导入合并简易DNS分流黑名单</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn13" class="uploadjsonbtn" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row13" class="addNewSubscriber" style="width:100%">新增关键字</button>
+            </div>
+            <div>
+                <button id="download-json-btn13" class="button download-json-btn" style="width: 100%">导出配置备份</button>
+            </div>
+            <button id="removem3ulinks13" class="button removeallSubscriber" onclick="removem3ulinks13()">删除全部域名
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">简易黑名单域名:一、二级域名
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table13" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -1050,11 +1139,6 @@
     // 中国DNS服务器缓存
     var chinaDnsServercache = sessionStorage.getItem('chinaDnsServer');
 
-    // 输入框显示中国DNS端口
-    const chinaDnsPort = document.getElementById('chinaDnsPort');
-    // 中国DNS端口缓存
-    var chinaDnsPortcache = sessionStorage.getItem('chinaDnsPort');
-
     // 输入框显示外国DNS服务器
     const extraDnsServer = document.getElementById('extraDnsServer');
     // 外国DNS服务器缓存
@@ -1128,6 +1212,31 @@
     // 获取所有具有类名 "urllink" 的 h3 元素
     var elements = document.getElementsByClassName("urllink");
 
+    const fileInput12 = document.getElementById('upload-json-btn12');
+    const addRowButton12 = document.getElementById('add-row12');
+    const inputTable12 = document.getElementById('input-table12');
+    const downloadBtn12 = document.getElementById('download-json-btn12');
+
+    const fileInput13 = document.getElementById('upload-json-btn13');
+    const addRowButton13 = document.getElementById('add-row13');
+    const inputTable13 = document.getElementById('input-table13');
+    const downloadBtn13 = document.getElementById('download-json-btn13');
+
+    // 输入框显示中国DNS端口
+    const chinaDnsPort = document.getElementById('chinaDnsPort');
+    // 中国DNS端口缓存
+    var chinaDnsPortcache = sessionStorage.getItem('chinaDnsPort');
+
+    // 输入框显示dns并发查询数
+    const queryThreadNum = document.getElementById('queryThreadNum');
+    // dns并发查询数缓存
+    var queryThreadNumcache = sessionStorage.getItem('queryThreadNum');
+
+    // 输入框显示通信超时时间
+    const timeout = document.getElementById('timeout');
+    // 通信超时时间缓存
+    var timeoutcache = sessionStorage.getItem('timeout');
+
     function reloadFunctionOpenButton(id) {
         var switchButton = document.getElementById(id);
         const xhr = new XMLHttpRequest();
@@ -1148,7 +1257,7 @@
                         switchButton.textContent = "已关闭";
                     }
                 } else {
-                    alert('获取功能开启状态失败：' + xhr.statusText);
+                    //alert('获取功能开启状态失败：' + xhr.statusText);
                 }
             }
         };
@@ -1305,6 +1414,16 @@
         saveDnsSetting('/api/savechinaDnsPort','chinaDnsPort',chinaDnsPort)
     }
 
+    //修改DNS并发查询数
+    function saveQueryThreadNum() {
+        saveDnsSetting('/api/savequeryThreadNum','queryThreadNum',queryThreadNum)
+    }
+
+    //修改DNS通信时间
+    function saveTimeout() {
+        saveDnsSetting('/api/savetimeout','timeout',timeout)
+    }
+
     //修改主机IP
     function changeIP() {
         saveDnsSetting('/api/changeIP','iptext',iptext)
@@ -1316,6 +1435,16 @@
     //中国DNS端口加载
     function reloadChinaDnsPort() {
         reloadDnsSetting(chinaDnsPortcache,chinaDnsPort,'/api/getChinaDnsPort','chinaDnsPort')
+    }
+
+    //DNS并发查询数
+    function reloadQueryThreadNum() {
+        reloadDnsSetting(queryThreadNumcache,queryThreadNum,'/api/getQueryThreadNum','queryThreadNum')
+    }
+
+    //通信超时时间查询
+    function reloadTimeout() {
+        reloadDnsSetting(timeoutcache,timeout,'/api/gettimeout','timeout')
     }
 
     //修改中国DNS服务器
@@ -1567,6 +1696,16 @@
         reloadBase('/api/getall11',  inputTable11)
     }
 
+    //DNS简易白名单-从数据库拉取关键字列表数据
+    function reloadDNSSIMPLEWhiteList() {
+        reloadBase('/api/getall12',  inputTable12)
+    }
+
+    //DNS简易黑名单-从数据库拉取关键字列表数据
+    function reloadDNSSIMPLEBlackList() {
+        reloadBase('/api/getall13',  inputTable13)
+    }
+
     //超融合ipv6-从数据库拉取订阅列表数据
     function reloadIpv6ListLink() {
         reloadBase('/api/getall5',   inputTable5)
@@ -1688,6 +1827,16 @@
         saveInputValuebase(inputValue, name, '/api/addnewm3u11')
     }
 
+    //简易DNS白名单配置
+    function saveInputValue12(inputValue, name) {
+        saveInputValuebase(inputValue, name, '/api/addnewm3u12')
+    }
+
+    //简易DNS黑名单配置
+    function saveInputValue13(inputValue, name) {
+        saveInputValuebase(inputValue, name, '/api/addnewm3u13')
+    }
+
     //永久列表-保留输入行数据
     function savem3uInputValue(url, info) {
         saveInputValuebase(url, info, '/api/addm3udata')
@@ -1759,6 +1908,16 @@
         deleteInputRowBase(row, inputValue, '/api/deletewm3u11')
     }
 
+    //删除DNS简易白名单
+    function deleteInputRow12(row, inputValue) {
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u12')
+    }
+
+    //删除DNS简易黑名单
+    function deleteInputRow13(row, inputValue) {
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u13')
+    }
+
     //永久列表-删除输入行
     function deleteM3uInputRow(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletem3udata')
@@ -1801,6 +1960,10 @@
         return window[methodName].apply(null, params)
     }
 
+    //简易DNS黑名单
+    inputableAddEventListener(inputTable13,  'saveInputValue13', 'deleteInputRow13')
+    //简易DNS白名单
+    inputableAddEventListener(inputTable12,  'saveInputValue12', 'deleteInputRow12')
     //m3u白名单-关键字列表里按钮监听
     inputableAddEventListener(inputTable11,  'saveInputValue11', 'deleteInputRow11')
     //节点后端服务器订阅-订阅列表里按钮监听
@@ -1846,6 +2009,10 @@
         });
     }
 
+    //DNS简易黑名单-导入json配置
+    fileInputAddEventListenerBase(fileInput13, '/api/upload_json_file13')
+    //DNS简易白名单-导入json配置
+    fileInputAddEventListenerBase(fileInput12, '/api/upload_json_file12')
     //m3u白名单-关键字-导入json配置
     fileInputAddEventListenerBase(fileInput11, '/api/upload_json_file11')
     //节点订阅-后端地址配置订阅-导入json配置
@@ -1919,6 +2086,21 @@
     // 超融合节点-删除全部后端服务器配置文件
     function removem3ulinks10() {
         removelinksBase('/api/removem3ulinks10')
+    }
+
+    // m3u白名单-删除全部配置文件
+    function removem3ulinks11() {
+        removelinksBase('/api/removem3ulinks11')
+    }
+
+    //简易DNS白名单-删除全部配置文件
+    function removem3ulinks12() {
+        removelinksBase('/api/removem3ulinks12')
+    }
+
+    //简易DNS黑名单-删除全部配置文件
+    function removem3ulinks13() {
+        removelinksBase('/api/removem3ulinks13')
     }
 
     // 超融合节点订阅-删除全部网络订阅配置文件
@@ -2130,6 +2312,8 @@
             reloadExtraDnsServer()
             reloadExtraDnsPort()
             reloadChinaDnsPort()
+            reloadQueryThreadNum()
+            reloadTimeout()
         } else if (selectedPage === pages[13].id) {
             reloadThreadNum2()
             reloadChinaDnsServer2()
@@ -2144,30 +2328,11 @@
             reloadGiteeAcessToken()
         } else if (selectedPage === pages[15].id) {
             reloadM3uWhiteList()
-        }else if (selectedPage === pages[17].id) {
-            reloadFunctionOpenButton('switch')
-            reloadFunctionOpenButton('switch2')
-            reloadFunctionOpenButton('switch3')
-            reloadFunctionOpenButton('switch4')
-            reloadFunctionOpenButton('switch5')
-            reloadFunctionOpenButton('switch6')
-            reloadFunctionOpenButton('switch7')
-            reloadFunctionOpenButton('switch8')
-            reloadFunctionOpenButton('switch9')
-            reloadFunctionOpenButton('switch10')
-            reloadFunctionOpenButton('switch11')
-            reloadFunctionOpenButton('switch12')
-            reloadFunctionOpenButton('switch13')
-            reloadFunctionOpenButton('switch14')
-            reloadFunctionOpenButton('switch15')
-            reloadFunctionOpenButton('switch16')
-            reloadFunctionOpenButton('switch17')
-            reloadFunctionOpenButton('switch18')
-            reloadFunctionOpenButton('switch19')
-            reloadFunctionOpenButton('switch20')
-            reloadFunctionOpenButton('switch21')
-            reloadFunctionOpenButton('switch22')
-            reloadFunctionOpenButton('switch23')
+        }else if (selectedPage === pages[18].id) {
+            reloadDNSSIMPLEWhiteList()
+        }
+        else if (selectedPage === pages[19].id) {
+            reloadDNSSIMPLEBlackList()
         }
         if (selectedPage !== pages[1].id) {
             window.removeEventListener('scroll', handleScroll);
@@ -2209,6 +2374,10 @@
         });
     }
 
+    // DNS简易黑名单-导出订阅json配置
+    downloadBtnAddEventListenerBase(downloadBtn13, '/api/download_json_file13', 'temp_dnssimpleblacklist.json')
+    // DNS简易白名单-导出订阅json配置
+    downloadBtnAddEventListenerBase(downloadBtn12, '/api/download_json_file12', 'temp_dnssimplewhitelist.json')
     // M3U白名单-导出订阅json配置
     downloadBtnAddEventListenerBase(downloadBtn11, '/api/download_json_file11', 'temp_m3uwhitelist.json')
     // 超融合节点后端服务器订阅-导出订阅json配置
@@ -2253,6 +2422,10 @@
         });
     }
 
+    //DNS简易黑名单-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton13, inputTable13)
+    //DNS简易白名单-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton12, inputTable12)
     //M3U白名单-关键字-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton11, inputTable11)
     //节点订阅-后端地址配置-只添加一行列表，不存储数据
