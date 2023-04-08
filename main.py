@@ -2543,7 +2543,7 @@ def addnewm3u13():
     # 获取 HTML 页面发送的 POST 请求参数
     addurl = request.json.get('addurl')
     name = request.json.get('name')
-    name = stupidThink(name)
+    addurl = stupidThink(addurl)
     my_dict = {addurl: name}
     redis_add_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST, my_dict)
     return jsonify({'addresult': "add success"})
@@ -2591,7 +2591,7 @@ def addnewm3u12():
     # 获取 HTML 页面发送的 POST 请求参数
     addurl = request.json.get('addurl')
     name = request.json.get('name')
-    name = stupidThink(name)
+    addurl = stupidThink(addurl)
     my_dict = {addurl: name}
     redis_add_map(REDIS_KEY_DNS_SIMPLE_WHITELIST, my_dict)
     return jsonify({'addresult': "add success"})
