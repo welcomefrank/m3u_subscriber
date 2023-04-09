@@ -2,6 +2,7 @@ import abc
 import asyncio
 import base64
 import secrets
+import socket
 import string
 import concurrent
 import ipaddress
@@ -10,6 +11,7 @@ import math
 import os
 import queue
 import re
+import struct
 # import subprocess
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -78,6 +80,11 @@ REDIS_KEY_M3U_BLACKLIST = "m3ublacklist"
 REDIS_KEY_DNS_SIMPLE_WHITELIST = "dnssimplewhitelist"
 # 简易DNS域名黑名单
 REDIS_KEY_DNS_SIMPLE_BLACKLIST = "dnssimpleblacklist"
+# 白名单中国大陆IPV4下载数据转换成的整数数组
+REDIS_KEY_WHITELIST_IPV4_DATA_INT_RANGE = "whitelistipv4dataintrange"
+
+# 超融合合并ipv4数据转换成的整数数组字典数据
+ipv4_int_range = {}
 
 # m3u密码
 REDIS_KEY_THREADS2 = "threadsnum2"
@@ -121,6 +128,20 @@ gitee_path = {REDIS_KEY_GITEE_PATH: ""}
 REDIS_KEY_GITEE_ACCESS_TOKEN = "redisgiteeaccestoken"
 gitee_access_token = {REDIS_KEY_GITEE_ACCESS_TOKEN: ""}
 
+REDIS_KEY_FUNCTION_DICT = "functiondict"
+# 功能开关字典
+function_dict = {}
+
+# 白名单三段字典:顶级域名,一级域名长度,一级域名首位,一级域名数据
+REDIS_KEY_WHITELIST_DATA_SP = "whitelistdatasp"
+# 白名单三段字典:顶级域名,一级域名长度,一级域名首位,一级域名数据
+whitelistSpData = {}
+
+# 黑名单三段字典:顶级域名,一级域名长度,一级域名首位,一级域名数据
+REDIS_KEY_BLACKLIST_DATA_SP = "blacklistdatasp"
+# 黑名单三段字典:顶级域名,一级域名长度,一级域名首位,一级域名数据
+blacklistSpData = {}
+
 # 有缓存的redis备份字典key
 # cachedictkey = [REDIS_KEY_GITEE_ACCESS_TOKEN, REDIS_KEY_GITEE_PATH, REDIS_KEY_GITEE_REPONAME, REDIS_KEY_GITEE_USERNAME,
 #                 REDIS_KEY_THREADS7, REDIS_KEY_THREADS6, REDIS_KEY_THREADS5, REDIS_KEY_THREADS4, REDIS_KEY_THREADS3,
@@ -132,7 +153,8 @@ allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_
               REDIS_KEY_PROXIES_SERVER_CHOSEN, REDIS_KEY_GITEE_USERNAME, REDIS_KEY_THREADS2, REDIS_KEY_THREADS3,
               REDIS_KEY_THREADS4, REDIS_KEY_GITEE_REPONAME, REDIS_KEY_GITEE_PATH, REDIS_KEY_GITEE_ACCESS_TOKEN,
               REDIS_KEY_THREADS5, REDIS_KEY_THREADS6, REDIS_KEY_THREADS7, REDIS_KEY_M3U_WHITELIST,
-              REDIS_KEY_M3U_BLACKLIST, REDIS_KEY_DNS_SIMPLE_WHITELIST, REDIS_KEY_DNS_SIMPLE_BLACKLIST]
+              REDIS_KEY_M3U_BLACKLIST, REDIS_KEY_DNS_SIMPLE_WHITELIST, REDIS_KEY_DNS_SIMPLE_BLACKLIST,
+              REDIS_KEY_FUNCTION_DICT, REDIS_KEY_WHITELIST_IPV4_DATA_INT_RANGE]
 
 # redis_add_map(REDIS_KEY_GITEE_ACCOUNT, tmp_dict)
 
@@ -184,9 +206,11 @@ REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG = "updateextradnsserverflag"
 REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG = "updateextradnsportflag"
 REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG = "updatesimplewhitelistflag"
 REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG = "updatesimpleblacklistflag"
+REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG = "updatewhitelistspflag"
+REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG = "updateblacklistspflag"
 
 REDIS_KEY_THREADS = "threadsnum"
-threadsNum = {REDIS_KEY_THREADS: 1000}
+threadsNum = {REDIS_KEY_THREADS: 100}
 
 REDIS_KEY_CHINA_DNS_SERVER = "chinadnsserver"
 chinadnsserver = {REDIS_KEY_CHINA_DNS_SERVER: ""}
@@ -470,10 +494,15 @@ def writeTvList(fileName, secretfilename):
 # whitelist-加密生成   switch12
 def writeOpenclashNameServerPolicy():
     if white_list_nameserver_policy and len(white_list_nameserver_policy) > 0:
-        # 更新redis数据库白名单
-        redis_add_map(REDIS_KEY_WHITE_DOMAINS, white_list_nameserver_policy)
+        # 更新redis数据库白名单三级分层字典
+        redis_del_map(REDIS_KEY_WHITELIST_DATA_SP)
+        redis_add_map(REDIS_KEY_WHITELIST_DATA_SP, whitelistSpData)
+        whitelistSpData.clear()
         # 通知dns服务器更新内存
+        redis_add(REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG, 1)
         # redis_add(REDIS_KEY_UPDATE_WHITE_LIST_FLAG, 1)
+        # 更新redis数据库白名单
+        # redis_add_map(REDIS_KEY_WHITE_DOMAINS, white_list_nameserver_policy)
         distribute_data(white_list_nameserver_policy, "/whiteList.txt", 10)
         white_list_nameserver_policy.clear()
         # 白名单加密
@@ -483,10 +512,17 @@ def writeOpenclashNameServerPolicy():
 
 def writeBlackList():
     if black_list_nameserver_policy and len(black_list_nameserver_policy) > 0:
-        # 更新redis数据库黑名单
-        redis_add_map(REDIS_KEY_BLACK_DOMAINS, black_list_nameserver_policy)
+        # 更新redis数据库白名单三级分层字典
+        redis_del_map(REDIS_KEY_BLACKLIST_DATA_SP)
+        redis_add_map(REDIS_KEY_BLACKLIST_DATA_SP, blacklistSpData)
+        blacklistSpData.clear()
         # 通知dns服务器更新内存
-        redis_add(REDIS_KEY_UPDATE_BLACK_LIST_FLAG, 1)
+        redis_add(REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG, 1)
+
+        # 更新redis数据库黑名单
+        # redis_add_map(REDIS_KEY_BLACK_DOMAINS, black_list_nameserver_policy)
+        # 通知dns服务器更新内存
+        # redis_add(REDIS_KEY_UPDATE_BLACK_LIST_FLAG, 1)
         distribute_data(black_list_nameserver_policy, "/blackList.txt", 10)
         black_list_nameserver_policy.clear()
         # 黑名单加密
@@ -557,6 +593,11 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         thread2.start()
     # ipv4
     if processDataMethodName == 'process_data_abstract5':
+        # ipv4整数数组字典更新
+        old_dict_ipv4_range = redis_get_map(REDIS_KEY_WHITELIST_IPV4_DATA_INT_RANGE)
+        ipv4_int_range.update(old_dict_ipv4_range)
+        redis_add_map(REDIS_KEY_WHITELIST_IPV4_DATA_INT_RANGE, ipv4_int_range)
+        ipv4_int_range.clear()
         # 通知dns服务器更新内存,不给dns分流器使用，数据太大了
         # redis_add(REDIS_KEY_UPDATE_IPV4_LIST_FLAG, 1)
         # ipv4-加密
@@ -646,6 +687,7 @@ def worker_gitee():
         # 执行上传文件操作
         file_name = task
         updateFileToGitee(file_name)
+        time.sleep(60)
 
 
 # 把自己本地文件加密生成对应的加密文本
@@ -704,7 +746,95 @@ def init_db():
     init_extra_dns_port()
     init_m3u_whitelist()
     init_IP()
-    # init_function_dict()
+    init_function_dict()
+
+
+def init_function_dict():
+    global function_dict
+    dict = redis_get_map(REDIS_KEY_FUNCTION_DICT)
+    if dict:
+        keys = dict.keys()
+        # 生成有效M3U
+        if 'switch' not in keys:
+            dict['switch'] = 1
+        # M3U加密
+        if 'switch2' not in keys:
+            dict['switch2'] = 0
+        # 完整M3U加密上传gitee
+        if 'switch3' not in keys:
+            dict['switch3'] = 0
+        # 生成全部M3U
+        if 'switch4' not in keys:
+            dict['switch4'] = 1
+        # 生成白名单M3U
+        if 'switch5' not in keys:
+            dict['switch5'] = 1
+        # M3U域名-无加密-tvlist
+        if 'switch6' not in keys:
+            dict['switch6'] = 1
+        # m3u域名加密文件上传gitee
+        if 'switch7' not in keys:
+            dict['switch7'] = 0
+        # m3u域名加密文件生成
+        if 'switch8' not in keys:
+            dict['switch8'] = 0
+        # 域名白名单生成dnsmasq加密文件
+        if 'switch9' not in keys:
+            dict['switch9'] = 0
+        # dnsmasq加密文件上传gitee
+        if 'switch10' not in keys:
+            dict['switch10'] = 0
+        # 域名白名单-加密上传
+        if 'switch11' not in keys:
+            dict['switch11'] = 0
+        # 域名白名单-加密
+        if 'switch12' not in keys:
+            dict['switch12'] = 0
+        # 域名黑名单-openclash-无加密
+        if 'switch13' not in keys:
+            dict['switch13'] = 1
+        # 域名黑名单-openclash-加密
+        if 'switch14' not in keys:
+            dict['switch14'] = 0
+        # 域名黑名单-openclash-加密-上传gitee
+        if 'switch15' not in keys:
+            dict['switch15'] = 0
+        # 域名黑名单-加密
+        if 'switch16' not in keys:
+            dict['switch16'] = 0
+        # 域名黑名单-加密-上传gitee
+        if 'switch17' not in keys:
+            dict['switch17'] = 0
+        # ipv4-加密
+        if 'switch18' not in keys:
+            dict['switch18'] = 0
+        # ipv4-加密-上传gitee
+        if 'switch19' not in keys:
+            dict['switch19'] = 0
+        # ipv6-加密
+        if 'switch20' not in keys:
+            dict['switch20'] = 0
+        # ipv6-加密-上传gitee
+        if 'switch21' not in keys:
+            dict['switch21'] = 0
+        # 节点订阅-加密
+        if 'switch22' not in keys:
+            dict['switch22'] = 1
+        # 节点订阅+-加密-上传gitee
+        if 'switch23' not in keys:
+            dict['switch23'] = 1
+        # 自动生成简易DNS黑白名单
+        if 'switch24' not in keys:
+            dict['switch24'] = 1
+        redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
+        function_dict = dict.copy()
+    else:
+        dict = {'switch': 1, 'switch2': 0, 'switch3': 0, 'switch4': 1, 'switch5': 1, 'switch6': 1, 'switch7': 0,
+                'switch8': 0, 'switch9': 0, 'switch10': 0, 'switch11': 0, 'switch12': 0, 'switch13': 1, 'switch14': 0,
+                'switch15': 0, 'switch16': 0, 'switch17': 0, 'switch18': 0, 'switch19': 0, 'switch20': 0, 'switch21': 0,
+                'switch22': 1, 'switch23': 1, 'switch24': 1}
+        redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
+        function_dict = dict.copy()
 
 
 # 初始化节点后端服务器
@@ -945,6 +1075,31 @@ def updateBlackList(url):
     black_list_nameserver_policy[url] = ""
 
 
+def updateBlackListSpData(domain):
+    # 一级域名，类似:一级域名名字.顶级域名名字
+    domain_name_str = stupidThink(domain)
+    blacklistSpData[domain_name_str] = ''
+    # # 一级域名名字，顶级域名名字
+    # start, end = domain_name_str.split('.')
+    # # 一级域名字符串数组
+    # arr = start.split('.')
+    # # 一级域名字符串数组长度
+    # length = str(len(arr))
+    # # 一级域名数组首位字符串
+    # startStr = arr[0]
+    # # 字典主键依据顺序为:顶级域名,一级域名长度,一级域名首位;最底层值是字典:一级域名数据,空字符串
+    # if end not in blacklistSpData:
+    #     blacklistSpData[end] = {}
+    # endDict = blacklistSpData[end]
+    # if length not in endDict:
+    #     endDict[length] = {}
+    # lengthDict = endDict[length]
+    # if startStr not in lengthDict:
+    #     lengthDict[startStr] = {}
+    # startStrDict = lengthDict[startStr]
+    # startStrDict[domain_name_str] = ''
+
+
 # 字符串内容处理-域名转openclash-fallbackfilter-domain
 def process_data_domain_openclash_fallbackfilter(data, index, step, my_dict):
     end_index = min(index + step, len(data))
@@ -952,6 +1107,7 @@ def process_data_domain_openclash_fallbackfilter(data, index, step, my_dict):
         line = data[i].strip()
         if not line:
             continue
+        updateBlackListSpData(line)
         # 判断是不是+.域名
         lineEncoder = line.encode()
         if re.match(wildcard_regex2, line):
@@ -1021,9 +1177,11 @@ def process_data_ipv4_collect(data, index, step, my_dict):
         line = data[i].strip()
         if not line:
             continue
-        # 判断是不是域名或者*.域名
+        # 判断是ipv4
         if is_ipv4_network(line):
             my_dict[line] = ""
+            # 转换成ipv4-整数数组字典
+            update_ipv4_int_range(line)
 
 
 # 字符串内容处理-ipv6合并
@@ -1050,6 +1208,31 @@ def process_data_domain_collect(data, index, step, my_dict):
             my_dict[line] = ""
 
 
+def updateWhiteListSpData(domain):
+    # 一级域名，类似:一级域名名字.顶级域名名字
+    domain_name_str = stupidThink(domain)
+    whitelistSpData[domain_name_str] = ''
+    # # 一级域名名字，顶级域名名字
+    # start, end = domain_name_str.split('.')
+    # # 一级域名字符串数组
+    # arr = start.split('.')
+    # # 一级域名字符串数组长度
+    # length = str(len(arr))
+    # # 一级域名数组首位字符串
+    # startStr = arr[0]
+    # # 字典主键依据顺序为:顶级域名,一级域名长度,一级域名首位;最底层值是字典:一级域名数据,空字符串
+    # if end not in whitelistSpData:
+    #     whitelistSpData[end] = {}
+    # endDict = whitelistSpData[end]
+    # if length not in endDict:
+    #     endDict[length] = {}
+    # lengthDict = endDict[length]
+    # if startStr not in lengthDict:
+    #     lengthDict[startStr] = {}
+    # startStrDict = lengthDict[startStr]
+    # startStrDict[domain_name_str] = ''
+
+
 # 字符串内容处理-域名转dnsmasq白名单
 def process_data_domain_dnsmasq(data, index, step, my_dict):
     end_index = min(index + step, len(data))
@@ -1057,6 +1240,7 @@ def process_data_domain_dnsmasq(data, index, step, my_dict):
         line = data[i].strip()
         if not line:
             continue
+        updateWhiteListSpData(line)
         # 普通域名
         if re.match(domain_regex, line):
             lineEncoder = line.encode()
@@ -1455,7 +1639,8 @@ def generate_multi_json_string(mapnameArr):
     finalDict = {}
     for name in mapnameArr:
         m3ulink = redis_get_map(name)
-        finalDict[name] = m3ulink
+        if len(m3ulink) > 0:
+            finalDict[name] = m3ulink
     # 将字典转换为JSON字符串并返回
     json_str = json.dumps(finalDict)
     return json_str
@@ -1474,8 +1659,9 @@ def upload_oneKey_json(request, filename):
         with open(filename, 'r') as f:
             json_dict = json.load(f)
         for cachekey, valuedict in json_dict.items():
-            redis_add_map(cachekey, valuedict)
-            importToReloadCache(cachekey, valuedict)
+            if len(valuedict) > 0:
+                redis_add_map(cachekey, valuedict)
+                importToReloadCache(cachekey, valuedict)
         os.remove(filename)
         return jsonify({'success': True})
     except Exception as e:
@@ -2041,13 +2227,13 @@ def init_threads_num():
     if num:
         num = int(num.decode())
         if num == 0:
-            num = 1000
+            num = 100
             redis_add(REDIS_KEY_THREADS, num)
             threadsNum[REDIS_KEY_THREADS] = num
             redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 1)
         threadsNum[REDIS_KEY_THREADS] = num
     else:
-        num = 1000
+        num = 100
         redis_add(REDIS_KEY_THREADS, num)
         threadsNum[REDIS_KEY_THREADS] = num
         redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 1)
@@ -2442,45 +2628,49 @@ def stupidThink(domain_name):
     # return sub_domains[len(sub_domains) - 1]
 
 
+# 将CIDR表示的IP地址段转换为IP网段数组
+def cidr_to_ip_range(cidr):
+    cidr_parts = cidr.split('/')
+    if len(cidr_parts) != 2:
+        # 在这里处理错误，例如抛出一个自定义的异常或记录错误消息
+        pass
+    else:
+        ip, mask = cidr_parts
+        mask = int(mask)
+        # 计算网络地址
+        network = socket.inet_aton(ip)
+        network = struct.unpack("!I", network)[0] & ((1 << 32 - mask) - 1 << mask)
+        # 计算广播地址
+        broadcast = network | (1 << 32 - mask) - 1
+        # 将地址段转换为元组
+        return (network, broadcast)
+
+
+def update_ipv4_int_range(ipstr):
+    iprange = cidr_to_ip_range(ipstr)
+    if iprange:
+        ipv4_int_range[iprange] = ''
+
+
 ############################################################协议区####################################################
 
-# # 查询功能开启状态
-# @app.route("/api/getSwitchstate", methods=['POST'])
-# def getSwitchstate():
-#     id = request.json['id']
-#     try:
-#         if id in function_dict:
-#             status = function_dict[id]
-#             return jsonify({"checkresult": status})
-#         else:
-#             dict = redis_get_map(REDIS_KEY_FUNCTION_DICT)
-#             status = dict[id]
-#             if status:
-#                 return jsonify({"checkresult": status})
-#             else:
-#                 dict[id] = 1
-#                 redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
-#                 return jsonify({"checkresult": 1})
-#     except:
-#         dict = redis_get_map(REDIS_KEY_FUNCTION_DICT)
-#         if id in dict:
-#             status = dict[id]
-#             function_dict[id] = int(status)
-#             return jsonify({"checkresult": status})
-#         else:
-#             dict[id] = 1
-#             redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
-#             return jsonify({"checkresult": 1})
-#
-#
-# # 切换功能开关
-# @app.route('/api/switchstate', methods=['POST'])
-# def switchFunction():
-#     state = request.json['state']
-#     id = request.json['id']
-#     function_dict[id] = int(state)
-#     redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
-#     return 'success'
+# 查询功能开启状态
+@app.route("/api/getSwitchstate", methods=['POST'])
+def getSwitchstate():
+    id = request.json['id']
+    status = function_dict[id]
+    return jsonify({"checkresult": status})
+
+
+# 切换功能开关
+@app.route('/api/switchstate', methods=['POST'])
+def switchFunction():
+    state = request.json['state']
+    id = request.json['id']
+    function_dict[id] = int(state)
+    redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
+    return 'success'
+
 
 # 修改DNS并发查询数量
 @app.route('/api/savetimeout', methods=['POST'])
@@ -3538,7 +3728,7 @@ if __name__ == '__main__':
             # 关闭旧连接
             r.close()
             # 创建新的Redis连接
-            r = redis.Redis(host='localhost', port=6379)
+            r = redis.Redis(host='127.0.0.1', port=6379)
             print('!!!!!!!!!!!!!!!!!!!!!!!Redis is not ready main.py\n')
         else:
             print('!!!!!!!!!!!!!!!!!!!!!!!Redis is ready main.py\n')

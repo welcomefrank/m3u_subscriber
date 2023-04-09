@@ -988,6 +988,10 @@
                 <button id="switch23" class="switchfunctionbutton" onclick="toggleSwitch('switch23')">已关闭</button>
                 <input class="toggletext" type="text" value="节点订阅-加密-上传Gitee">
             </div>
+            <div class="grid-item">
+                <button id="switch24" class="switchfunctionbutton" onclick="toggleSwitch('switch24')">已关闭</button>
+                <input class="toggletext" type="text" value="自动生成简易DNS黑白名单">
+            </div>
         </div>
     </div>
     <div id="page19" style="display: none;">
@@ -996,6 +1000,7 @@
             <h3>填写个人日常使用的白名单域名一级域名，比如:bilibili.com，bilivideo.com</h3>
             <h3>这里的数据不建议特别多,根据个人网络冲浪习惯设置</h3>
             <h3>该规则优先于DNS白名单订阅的全部域名规则</h3>
+            <h3>默认自动开启自主生成白名单数据,如果不可靠可以在功能开关关闭该功能</h3>
             <h3>上传文件导入合并简易DNS分流白名单</h3>
         </div>
         <div style="width:100%">
@@ -1027,6 +1032,7 @@
             <h3>填写个人日常使用的黑名单域名一级域名，比如:youtube.com，twitter.com</h3>
             <h3>这里的数据不建议特别多,根据个人网络冲浪习惯设置</h3>
             <h3>该规则优先于DNS黑名单订阅的全部域名规则</h3>
+            <h3>默认自动开启自主生成黑名单数据,如果不可靠可以在功能开关关闭该功能</h3>
             <h3>上传文件导入合并简易DNS分流黑名单</h3>
         </div>
         <div style="width:100%">
@@ -2328,6 +2334,55 @@
             reloadGiteeAcessToken()
         } else if (selectedPage === pages[15].id) {
             reloadM3uWhiteList()
+        }else if (selectedPage === pages[17].id) {
+            //生成有效M3U
+            reloadFunctionOpenButton('switch')
+            //M3U加密
+            reloadFunctionOpenButton('switch2')
+            //完整M3U加密上传gitee
+            reloadFunctionOpenButton('switch3')
+            //生成全部M3U
+            reloadFunctionOpenButton('switch4')
+            //生成白名单M3U
+            reloadFunctionOpenButton('switch5')
+            //M3U域名-无加密
+            reloadFunctionOpenButton('switch6')
+            //m3u域名加密文件上传gitee
+            reloadFunctionOpenButton('switch7')
+            //m3u域名加密文件生成
+            reloadFunctionOpenButton('switch8')
+            //域名白名单生成dnsmasq加密文件
+            reloadFunctionOpenButton('switch9')
+            //dnsmasq加密文件上传gitee
+            reloadFunctionOpenButton('switch10')
+            //域名白名单-加密上传
+            reloadFunctionOpenButton('switch11')
+            //域名白名单-加密
+            reloadFunctionOpenButton('switch12')
+            //域名黑名单-openclash-无加密
+            reloadFunctionOpenButton('switch13')
+            //域名黑名单-openclash-加密
+            reloadFunctionOpenButton('switch14')
+            //域名黑名单-openclash-加密-上传gitee
+            reloadFunctionOpenButton('switch15')
+            //域名黑名单-加密
+            reloadFunctionOpenButton('switch16')
+            //域名黑名单-加密-上传gitee
+            reloadFunctionOpenButton('switch17')
+            //ipv4-加密
+            reloadFunctionOpenButton('switch18')
+            //ipv4-加密-上传gitee
+            reloadFunctionOpenButton('switch19')
+            //ipv6-加密
+            reloadFunctionOpenButton('switch20')
+            //ipv6-加密-上传gitee
+            reloadFunctionOpenButton('switch21')
+            //节点订阅-加密
+            reloadFunctionOpenButton('switch22')
+            //节点订阅+-加密-上传gitee
+            reloadFunctionOpenButton('switch23')
+            //自动生成简易DNS黑白名单
+            reloadFunctionOpenButton('switch24')
         }else if (selectedPage === pages[18].id) {
             reloadDNSSIMPLEWhiteList()
         }
