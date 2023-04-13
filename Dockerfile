@@ -3,6 +3,7 @@ FROM nginx
 #COPY main.py /app/main.py
 COPY ./*.py /app/
 COPY ./*.ini /app/
+COPY ./bitcoin.png /app/
 # 将前端文件复制到容器中的 /usr/share/nginx/html 目录
 COPY index.html /usr/share/nginx/html
 # 将 nginx 配置文件复制到容器中的 /etc/nginx/conf.d/default.conf

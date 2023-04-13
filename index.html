@@ -36,7 +36,7 @@
             margin-right: 5px;
             width: 45%
         }
-        .suburlclassname,.stubboninput {
+        .suburlclassname {
             width: 70%;
             background-color: #758a99;
             color: aliceblue;
@@ -44,10 +44,15 @@
         }
 
         .stubboninput {
+            width: 76%;
+            background-color: #758a99;
+            color: aliceblue;
+            font-size: x-large;
+            border-radius: 5px;
             text-align: right;
             padding-top: 20px;
             padding-bottom: 20px;
-         }
+        }
 
         .stubbonsave
         {
@@ -57,8 +62,8 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
-
-            float: right
+            float: right;
+            margin-left: 15px;
         }
 
         .subnameClassName{
@@ -103,11 +108,11 @@
 
         #remove-m3u-btn, .removeallSubscriber {
             background-color: crimson;
-            float: left;
+            float: right;
             width: 25%;
         }
 
-        #input, #output,.stubboninput {
+        #input, #output,#input2, #output2 {
             width: 90%;
             background-color: #758a99;
             color: aliceblue;
@@ -197,6 +202,25 @@
             margin-bottom: 10px; /* 按钮下方留白 */
         }
 
+        .searchbox {
+            background-color: #4CAF50;
+            border: none;
+            color: #fff;
+            padding: 12px 20px;
+            text-align: center;
+            font-size: xx-large;
+            border-radius: 30px;
+            width: 40%;
+            margin-bottom: 20px;
+            background-image: linear-gradient(to bottom right, #4CAF50, #d9d9d9);
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2), inset 0 -1px 1px rgba(0, 0, 0, 0.1), 0 3px 3px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .searchbox:focus {
+            outline: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), inset 0 1px 2px rgba(0, 0, 0, 0.2), inset 0 -1px 1px rgba(0, 0, 0, 0.1), 0 3px 3px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
 
 
     </style>
@@ -270,7 +294,7 @@
     </label>
     <label>
         <input type="radio" name="page" id="page15">
-        <span>gitee同步账号</span>
+        <span>同步账号</span>
     </label>
     <label>
         <input type="radio" name="page" id="page16">
@@ -291,6 +315,10 @@
     <label>
         <input type="radio" name="page" id="page20">
         <span>简易DNS分流黑名单</span>
+    </label>
+    <label>
+        <input type="radio" name="page" id="page21">
+        <span>打赏频道</span>
     </label>
 </div>
 <div id="choice">
@@ -328,12 +356,15 @@
                 </button>
             </div>
             <div>
-                <button id="download-json-btn" class="button download-json-btn" style="width: 100%">导出M3U超融合备份</button>
+                <button id="download-json-btn" class="button download-json-btn" style="width: 100%">导出M3U订阅备份</button>
             </div>
-            <button id="removem3ulinks" class="button removeallSubscriber" onclick="removem3ulinks()">删除全部订阅
+            <div style="width: 97%;">
+                <input type="text" id="searchInput6" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks')">删除全部订阅
             </button>
             <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">订阅来源:M3U网络直播源订阅地址+加密订阅密码
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:M3U网络直播源订阅地址+加密订阅源的密码(没有加密就不填写)
                 </div>
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
@@ -355,7 +386,7 @@
             合并文本框直播源
         </button>
         <button id="download-m3u-btn" class="button" style="width: 100%">导出全部本地直播源</button>
-        <button id="remove-m3u-btn" onclick="removem3u()" class="button" style="width: 25%;float: left">
+        <button id="remove-m3u-btn" onclick="removem3u()" class="button removeallSubscriber">
             删除全部本地直播源
         </button>
         <div style="display: flex;width: 100%;">
@@ -380,7 +411,10 @@
             <div>
                 <button id="download-json-btn6" class="button download-json-btn" style="width: 100%">导出密码备份</button>
             </div>
-            <button id="removem3ulinks6" class="button removeallSubscriber" onclick="removem3ulinks6()">删除全部密码
+            <div style="width: 97%;">
+                <input type="text" id="searchInput" placeholder="搜索框"  class="searchbox" style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks6" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks6')">删除全部密码
             </button>
             <div style="display: flex;width: 100%;">
                 <div class="notice" style="display: flex;width: 80%;">订阅来源:密码来源+密码内容
@@ -452,12 +486,15 @@
                 </button>
             </div>
             <div>
-                <button id="download-json-btn2" class="button download-json-btn" style="width: 100%">导出白名单超融合备份</button>
+                <button id="download-json-btn2" class="button download-json-btn" style="width: 100%">导出白名单订阅备份</button>
             </div>
-            <button id="removem3ulinks2" class="button removeallSubscriber" onclick="removem3ulinks2()">删除全部订阅
+            <div style="width: 97%;">
+                <input type="text" id="searchInput7" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks2" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks2')">删除全部订阅
             </button>
             <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">订阅来源:白名单订阅地址+加密订阅密码
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:白名单订阅地址+加密订阅源的密码(没有加密就不填写)
                 </div>
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
@@ -491,12 +528,15 @@
                 </button>
             </div>
             <div>
-                <button id="download-json-btn3" class="button download-json-btn" style="width: 100%">导出黑名单超融合备份</button>
+                <button id="download-json-btn3" class="button download-json-btn" style="width: 100%">导出黑名单订阅备份</button>
             </div>
-            <button id="removem3ulinks3" class="button removeallSubscriber" onclick="removem3ulinks3()">删除全部订阅
+            <div style="width: 97%;">
+                <input type="text" id="searchInput8" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks3" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks3')">删除全部订阅
             </button>
             <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">订阅来源:黑名单订阅地址+加密订阅密码
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:黑名单订阅地址+加密订阅源的密码(没有加密就不填写)
                 </div>
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
@@ -527,12 +567,15 @@
                 </button>
             </div>
             <div>
-                <button id="download-json-btn4" class="button download-json-btn" style="width: 100%">导出ipv4超融合备份</button>
+                <button id="download-json-btn4" class="button download-json-btn" style="width: 100%">导出ipv4订阅备份</button>
             </div>
-            <button id="removem3ulinks4" class="button removeallSubscriber" onclick="removem3ulinks4()">删除全部订阅
+            <div style="width: 97%;">
+                <input type="text" id="searchInput9" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks4" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks4')">删除全部订阅
             </button>
             <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">订阅来源:ipv4订阅地址+加密订阅密码
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:ipv4订阅地址+加密订阅源的密码(没有加密就不填写)
                 </div>
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
@@ -563,12 +606,15 @@
                 </button>
             </div>
             <div>
-                <button id="download-json-btn5" class="button download-json-btn" style="width: 100%">导出ipv6超融合备份</button>
+                <button id="download-json-btn5" class="button download-json-btn" style="width: 100%">导出ipv6订阅备份</button>
             </div>
-            <button id="removem3ulinks5" class="button removeallSubscriber" onclick="removem3ulinks5()">删除全部订阅
+            <div style="width: 97%;">
+                <input type="text" id="searchInput10" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks5" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks5')">删除全部订阅
             </button>
             <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">订阅来源:ipv6订阅地址+加密订阅密码
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:ipv6订阅地址+加密订阅源的密码(没有加密就不填写)
                 </div>
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
@@ -584,11 +630,11 @@
         <div style="width:100%;display:flex; justify-content:space-between;">
             <div style="width: 50%">
                 <p>在左边输入要去重复的文本，每行一个条目。</p>
-                <textarea id="input" rows="30" cols="50"></textarea>
+                <textarea id="input2" rows="30" cols="50"></textarea>
             </div>
             <div style="width: 50%">
                 <p>去重复结果如下：</p>
-                <textarea id="output" rows="30" cols="50" readonly></textarea>
+                <textarea id="output2" rows="30" cols="50" readonly></textarea>
                 <br>
             </div>
         </div>
@@ -644,12 +690,15 @@
                 </button>
             </div>
             <div>
-                <button id="download-json-btn8" class="button download-json-btn" style="width: 100%">导出节点超融合备份</button>
+                <button id="download-json-btn8" class="button download-json-btn" style="width: 100%">导出节点订阅备份</button>
             </div>
-            <button id="removem3ulinks8" class="button removeallSubscriber" onclick="removem3ulinks8()">删除全部订阅
+            <div style="width: 97%;">
+                <input type="text" id="searchInput11" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks8" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks8')">删除全部订阅
             </button>
             <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">订阅来源:节点订阅地址+加密订阅密码
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:节点订阅地址+加密订阅源的密码
                 </div>
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
@@ -674,7 +723,10 @@
             <div>
                 <button id="download-json-btn9" class="button download-json-btn" style="width: 100%">导出远程配置备份</button>
             </div>
-            <button id="removem3ulinks9" class="button removeallSubscriber" onclick="removem3ulinks9()">删除全部订阅
+            <div style="width: 97%;">
+                <input type="text" id="searchInput12" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks9" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks9')">删除全部订阅
             </button>
             <div style="display: flex;width: 100%;">
                 <div class="notice" style="display: flex;width: 80%;">订阅来源:远程订阅地址+备注
@@ -702,7 +754,10 @@
             <div>
                 <button id="download-json-btn10" class="button download-json-btn" style="width: 100%">导出后端地址配置备份</button>
             </div>
-            <button id="removem3ulinks10" class="button removeallSubscriber" onclick="removem3ulinks10()">删除全部订阅
+            <div style="width: 97%;">
+                <input type="text" id="searchInput13" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks10" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks10')">删除全部订阅
             </button>
             <div style="display: flex;width: 100%;">
                 <div class="notice" style="display: flex;width: 80%;">订阅来源:后端地址+备注
@@ -782,42 +837,77 @@
         </div>
         <div style="width:100%">
             <input type="text" id="threads2" class="stubboninput"/>
-            <button id="threadsButton2" onclick="changeM3uPassword()" class="stubbonsave">切换</button>
+            <button  onclick="changePassword('m3u','threads2',threadNum2)" class="stubbonsave">系统随机</button>
+            <button  onclick="changePasswordByHand('m3u','threads2',threadNum2)" class="stubbonsave">手动修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             域名白名单订阅
         </div>
         <div style="width:100%">
             <input type="text" id="chinaDnsServer2" class="stubboninput"/>
-            <button id="chinaDnsServerBtn2" onclick="changeWhiteListPassword()" class="stubbonsave">切换</button>
+            <button  onclick="changePassword('whitelist','chinaDnsServer2',chinaDnsServer2)" class="stubbonsave">系统随机</button>
+            <button  onclick="changePasswordByHand('whitelist','chinaDnsServer2',chinaDnsServer2)" class="stubbonsave">手动修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             域名黑名单订阅
         </div>
         <div style="width:100%">
             <input type="text" id="chinaDnsPort2" class="stubboninput"/>
-            <button id="chinaDnsPortBtn2" onclick="changeBlackListPassword()" class="stubbonsave">切换</button>
+            <button  onclick="changePassword('blacklist','chinaDnsPort2',chinaDnsPort2)" class="stubbonsave">系统随机</button>
+            <button  onclick="changePasswordByHand('blacklist','chinaDnsPort2',chinaDnsPort2)" class="stubbonsave">手动修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             ipv4订阅
         </div>
         <div style="width:100%">
             <input type="text" id="extraDnsServer2" class="stubboninput"/>
-            <button id="extraDnsServerBtn2" onclick="changeIPV4ListPassword()" class="stubbonsave">切换</button>
+            <button  onclick="changePassword('ipv4','extraDnsServer2',extraDnsServer2)" class="stubbonsave">系统随机</button>
+            <button  onclick="changePasswordByHand('ipv4','extraDnsServer2',extraDnsServer2)" class="stubbonsave">手动修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             ipv6订阅
         </div>
         <div style="width:100%">
             <input type="text" id="extraDnsPort2" class="stubboninput"/>
-            <button id="extraDnsPortBtn2" onclick="changeIPV6ListPassword()" class="stubbonsave">切换</button>
+            <button  onclick="changePassword('ipv6','extraDnsPort2',extraDnsPort2)" class="stubbonsave">系统随机</button>
+            <button  onclick="changePasswordByHand('ipv6','extraDnsPort2',extraDnsPort2)" class="stubbonsave">手动修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             节点订阅
         </div>
         <div style="width:100%">
             <input type="text" id="extraDnsPort3" class="stubboninput"/>
-            <button id="extraDnsPortBtn3" onclick="changeProxyListPassword()" class="stubbonsave">切换</button>
+            <button  onclick="changePassword('proxy','extraDnsPort3',extraDnsPort3)" class="stubbonsave">系统随机</button>
+            <button  onclick="changePasswordByHand('proxy','extraDnsPort3',extraDnsPort3)" class="stubbonsave">手动修改</button>
+        </div>
+        <br>
+        <h1>历史加密密码记录</h1>
+        <div style="float: left;width: 70%">
+            <h3>上传文件导入合并历史加密密码记录</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn14" class="uploadjsonbtn" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="download-json-btn14" class="button download-json-btn" style="width: 100%">
+                    导出历史订阅密码备份
+                </button>
+            </div>
+            <div style="width: 97%;">
+                <input type="text" id="searchInput2" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks14" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks14')">删除全部历史订阅密码
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">订阅密码+订阅类型
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table14" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
         </div>
     </div>
     <div id="page15" style="display: none;">
@@ -827,32 +917,114 @@
             <h3>同步上传加密订阅超融合文件</h3>
         </div>
         <div style="display: flex;width: 100%;">
-            用户名:username
+            gitee用户名:username
         </div>
         <div style="width:100%">
-            <input type="text" id="giteeUsername" class="stubboninput"/>
-            <button id="threadsButton2" onclick="saveGiteeUsername()" class="stubbonsave">修改</button>
+            <input type="text" id="giteeUsername" class="stubboninput" placeholder="ppap"/>
+            <button  onclick="changeSyncData('username', 'bbs', 'giteeUsername', giteeUsername)" class="stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
-            仓库名:repo_name
+            gitee仓库名:repo_name
         </div>
         <div style="width:100%">
-            <input type="text" id="giteeRePoname" class="stubboninput"/>
-            <button id="chinaDnsServerBtn2" onclick="saveGiteeRePoname()" class="stubbonsave">修改</button>
+            <input type="text" id="giteeRePoname" class="stubboninput" placeholder="test"/>
+            <button  onclick="changeSyncData('reponame', 'bbs', 'giteeRePoname', giteeRePoname)" class="stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
-            路径:path
+            gitee路径:path
         </div>
         <div style="width:100%">
-            <input type="text" id="giteePath" class="stubboninput"/>
-            <button id="chinaDnsPortBtn2" onclick="saveGiteePath()" class="stubbonsave">修改</button>
+            <input type="text" id="giteePath" class="stubboninput" placeholder="/"/>
+            <button  onclick="changeSyncData('path', 'bbs', 'giteePath', giteePath)" class="stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
-            访问令牌:access_token
+            gitee访问令牌:access_token
         </div>
         <div style="width:100%">
-            <input type="text" id="giteeAcessToken" class="stubboninput"/>
-            <button id="extraDnsServerBtn2" onclick="saveGiteeAcessToken()" class="stubbonsave">修改</button>
+            <input type="text" id="giteeAcessToken" class="stubboninput" placeholder="dsfdgshgrhergwrgsdeg"/>
+            <button  onclick="changeSyncData('accesstoken', 'bbs', 'giteeAcessToken', giteeAcessToken)" class="stubbonsave">修改</button>
+        </div>
+
+        <h1>github同步账号</h1>
+        <div style="float: left;width: 70%">
+            <h3>设置github账号、仓库、路径</h3>
+            <h3>同步上传加密订阅超融合文件</h3>
+        </div>
+        <div style="display: flex;width: 100%;">
+            github用户名:username
+        </div>
+        <div style="width:100%">
+            <input type="text" id="githubUsername" class="stubboninput" placeholder="ppap"/>
+            <button  onclick="changeSyncData('username', 'pps', 'githubUsername', githubUsername)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            github仓库名:repo_name
+        </div>
+        <div style="width:100%">
+            <input type="text" id="githubRePoname" class="stubboninput" placeholder="test"/>
+            <button  onclick="changeSyncData('reponame', 'pps', 'githubRePoname', githubRePoname)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            github路径:path
+        </div>
+        <div style="width:100%">
+            <input type="text" id="githubPath" class="stubboninput" placeholder="/"/>
+            <button  onclick="changeSyncData('path', 'pps', 'githubPath', githubPath)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            github访问令牌:access_token
+        </div>
+        <div style="width:100%">
+            <input type="text" id="githubAcessToken" class="stubboninput" placeholder="rewretwertrt34twr"/>
+            <button  onclick="changeSyncData('accesstoken', 'pps', 'githubAcessToken', githubAcessToken)" class="stubbonsave">修改</button>
+        </div>
+
+        <h1>webdav同步账号</h1>
+        <div style="float: left;width: 70%">
+            <h3>设置webdav账号、仓库、路径</h3>
+            <h3>同步上传加密订阅超融合文件</h3>
+        </div>
+        <div style="display: flex;width: 100%;">
+            webdav用户名:username
+        </div>
+        <div style="width:100%">
+            <input type="text" id="webdavUsername" class="stubboninput" placeholder="ppap"/>
+            <button  onclick="changeSyncData('username', 'lls', 'webdavUsername', webdavUsername)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            webdav密码:password
+        </div>
+        <div style="width:100%">
+            <input type="text" id="webdavPassword" class="stubboninput" placeholder="123456"/>
+            <button  onclick="changeSyncData('password', 'lls', 'webdavPassword', webdavPassword)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            webdav路径:path
+        </div>
+        <div style="width:100%">
+            <input type="text" id="webdavPath" class="stubboninput" placeholder="/dav/"/>
+            <button  onclick="changeSyncData('path', 'lls', 'webdavPath', webdavPath)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            webdav协议:agreement（http/https）
+        </div>
+        <div style="width:100%">
+            <input type="text" id="webdavAgreement" class="stubboninput" placeholder="http"/>
+            <button  onclick="changeSyncData('agreement', 'lls', 'webdavAgreement', webdavAgreement)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            webdav地址:ip地址或者域名(和协议对应起来,ip一般是http,域名一般是https)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="webdavIp" class="stubboninput" placeholder="192.168.5.1"/>
+            <button  onclick="changeSyncData('ip', 'lls', 'webdavIp', webdavIp)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            webdav端口:port (比如5244/80/8080....)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="webdavPort" class="stubboninput" placeholder="5244"/>
+            <button  onclick="changeSyncData('port', 'lls', 'webdavPort', webdavPort)" class="stubbonsave">修改</button>
         </div>
     </div>
     <div id="page16" style="display: none;">
@@ -870,7 +1042,10 @@
             <div>
                 <button id="download-json-btn11" class="button download-json-btn" style="width: 100%">导出关键字配置备份</button>
             </div>
-            <button id="removem3ulinks11" class="button removeallSubscriber" onclick="removem3ulinks11()">删除全部关键字
+            <div style="width: 97%;">
+                <input type="text" id="searchInput3" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks11" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks11')">删除全部关键字
             </button>
             <div style="display: flex;width: 100%;">
                 <div class="notice" style="display: flex;width: 80%;">关键字:过滤生成有效大陆直播源的判断依据
@@ -906,7 +1081,7 @@
             </div>
             <div class="grid-item">
                 <button id="switch3" class="switchfunctionbutton" onclick="toggleSwitch('switch3')">已关闭</button>
-                <input class="toggletext" type="text" value="全部M3U加密上传Gitee">
+                <input class="toggletext" type="text" value="全部M3U加密上传">
             </div>
             <div class="grid-item">
                 <button id="switch4" class="switchfunctionbutton" onclick="toggleSwitch('switch4')">已关闭</button>
@@ -922,7 +1097,7 @@
             </div>
             <div class="grid-item">
                 <button id="switch7" class="switchfunctionbutton" onclick="toggleSwitch('switch7')">已关闭</button>
-                <input class="toggletext" type="text" value="m3u域名加密文件上传gitee">
+                <input class="toggletext" type="text" value="m3u域名加密文件上传">
             </div>
             <div class="grid-item">
                 <button id="switch8" class="switchfunctionbutton" onclick="toggleSwitch('switch8')">已关闭</button>
@@ -946,7 +1121,7 @@
             </div>
             <div class="grid-item">
                 <button id="switch13" class="switchfunctionbutton" onclick="toggleSwitch('switch13')">已关闭</button>
-                <input class="toggletext" type="text" value="域名黑名单OP-无加密">
+                <input class="toggletext" type="text" value="域名黑名单-定时器">
             </div>
             <div class="grid-item">
                 <button id="switch14" class="switchfunctionbutton" onclick="toggleSwitch('switch14')">已关闭</button>
@@ -954,7 +1129,7 @@
             </div>
             <div class="grid-item">
                 <button id="switch15" class="switchfunctionbutton" onclick="toggleSwitch('switch15')">已关闭</button>
-                <input class="toggletext" type="text" value="域名黑名单OP-加密-上传Gitee">
+                <input class="toggletext" type="text" value="域名黑名单OP-加密-上传">
             </div>
             <div class="grid-item">
                 <button id="switch16" class="switchfunctionbutton" onclick="toggleSwitch('switch16')">已关闭</button>
@@ -962,7 +1137,7 @@
             </div>
             <div class="grid-item">
                 <button id="switch17" class="switchfunctionbutton" onclick="toggleSwitch('switch17')">已关闭</button>
-                <input class="toggletext" type="text" value="域名黑名单-加密-上传Gitee">
+                <input class="toggletext" type="text" value="域名黑名单-加密-上传">
             </div>
             <div class="grid-item">
                 <button id="switch18" class="switchfunctionbutton" onclick="toggleSwitch('switch18')">已关闭</button>
@@ -970,7 +1145,7 @@
             </div>
             <div class="grid-item">
                 <button id="switch19" class="switchfunctionbutton" onclick="toggleSwitch('switch19')">已关闭</button>
-                <input class="toggletext" type="text" value="ipv4-加密-上传Gitee">
+                <input class="toggletext" type="text" value="ipv4-加密-上传">
             </div>
             <div class="grid-item">
                 <button id="switch20" class="switchfunctionbutton" onclick="toggleSwitch('switch20')">已关闭</button>
@@ -978,7 +1153,7 @@
             </div>
             <div class="grid-item">
                 <button id="switch21" class="switchfunctionbutton" onclick="toggleSwitch('switch21')">已关闭</button>
-                <input class="toggletext" type="text" value="ipv6-加密-上传Gitee">
+                <input class="toggletext" type="text" value="ipv6-加密-上传">
             </div>
             <div class="grid-item">
                 <button id="switch22" class="switchfunctionbutton" onclick="toggleSwitch('switch22')">已关闭</button>
@@ -986,11 +1161,43 @@
             </div>
             <div class="grid-item">
                 <button id="switch23" class="switchfunctionbutton" onclick="toggleSwitch('switch23')">已关闭</button>
-                <input class="toggletext" type="text" value="节点订阅-加密-上传Gitee">
+                <input class="toggletext" type="text" value="节点订阅-加密-上传">
             </div>
             <div class="grid-item">
                 <button id="switch24" class="switchfunctionbutton" onclick="toggleSwitch('switch24')">已关闭</button>
                 <input class="toggletext" type="text" value="自动生成简易DNS黑白名单">
+            </div>
+            <div class="grid-item">
+                <button id="switch25" class="switchfunctionbutton" onclick="toggleSwitch('switch25')">已关闭</button>
+                <input class="toggletext" type="text" value="m3u-定时器">
+            </div>
+            <div class="grid-item">
+                <button id="switch26" class="switchfunctionbutton" onclick="toggleSwitch('switch26')">已关闭</button>
+                <input class="toggletext" type="text" value="域名白名单-定时器">
+            </div>
+            <div class="grid-item">
+                <button id="switch27" class="switchfunctionbutton" onclick="toggleSwitch('switch27')">已关闭</button>
+                <input class="toggletext" type="text" value="ipv4-定时器">
+            </div>
+            <div class="grid-item">
+                <button id="switch28" class="switchfunctionbutton" onclick="toggleSwitch('switch28')">已关闭</button>
+                <input class="toggletext" type="text" value="ipv6-定时器">
+            </div>
+            <div class="grid-item">
+                <button id="switch29" class="switchfunctionbutton" onclick="toggleSwitch('switch29')">已关闭</button>
+                <input class="toggletext" type="text" value="节点订阅-定时器">
+            </div>
+            <div class="grid-item">
+                <button id="switch30" class="switchfunctionbutton" onclick="toggleSwitch('switch30')">已关闭</button>
+                <input class="toggletext" type="text" value="上传至Gitee">
+            </div>
+            <div class="grid-item">
+                <button id="switch31" class="switchfunctionbutton" onclick="toggleSwitch('switch31')">已关闭</button>
+                <input class="toggletext" type="text" value="上传至Github">
+            </div>
+            <div class="grid-item">
+                <button id="switch32" class="switchfunctionbutton" onclick="toggleSwitch('switch32')">已关闭</button>
+                <input class="toggletext" type="text" value="上传至Webdav">
             </div>
         </div>
     </div>
@@ -1013,10 +1220,13 @@
             <div>
                 <button id="download-json-btn12" class="button download-json-btn" style="width: 100%">导出配置备份</button>
             </div>
-            <button id="removem3ulinks12" class="button removeallSubscriber" onclick="removem3ulinks12()">删除全部域名
+            <div style="width: 97%;">
+                <input type="text" id="searchInput4" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks12" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks12')">删除全部域名
             </button>
             <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">简易白名单域名:一、二级域名
+                <div class="notice" style="display: flex;width: 80%;">简易白名单域名:一级域名
                 </div>
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
@@ -1045,10 +1255,13 @@
             <div>
                 <button id="download-json-btn13" class="button download-json-btn" style="width: 100%">导出配置备份</button>
             </div>
-            <button id="removem3ulinks13" class="button removeallSubscriber" onclick="removem3ulinks13()">删除全部域名
+            <div style="width: 97%;">
+                <input type="text" id="searchInput5" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks13" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks13')">删除全部域名
             </button>
             <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">简易黑名单域名:一、二级域名
+                <div class="notice" style="display: flex;width: 80%;">简易黑名单域名:一级域名
                 </div>
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
@@ -1057,6 +1270,12 @@
                 </tbody>
             </table>
         </div>
+    </div>
+    <div id="page21" style="display: none;">
+        <h1>打赏频道</h1>
+        <h3>各位路人朋友可以请我喝一杯咖啡吗^_^,您的支持将给予我更多动力迭代这个项目</h3>
+        <h4>比特币(bitcoin)</h4>
+         <li id="bitcoin" ><img id="bitcoin-image" src="#" alt="Bitcoin"></li>
     </div>
 </div>
 
@@ -1102,6 +1321,9 @@
     const addRowButton6 = document.getElementById('add-row6');
     const inputTable6 = document.getElementById('input-table6');
     const downloadBtn6 = document.getElementById('download-json-btn6');
+
+    // 获取页面元素-密码本
+    const searchInput = document.getElementById('searchInput');
 
     const fileInput7 = document.getElementById('upload-json-btn7');
     const downloadBtn7 = document.getElementById('download-json-btn7');
@@ -1187,23 +1409,32 @@
 
     // 输入框显示gitee账号用户名
     const giteeUsername = document.getElementById('giteeUsername');
-    // gitee账号用户名缓存
-    var giteeUsernameCache = sessionStorage.getItem('giteeUsername');
-
+    // 输入框显示github账号用户名
+    const githubUsername = document.getElementById('githubUsername');
     // 输入框显示gitee仓库名字
     const giteeRePoname = document.getElementById('giteeRePoname');
-    // gitee仓库名字缓存
-    var giteeRePonameCache = sessionStorage.getItem('giteeRePoname');
-
+    // 输入框显示github仓库名字
+    const githubRePoname = document.getElementById('githubRePoname');
     // 输入框显示gitee仓库路径
     const giteePath = document.getElementById('giteePath');
-    // gitee仓库路径缓存
-    var giteePathCache = sessionStorage.getItem('giteePath');
-
+    // 输入框显示github仓库路径
+    const githubPath = document.getElementById('githubPath');
     // 输入框显示gitee accestoken
     const giteeAcessToken = document.getElementById('giteeAcessToken');
-    // gitee   accestoken
-    var giteeAcessTokenCache = sessionStorage.getItem('giteeAcessToken');
+    // 输入框显示github accestoken
+    const githubAcessToken = document.getElementById('githubAcessToken');
+    // 输入框显示webdav仓库路径
+    const webdavPath = document.getElementById('webdavPath');
+    // 输入框显示webdav账号用户名
+    const webdavUsername = document.getElementById('webdavUsername');
+    // 输入框显示webdav账号密码
+    const webdavPassword = document.getElementById('webdavPassword');
+    // 输入框显示webdav账户协议
+    const webdavAgreement = document.getElementById('webdavAgreement');
+    // 输入框显示webdav账户端口
+    const webdavPort = document.getElementById('webdavPort');
+    // 输入框显示webdav账户地址
+    const webdavIp = document.getElementById('webdavIp');
 
     const fileInput11 = document.getElementById('upload-json-btn11');
     const addRowButton11 = document.getElementById('add-row11');
@@ -1242,6 +1473,98 @@
     const timeout = document.getElementById('timeout');
     // 通信超时时间缓存
     var timeoutcache = sessionStorage.getItem('timeout');
+
+    const fileInput14 = document.getElementById('upload-json-btn14');
+    const inputTable14 = document.getElementById('input-table14');
+    const downloadBtn14 = document.getElementById('download-json-btn14');
+
+    const li = document.getElementById('bitcoin'); // 获取要添加点击事件的li元素
+
+    li.addEventListener('click', () => {
+        window.location.href = 'bitcoin:BC1QCA337CSCNUFCGLLKZF4UTPLFX0YDZ66UAE38U9?amount=0.00010000&label=%E8%AF%B7%E6%88%91%E5%96%9D%E6%9D%AF%E8%8C%B6%E5%90%A7&message=%E8%AF%B7%E6%88%91%E5%96%9D%E6%9D%AF%E8%8C%B6%E5%90%A7';
+    });
+
+    const imageElement = document.getElementById('bitcoin-image');
+
+    // 获取页面元素-历史订阅密码
+    const searchInput2 = document.getElementById('searchInput2');
+    // 获取页面元素-m3u白名单
+    const searchInput3 = document.getElementById('searchInput3');
+    // 获取页面元素-简易dns白名单
+    const searchInput4 = document.getElementById('searchInput4');
+    // 获取页面元素-简易dns黑名单
+    const searchInput5 = document.getElementById('searchInput5');
+    // 获取页面元素-直播源订阅
+    const searchInput6 = document.getElementById('searchInput6');
+    // 获取页面元素-域名白名单订阅
+    const searchInput7 = document.getElementById('searchInput7');
+    // 获取页面元素-域名黑名单订阅
+    const searchInput8 = document.getElementById('searchInput8');
+    // 获取页面元素-ipv4订阅
+    const searchInput9 = document.getElementById('searchInput9');
+    // 获取页面元素-ipv6订阅
+    const searchInput10 = document.getElementById('searchInput10');
+    // 获取页面元素-节点订阅
+    const searchInput11 = document.getElementById('searchInput11');
+    // 获取页面元素-节点远程配置订阅
+    const searchInput12 = document.getElementById('searchInput12');
+    // 获取页面元素-节点后端配置订阅
+    const searchInput13 = document.getElementById('searchInput13');
+
+    // 给节点后端配置订阅搜索框绑定'oninput'事件
+    searchAddListener(searchInput13,inputTable10)
+    // 给节点远程配置订阅搜索框绑定'oninput'事件
+    searchAddListener(searchInput12,inputTable9)
+    // 给节点订阅搜索框绑定'oninput'事件
+    searchAddListener(searchInput11,inputTable8)
+    // 给ipv6订阅搜索框绑定'oninput'事件
+    searchAddListener(searchInput10,inputTable5)
+    // 给ipv4订阅搜索框绑定'oninput'事件
+    searchAddListener(searchInput9,inputTable4)
+    // 给域名黑名单订阅搜索框绑定'oninput'事件
+    searchAddListener(searchInput8,inputTable3)
+    // 给域名白名单订阅搜索框绑定'oninput'事件
+    searchAddListener(searchInput7,inputTable2)
+    // 给直播源订阅搜索框绑定'oninput'事件
+    searchAddListener(searchInput6,inputTable)
+    // 给简易dns白名单搜索框绑定'oninput'事件
+    searchAddListener(searchInput5,inputTable13)
+    // 给简易dns白名单搜索框绑定'oninput'事件
+    searchAddListener(searchInput4,inputTable12)
+    // 给m3u白名单搜索框绑定'oninput'事件
+    searchAddListener(searchInput3,inputTable11)
+    // 给历史订阅密码搜索框绑定'oninput'事件
+    searchAddListener(searchInput2,inputTable14)
+    // 给密码本搜索框绑定'oninput'事件
+    searchAddListener(searchInput,inputTable6)
+
+    // 下拉菜单搜索框监听
+    function searchAddListener(searchInputVar,tableVar) {
+        searchInputVar.addEventListener('input', () => {
+            // 获取搜索框的值
+            const keyword = searchInputVar.value.trim().toLowerCase();
+            // 遍历密码列表，只显示符合搜索框值的密码
+            const passwordRows = tableVar.querySelectorAll('tr');
+            passwordRows.forEach((row) => {
+                const passwordName = row.querySelector('.suburlclassname').value.trim().toLowerCase();
+                const passwordValue = row.querySelector('.subnameClassName').value.trim().toLowerCase();
+                if (passwordName.includes(keyword) || passwordValue.includes(keyword)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    }
+
+    function reloadImage(){
+            fetch('/api/get_image')
+        .then((response) => response.blob())
+        .then((blob) => {
+            imageElement.src = URL.createObjectURL(blob);
+        });
+    }
+
 
     function reloadFunctionOpenButton(id) {
         var switchButton = document.getElementById(id);
@@ -1335,63 +1658,119 @@
         }
     }
 
-    function changeProxyListPassword(){
-        changepassword('/api/changeProxyListPassword','extraDnsPort3',extraDnsPort3)
+
+    function changePassword(cacheKey, id, idVar) {
+        PostDataByAskAndReturn('/api/changeSubscribePassword', cacheKey,'获取功能开启状态失败：')
+            .then(function (returnValue) {
+                idVar.value = returnValue;
+                sessionStorage.setItem(id, returnValue);
+            })
+            .catch(function (error) {
+                console.log(error);
+            });
     }
 
-    function changeIPV6ListPassword(){
-        changepassword('/api/changeIPV6ListPassword','extraDnsPort2',extraDnsPort2)
+    function changePasswordByHand(cacheKey, id, idVar) {
+        PostDataByAsk2AndReturn('/api/changeSubscribePasswordByHand', cacheKey,idVar.value)
+            .then(function (returnValue) {
+                sessionStorage.setItem(id, idVar.value);
+            })
+            .catch(function (error) {
+                console.log(error);
+            });
     }
 
-    function changeIPV4ListPassword(){
-        changepassword('/api/changeIPV4ListPassword','extraDnsServer2',extraDnsServer2)
+    function getSyncData(cacheKey, type, id, idVar) {
+        var cachevalue = sessionStorage.getItem(id);
+        if (cachevalue != null && cachevalue !== '') {
+            idVar.value = cachevalue;
+        } else {
+            PostDataByAsk2AndReturn('/api/getSyncAccountData', cacheKey, type)
+                .then(function (returnValue) {
+                    idVar.value = returnValue;
+                    sessionStorage.setItem(id, returnValue);
+                })
+                .catch(function (error) {
+                    console.log(error);
+                });
+        }
     }
 
-    function changeBlackListPassword(){
-        changepassword('/api/changeBlackListPassword','chinaDnsPort2',chinaDnsPort2)
+    function changeSyncData(cacheKey, type, id, idVar) {
+        PostDataByAsk3AndReturn('/api/changeSyncData', cacheKey, type,idVar.value)
+            .then(function (returnValue) {
+                //idVar.value = returnValue;
+                sessionStorage.setItem(id, idVar.value);
+            })
+            .catch(function (error) {
+                console.log(error);
+            });
     }
 
-    function changeWhiteListPassword(){
-        changepassword('/api/changeWhiteListPassword','chinaDnsServer2',chinaDnsServer2)
-    }
-
-    function changeM3uPassword(){
-        changepassword('/api/changeM3uPassword','threads2',threadNum2)
-    }
-
-    function changepassword(requestPath, id, idVar) {
-        fetch(requestPath)
-            .then(response => response.json())
-            .then(data => {
-                    idVar.value = data.password;
-                    sessionStorage.setItem(id, data.password);
+    // 发送一个cachekey,requestpath,一个值type,一个值修改值,有返回值
+    function PostDataByAsk3AndReturn(requestPath, cacheKey,type, textvalue) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', requestPath);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        const response = JSON.parse(xhr.responseText);
+                        resolve(response.password);
+                    } else {
+                        reject(new Error('fail' + xhr.statusText));
+                    }
                 }
-            )
-        ;
+            };
+            xhr.send(JSON.stringify({'cacheKey': cacheKey,'type':type,'inputvalue': textvalue}));
+        });
+    }
+
+    // 发送一个cachekey,requestpath,一个值,有返回值
+    function PostDataByAsk2AndReturn(requestPath, cacheKey, textvalue) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', requestPath);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        const response = JSON.parse(xhr.responseText);
+                        resolve(response.password);
+                    } else {
+                        reject(new Error('fail' + xhr.statusText));
+                    }
+                }
+            };
+            xhr.send(JSON.stringify({'cacheKey': cacheKey,'inputvalue': textvalue}));
+        });
+    }
+
+    // 发送一个cachekey,requestpath,返回一个值
+    function PostDataByAskAndReturn(requestPath, cacheKey, errcode) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', requestPath);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        const response = JSON.parse(xhr.responseText);
+                        resolve(response.password);
+                    } else {
+                        reject(new Error(errcode + xhr.statusText));
+                    }
+                }
+            };
+            xhr.send(JSON.stringify({'cacheKey': cacheKey}));
+        });
     }
 
     //修改外国DNS端口
     function saveExtraDnsPort() {
         saveDnsSetting('/api/saveExtraDnsPort','extraDnsPort',extraDnsPort)
     }
-
-    //修改GITEE用户名
-    function saveGiteeUsername() {
-        saveDnsSetting('/api/saveGiteeUsername','giteeUsername',giteeUsername)
-    }
-    //修改GITEE仓库名字
-    function saveGiteeRePoname() {
-        saveDnsSetting('/api/saveGiteeRePoname','giteeRePoname',giteeRePoname)
-    }
-    //修改GITEE仓库路径
-    function saveGiteePath() {
-        saveDnsSetting('/api/saveGiteePath','giteePath',giteePath)
-    }
-    //修改GITEE access token
-    function saveGiteeAcessToken() {
-        saveDnsSetting('/api/saveGiteeAcessToken','giteeAcessToken',giteeAcessToken)
-    }
-
 
     //外国DNS端口加载
     function reloadExtraDnsPort() {
@@ -1498,27 +1877,7 @@
         reloadDnsSetting(extraDnsPortcache3,extraDnsPort3,'/api/getExtraDnsPort3','extraDnsPort3')
     }
 
-    //gitee账户用户名加载
-    function reloadGiteeUsername() {
-        reloadDnsSetting(giteeUsernameCache,giteeUsername,'/api/getGiteeUsername','giteeUsername')
-    }
-
-    //gitee仓库名字加载
-    function reloadGiteeRePoname() {
-        reloadDnsSetting(giteeRePonameCache,giteeRePoname,'/api/getGiteeRePoname','giteeRePoname')
-    }
-
-    //gitee仓库路径加载
-    function reloadGiteePathCache() {
-        reloadDnsSetting(giteePathCache,giteePath,'/api/getGiteePathCache','giteePath')
-    }
-
-    //gitee AcessToken加载
-    function reloadGiteeAcessToken() {
-        reloadDnsSetting(giteeAcessTokenCache,giteeAcessToken,'/api/getGiteeAcessToken','giteeAcessToken')
-    }
-
-        //修改线程数
+    //修改线程数
     function saveData() {
         saveDnsSetting('/api/saveThreadS','threads',threadNum)
     }
@@ -1603,7 +1962,7 @@
       dropdown2.classList.toggle('active');
     });
 
-    // 节点订阅-修改默认的代理模板
+    // 节点订阅-修改默认的代理模板，只POST不需要返回值
     function sendData(requestPath,name) {
         // TODO: 发送请求到后端
         // 发送选择按钮的请求给后端
@@ -1712,14 +2071,14 @@
         reloadBase('/api/getall13',  inputTable13)
     }
 
+    //加密订阅密码历史记录-从数据库拉取关键字列表数据
+    function reloadHistorySubscribePassList() {
+        reloadBase('/api/getall14',  inputTable14)
+    }
+
     //超融合ipv6-从数据库拉取订阅列表数据
     function reloadIpv6ListLink() {
         reloadBase('/api/getall5',   inputTable5)
-    }
-
-    //密码本-从数据库拉取密码列表数据
-    function reloadPasswordList() {
-        reloadBase('/api/getall6',  inputTable6)
     }
 
     //超融合ipv4-从数据库拉取订阅列表数据
@@ -1735,6 +2094,11 @@
     //超融合黑名单-从数据库拉取订阅列表数据
     function reloadBlackListLink() {
         reloadBase('/api/getall3',  inputTable3)
+    }
+
+        //密码本-从数据库拉取密码列表数据
+    function reloadPasswordList() {
+        reloadBase('/api/getall6',  inputTable6)
     }
 
     //从数据库拉取订阅列表数据
@@ -1838,6 +2202,11 @@
         saveInputValuebase(inputValue, name, '/api/addnewm3u12')
     }
 
+    //加密订阅密码历史记录
+    function saveInputValue14(inputValue, name) {
+        alert('该功能不提供修改数据权限');
+    }
+
     //简易DNS黑名单配置
     function saveInputValue13(inputValue, name) {
         saveInputValuebase(inputValue, name, '/api/addnewm3u13')
@@ -1924,6 +2293,11 @@
         deleteInputRowBase(row, inputValue, '/api/deletewm3u13')
     }
 
+    //删除加密订阅密码历史记录
+    function deleteInputRow14(row, inputValue) {
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u14')
+    }
+
     //永久列表-删除输入行
     function deleteM3uInputRow(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletem3udata')
@@ -1966,6 +2340,8 @@
         return window[methodName].apply(null, params)
     }
 
+    //加密订阅密码历史记录
+    inputableAddEventListener(inputTable14,  'saveInputValue14', 'deleteInputRow14')
     //简易DNS黑名单
     inputableAddEventListener(inputTable13,  'saveInputValue13', 'deleteInputRow13')
     //简易DNS白名单
@@ -2015,6 +2391,8 @@
         });
     }
 
+    //加密订阅密码历史记录-导入json配置
+    fileInputAddEventListenerBase(fileInput14, '/api/upload_json_file14')
     //DNS简易黑名单-导入json配置
     fileInputAddEventListenerBase(fileInput13, '/api/upload_json_file13')
     //DNS简易白名单-导入json配置
@@ -2063,98 +2441,41 @@
         });
     }
 
-
-    // 超融合m3u-删除全部网络直播源订阅配置文件
-    function removem3ulinks() {
-        removelinksBase('/api/removem3ulinks')
-    }
-
-    // 超融合域名白名单-删除全部网络订阅配置文件
-    function removem3ulinks2() {
-        removelinksBase('/api/removem3ulinks2')
-    }
-
-    // 超融合ipv4-删除全部网络订阅配置文件
-    function removem3ulinks4() {
-        removelinksBase('/api/removem3ulinks4')
-    }
-
-    // 超融合节点-删除全部网络订阅配置文件
-    function removem3ulinks5() {
-        removelinksBase('/api/removem3ulinks5')
-    }
-
-    // 超融合节点-删除全部网络订阅配置文件
-    function removem3ulinks9() {
-        removelinksBase('/api/removem3ulinks9')
-    }
-
-    // 超融合节点-删除全部后端服务器配置文件
-    function removem3ulinks10() {
-        removelinksBase('/api/removem3ulinks10')
-    }
-
-    // m3u白名单-删除全部配置文件
-    function removem3ulinks11() {
-        removelinksBase('/api/removem3ulinks11')
-    }
-
-    //简易DNS白名单-删除全部配置文件
-    function removem3ulinks12() {
-        removelinksBase('/api/removem3ulinks12')
-    }
-
-    //简易DNS黑名单-删除全部配置文件
-    function removem3ulinks13() {
-        removelinksBase('/api/removem3ulinks13')
-    }
-
-    // 超融合节点订阅-删除全部网络订阅配置文件
-    function removem3ulinks8() {
-        removelinksBase('/api/removem3ulinks8')
-    }
-
-    // 密码本-删除全部密码配置文件
-    function removem3ulinks6() {
-        removelinksBase('/api/removem3ulinks6')
-    }
-
-    // 超融合域名黑名单-删除全部网络订阅配置文件
-    function removem3ulinks3() {
-        removelinksBase('/api/removem3ulinks3')
-    }
-
     function removelinksBase(requestPath) {
-        // 获取按钮
-        const button = document.querySelector('button');
-        // 禁用按钮
-        button.disabled = true;
-        fetch(requestPath)
-            .then(response => response.text()) // 将响应转化为字符串
-            .then(data => {
-                if (data === 'success') {
-                    alert('本地订阅全部删除成功');
-                } else {
-                    alert('本地订阅全部删除失败');
-                }
-            });
-        // 恢复按钮
-        button.disabled = false;
-        location.reload()
+        if (window.confirm('您确定要删除全部配置文件吗？')) {
+            // 获取按钮
+            const button = document.querySelector('button');
+            // 禁用按钮
+            button.disabled = true;
+            fetch(requestPath)
+                .then(response => response.text()) // 将响应转化为字符串
+                .then(data => {
+                    if (data === 'success') {
+                        alert('本地订阅全部删除成功');
+                    } else {
+                        alert('本地订阅全部删除失败');
+                    }
+                });
+            // 恢复按钮
+            button.disabled = false;
+            location.reload()
+        }
     }
 
     // 永久列表-删除全部本地m3u文件
     function removem3u() {
-        fetch('/api/removeallm3u')
-            .then(response => response.text()) // 将响应转化为字符串
-            .then(data => {
-                if (data === 'success') {
-                    alert('本地永久直播源全部删除成功');
-                } else {
-                    alert('本地永久直播源全部删除失败');
-                }
-            });
-        handleScroll()
+        if (window.confirm('您确定要删除全部配置文件吗？')) {
+            fetch('/api/removeallm3u')
+                .then(response => response.text()) // 将响应转化为字符串
+                .then(data => {
+                    if (data === 'success') {
+                        alert('本地永久直播源全部删除成功');
+                    } else {
+                        alert('本地永久直播源全部删除失败');
+                    }
+                });
+            handleScroll()
+        }
     }
 
     //永久列表-上传m3u文件
@@ -2231,10 +2552,10 @@
             const actionsCell = document.createElement('td');
             const saveButton = document.createElement('button');
             saveButton.textContent = '保存';
-            saveButton.classList.add('save-m3u-button');
+            saveButton.classList.add('saveButtonClassName');
             const deleteButton = document.createElement('button');
             deleteButton.textContent = '删除';
-            deleteButton.classList.add('delete-m3u-button');
+            deleteButton.classList.add('deleteButtonClassName');
             actionsCell.appendChild(saveButton);
             actionsCell.appendChild(deleteButton);
             row.appendChild(valueCell);
@@ -2327,19 +2648,30 @@
             reloadExtraDnsServer2()
             reloadExtraDnsPort2()
             reloadExtraDnsPort3()
+            reloadHistorySubscribePassList()
         } else if (selectedPage === pages[14].id) {
-            reloadGiteeUsername()
-            reloadGiteeRePoname()
-            reloadGiteePathCache()
-            reloadGiteeAcessToken()
+            getSyncData('username', 'bbs', 'giteeUsername', giteeUsername)
+            getSyncData('reponame', 'bbs', 'giteeRePoname', giteeRePoname)
+            getSyncData('path', 'bbs', 'giteePath', giteePath)
+            getSyncData('accesstoken', 'bbs', 'giteeAcessToken', giteeAcessToken)
+            getSyncData('username', 'pps', 'githubUsername', githubUsername)
+            getSyncData('reponame', 'pps', 'githubRePoname', githubRePoname)
+            getSyncData('path', 'pps', 'githubPath', githubPath)
+            getSyncData('accesstoken', 'pps', 'githubAcessToken', githubAcessToken)
+            getSyncData('username', 'lls', 'webdavUsername', webdavUsername)
+            getSyncData('password', 'lls', 'webdavPassword', webdavPassword)
+            getSyncData('ip', 'lls', 'webdavIp', webdavIp)
+            getSyncData('port', 'lls', 'webdavPort', webdavPort)
+            getSyncData('path', 'lls', 'webdavPath', webdavPath)
+            getSyncData('agreement', 'lls', 'webdavAgreement', webdavAgreement)
         } else if (selectedPage === pages[15].id) {
             reloadM3uWhiteList()
         }else if (selectedPage === pages[17].id) {
             //生成有效M3U
             reloadFunctionOpenButton('switch')
-            //M3U加密
+            //全部M3U加密
             reloadFunctionOpenButton('switch2')
-            //完整M3U加密上传gitee
+            //完整M3U加密上传
             reloadFunctionOpenButton('switch3')
             //生成全部M3U
             reloadFunctionOpenButton('switch4')
@@ -2347,47 +2679,66 @@
             reloadFunctionOpenButton('switch5')
             //M3U域名-无加密
             reloadFunctionOpenButton('switch6')
-            //m3u域名加密文件上传gitee
+            //m3u域名加密文件上传
             reloadFunctionOpenButton('switch7')
             //m3u域名加密文件生成
             reloadFunctionOpenButton('switch8')
             //域名白名单生成dnsmasq加密文件
             reloadFunctionOpenButton('switch9')
-            //dnsmasq加密文件上传gitee
+            //dnsmasq加密文件上传
             reloadFunctionOpenButton('switch10')
             //域名白名单-加密上传
             reloadFunctionOpenButton('switch11')
             //域名白名单-加密
             reloadFunctionOpenButton('switch12')
-            //域名黑名单-openclash-无加密
+            //域名黑名单-定时器
             reloadFunctionOpenButton('switch13')
             //域名黑名单-openclash-加密
             reloadFunctionOpenButton('switch14')
-            //域名黑名单-openclash-加密-上传gitee
+            //域名黑名单-openclash-加密-上传
             reloadFunctionOpenButton('switch15')
             //域名黑名单-加密
             reloadFunctionOpenButton('switch16')
-            //域名黑名单-加密-上传gitee
+            //域名黑名单-加密-上传
             reloadFunctionOpenButton('switch17')
             //ipv4-加密
             reloadFunctionOpenButton('switch18')
-            //ipv4-加密-上传gitee
+            //ipv4-加密-上传
             reloadFunctionOpenButton('switch19')
             //ipv6-加密
             reloadFunctionOpenButton('switch20')
-            //ipv6-加密-上传gitee
+            //ipv6-加密-上传
             reloadFunctionOpenButton('switch21')
             //节点订阅-加密
             reloadFunctionOpenButton('switch22')
-            //节点订阅+-加密-上传gitee
+            //节点订阅+-加密-上传
             reloadFunctionOpenButton('switch23')
             //自动生成简易DNS黑白名单
             reloadFunctionOpenButton('switch24')
+            //m3u-定时器
+            reloadFunctionOpenButton('switch25')
+            //域名白名单-定时器
+            reloadFunctionOpenButton('switch26')
+            //ipv4-定时器
+            reloadFunctionOpenButton('switch27')
+            //ipv6-定时器
+            reloadFunctionOpenButton('switch28')
+            //节点订阅-定时器
+            reloadFunctionOpenButton('switch29')
+            //上传选项1-Gitee
+            reloadFunctionOpenButton('switch30')
+            //上传选项2-Github
+            reloadFunctionOpenButton('switch31')
+            //上传选项3-Webdav
+            reloadFunctionOpenButton('switch32')
         }else if (selectedPage === pages[18].id) {
             reloadDNSSIMPLEWhiteList()
         }
         else if (selectedPage === pages[19].id) {
             reloadDNSSIMPLEBlackList()
+        }else if (selectedPage === pages[20].id) {
+            // 打赏图片
+            reloadImage()
         }
         if (selectedPage !== pages[1].id) {
             window.removeEventListener('scroll', handleScroll);
@@ -2429,6 +2780,8 @@
         });
     }
 
+    // 加密订阅密码历史记录-导出订阅json配置
+    downloadBtnAddEventListenerBase(downloadBtn14, '/api/download_json_file14', 'temp_historysubscribepasslist.json')
     // DNS简易黑名单-导出订阅json配置
     downloadBtnAddEventListenerBase(downloadBtn13, '/api/download_json_file13', 'temp_dnssimpleblacklist.json')
     // DNS简易白名单-导出订阅json配置
@@ -2625,8 +2978,8 @@
     }
 
     function removeDuplicates() {
-        const inputTextArea = document.getElementById("input");
-        const outputTextArea = document.getElementById("output");
+        const inputTextArea = document.getElementById("input2");
+        const outputTextArea = document.getElementById("output2");
         const inputLines = inputTextArea.value.split("\n");
         const uniqueLines = new Set(inputLines);
         outputTextArea.value = [...uniqueLines].join("\n");

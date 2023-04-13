@@ -2,7 +2,6 @@ import abc
 import asyncio
 import base64
 import secrets
-import socket
 import string
 import concurrent
 import ipaddress
@@ -11,7 +10,6 @@ import math
 import os
 import queue
 import re
-import struct
 # import subprocess
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -80,53 +78,24 @@ REDIS_KEY_M3U_BLACKLIST = "m3ublacklist"
 REDIS_KEY_DNS_SIMPLE_WHITELIST = "dnssimplewhitelist"
 # 简易DNS域名黑名单
 REDIS_KEY_DNS_SIMPLE_BLACKLIST = "dnssimpleblacklist"
-# 白名单中国大陆IPV4下载数据转换成的整数数组
-REDIS_KEY_WHITELIST_IPV4_DATA_INT_RANGE = "whitelistipv4dataintrange"
+# 加密订阅密码历史记录,包括当前密码组
+REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS = "secretSubscribeHistoryPass"
 
-# 超融合合并ipv4数据转换成的整数数组字典数据
-ipv4_int_range = {}
+REDIS_KEY_SECRET_PASS_NOW = 'secretpassnow'
 
-# m3u密码
-REDIS_KEY_THREADS2 = "threadsnum2"
-threadsNum2 = {REDIS_KEY_THREADS2: ""}
-
-# 白名单密码
-REDIS_KEY_THREADS3 = "threadsnum3"
-threadsNum3 = {REDIS_KEY_THREADS3: ""}
-
-# 黑名单密码
-REDIS_KEY_THREADS4 = "threadsnum4"
-threadsNum4 = {REDIS_KEY_THREADS4: ""}
-
-# ipv4密码
-REDIS_KEY_THREADS5 = "threadsnum5"
-threadsNum5 = {REDIS_KEY_THREADS5: ""}
-
-# ipv6密码
-REDIS_KEY_THREADS6 = "threadsnum6"
-threadsNum6 = {REDIS_KEY_THREADS6: ""}
-
-# 节点订阅密码
-REDIS_KEY_THREADS7 = "threadsnum7"
-threadsNum7 = {REDIS_KEY_THREADS7: ""}
+redisKeySecretPassNow = {'m3u': '', 'whitelist': '', 'blacklist': '', 'ipv4': '', 'ipv6': '', 'proxy': ''}
 
 # # gitee账号:用户名,仓库名字,path,access Token
-# REDIS_KEY_GITEE_ACCOUNT = "redisgiteeaccount"
-# gitee账号:用户名
-REDIS_KEY_GITEE_USERNAME = "redisgiteeusername"
-gitee_username = {REDIS_KEY_GITEE_USERNAME: ""}
+REDIS_KEY_GITEE = 'redisKeyGitee'
+redisKeyGitee = {'username': '', 'reponame': '', 'path': '', 'accesstoken': ''}
 
-# gitee账号:仓库名字
-REDIS_KEY_GITEE_REPONAME = "redisgiteereponame"
-gitee_reponame = {REDIS_KEY_GITEE_REPONAME: ""}
+# # github账号:用户名,仓库名字,path,access Token
+REDIS_KEY_GITHUB = 'redisKeyGithub'
+redisKeyGithub = {'username': '', 'reponame': '', 'path': '', 'accesstoken': ''}
 
-# gitee账号:仓库路径
-REDIS_KEY_GITEE_PATH = "redisgiteepath"
-gitee_path = {REDIS_KEY_GITEE_PATH: ""}
-
-# gitee账号:access token
-REDIS_KEY_GITEE_ACCESS_TOKEN = "redisgiteeaccestoken"
-gitee_access_token = {REDIS_KEY_GITEE_ACCESS_TOKEN: ""}
+# # webdav账号:ip,端口，用户名，密码，路径,协议(http/https)
+REDIS_KEY_WEBDAV = 'redisKeyWebdav'
+redisKeyWebDav = {'ip': '', 'port': '', 'username': '', 'password': '', 'path': '', 'agreement': ''}
 
 REDIS_KEY_FUNCTION_DICT = "functiondict"
 # 功能开关字典
@@ -142,24 +111,17 @@ REDIS_KEY_BLACKLIST_DATA_SP = "blacklistdatasp"
 # 黑名单三段字典:顶级域名,一级域名长度,一级域名首位,一级域名数据
 blacklistSpData = {}
 
-# 有缓存的redis备份字典key
-# cachedictkey = [REDIS_KEY_GITEE_ACCESS_TOKEN, REDIS_KEY_GITEE_PATH, REDIS_KEY_GITEE_REPONAME, REDIS_KEY_GITEE_USERNAME,
-#                 REDIS_KEY_THREADS7, REDIS_KEY_THREADS6, REDIS_KEY_THREADS5, REDIS_KEY_THREADS4, REDIS_KEY_THREADS3,
-#                 REDIS_KEY_THREADS2]
 # 全部有redis备份字典key
 allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_LINK, REDIS_KEY_WHITELIST_IPV4_LINK,
               REDIS_KEY_WHITELIST_IPV6_LINK, REDIS_KEY_PASSWORD_LINK, REDIS_KEY_PROXIES_LINK, REDIS_KEY_PROXIES_TYPE,
               REDIS_KEY_PROXIES_MODEL, REDIS_KEY_PROXIES_MODEL_CHOSEN, REDIS_KEY_PROXIES_SERVER,
-              REDIS_KEY_PROXIES_SERVER_CHOSEN, REDIS_KEY_GITEE_USERNAME, REDIS_KEY_THREADS2, REDIS_KEY_THREADS3,
-              REDIS_KEY_THREADS4, REDIS_KEY_GITEE_REPONAME, REDIS_KEY_GITEE_PATH, REDIS_KEY_GITEE_ACCESS_TOKEN,
-              REDIS_KEY_THREADS5, REDIS_KEY_THREADS6, REDIS_KEY_THREADS7, REDIS_KEY_M3U_WHITELIST,
+              REDIS_KEY_PROXIES_SERVER_CHOSEN, REDIS_KEY_GITEE,REDIS_KEY_GITHUB,
+              REDIS_KEY_M3U_WHITELIST, REDIS_KEY_SECRET_PASS_NOW,REDIS_KEY_WEBDAV,
               REDIS_KEY_M3U_BLACKLIST, REDIS_KEY_DNS_SIMPLE_WHITELIST, REDIS_KEY_DNS_SIMPLE_BLACKLIST,
-              REDIS_KEY_FUNCTION_DICT, REDIS_KEY_WHITELIST_IPV4_DATA_INT_RANGE]
-
-# redis_add_map(REDIS_KEY_GITEE_ACCOUNT, tmp_dict)
+              REDIS_KEY_FUNCTION_DICT, REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS]
 
 # Adguardhome屏蔽前缀
-BLACKLIST_ADGUARDHOME_FORMATION = "240.0.0.0 "
+BLACKLIST_ADGUARDHOME_FORMATION = "0.0.0.0 "
 # dnsmasq白名单前缀
 BLACKLIST_DNSMASQ_FORMATION_LEFT = "server=/"
 # dnsmasq白名单后缀
@@ -301,18 +263,165 @@ def upload_json(request, rediskey, filename):
         return jsonify({'success': False})
 
 
-def execute(method_name, sleepSecond):
+# def execute(method_name, sleepSecond):
+#     while True:
+#         # m3u
+#         if method_name == 'chaoronghe':
+#             if not isOpenFunction('switch25'):
+#                 time.sleep(sleepSecond)
+#                 continue
+#         # 域名白名单
+#         elif method_name == 'chaoronghe2':
+#             if not isOpenFunction('switch26'):
+#                 time.sleep(sleepSecond)
+#                 continue
+#         # 域名黑名单
+#         elif method_name == 'chaoronghe3':
+#             if not isOpenFunction('switch13'):
+#                 time.sleep(sleepSecond)
+#                 continue
+#         # ipv4
+#         elif method_name == 'chaoronghe4':
+#             if not isOpenFunction('switch27'):
+#                 time.sleep(sleepSecond)
+#                 continue
+#         # ipv6
+#         elif method_name == 'chaoronghe5':
+#             if not isOpenFunction('switch28'):
+#                 time.sleep(sleepSecond)
+#                 continue
+#         # 节点订阅
+#         elif method_name == 'chaoronghe6':
+#             if not isOpenFunction('switch29'):
+#                 time.sleep(sleepSecond)
+#                 continue
+#         method = globals().get(method_name)
+#         # 判断方法是否存在
+#         if not method:
+#             break
+#         # 执行方法
+#         method()
+#         time.sleep(sleepSecond)
+
+
+# 直播源线程阻塞开关
+timer_condition_m3u = threading.Condition()
+# 域名白名单线程阻塞开关
+timer_condition_whitelist = threading.Condition()
+# 域名黑名单线程阻塞开关
+timer_condition_blacklist = threading.Condition()
+# ipv4线程阻塞开关
+timer_condition_ipv4list = threading.Condition()
+# ipv6线程阻塞开关
+timer_condition_ipv6list = threading.Condition()
+# 节点订阅线程阻塞开关
+timer_condition_proxylist = threading.Condition()
+
+
+def executeProxylist(sleepSecond):
     while True:
-        method = globals().get(method_name)
-        # 判断方法是否存在
-        if not method:
-            break
-        # 执行方法
-        method()
-        time.sleep(sleepSecond)  # 等待24小时
+        with timer_condition_proxylist:
+            if not isOpenFunction('switch29'):
+                timer_condition_proxylist.wait(sleepSecond)
+            # 执行方法
+            chaoronghe6()
+            timer_condition_proxylist.wait(sleepSecond)
+        time.sleep(10)
+
+
+def executeIPV6list(sleepSecond):
+    while True:
+        with timer_condition_ipv6list:
+            if not isOpenFunction('switch28'):
+                timer_condition_ipv6list.wait(sleepSecond)
+            # 执行方法
+            chaoronghe5()
+            timer_condition_ipv6list.wait(sleepSecond)
+        time.sleep(10)
+
+
+def executeIPV4list(sleepSecond):
+    while True:
+        with timer_condition_ipv4list:
+            if not isOpenFunction('switch27'):
+                timer_condition_ipv4list.wait(sleepSecond)
+            # 执行方法
+            chaoronghe4()
+            timer_condition_ipv4list.wait(sleepSecond)
+        time.sleep(10)
+
+
+def executeBlacklist(sleepSecond):
+    while True:
+        with timer_condition_blacklist:
+            if not isOpenFunction('switch13'):
+                timer_condition_blacklist.wait(sleepSecond)
+            # 执行方法
+            chaoronghe3()
+            timer_condition_blacklist.wait(sleepSecond)
+        time.sleep(10)
+
+
+def executeWhitelist(sleepSecond):
+    while True:
+        with timer_condition_whitelist:
+            if not isOpenFunction('switch26'):
+                timer_condition_whitelist.wait(sleepSecond)
+            # 执行方法
+            chaoronghe2()
+            timer_condition_whitelist.wait(sleepSecond)
+        time.sleep(10)
+
+
+def toggle_m3u(functionId, value):
+    global function_dict
+    if functionId == 'switch25':
+        with timer_condition_m3u:
+            function_dict[functionId] = str(value)
+            redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
+            timer_condition_m3u.notify()
+    elif functionId == 'switch26':
+        with timer_condition_whitelist:
+            function_dict[functionId] = str(value)
+            redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
+            timer_condition_whitelist.notify()
+    elif functionId == 'switch13':
+        with timer_condition_blacklist:
+            function_dict[functionId] = str(value)
+            redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
+            timer_condition_blacklist.notify()
+    elif functionId == 'switch27':
+        with timer_condition_ipv4list:
+            function_dict[functionId] = str(value)
+            redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
+            timer_condition_ipv4list.notify()
+    elif functionId == 'switch28':
+        with timer_condition_ipv6list:
+            function_dict[functionId] = str(value)
+            redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
+            timer_condition_ipv6list.notify()
+    elif functionId == 'switch29':
+        with timer_condition_proxylist:
+            function_dict[functionId] = str(value)
+            redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
+            timer_condition_proxylist.notify()
+
+
+def executeM3u(sleepSecond):
+    while True:
+        with timer_condition_m3u:
+            if not isOpenFunction('switch25'):
+                timer_condition_m3u.wait(sleepSecond)
+            # 执行方法
+            chaoronghe()
+            timer_condition_m3u.wait(sleepSecond)
+        time.sleep(10)
 
 
 async def checkWriteHealthM3u(url):
+    # 关闭白名单直播源生成
+    if not isOpenFunction('switch5'):
+        return
     name = tmp_url_tvg_name_dict.get(url)
     if name:
         async with aiofiles.open('/healthm3u.m3u', 'a', encoding='utf-8') as f:  # 异步的方式写入内容
@@ -354,9 +463,9 @@ def check_file(m3u_dict):
             return
         if os.path.exists("/alive.m3u"):
             os.remove("/alive.m3u")
-
-        if os.path.exists("/healthm3u.m3u"):
-            os.remove("/healthm3u.m3u")
+        if isOpenFunction('switch5'):
+            if os.path.exists("/healthm3u.m3u"):
+                os.remove("/healthm3u.m3u")
             # 异步缓慢检测出有效链接
         asyncio.run(asynctask(m3u_dict))
     except:
@@ -486,8 +595,9 @@ def addlist(request, rediskey):
 def writeTvList(fileName, secretfilename):
     distribute_data(white_list_adguardhome, fileName, 10)
     white_list_adguardhome.clear()
-    download_secert_file(fileName, secretfilename, REDIS_KEY_THREADS2,
-                         threadsNum2)
+    download_secert_file(fileName, secretfilename, 'm3u',
+                         isOpenFunction('switch8'), isOpenFunction('switch7'), isOpenFunction('switch30'),
+                         isOpenFunction('switch31'), isOpenFunction('switch32'))
 
 
 # whitelist-加密上传   switch11
@@ -496,6 +606,7 @@ def writeOpenclashNameServerPolicy():
     if white_list_nameserver_policy and len(white_list_nameserver_policy) > 0:
         # 更新redis数据库白名单三级分层字典
         redis_del_map(REDIS_KEY_WHITELIST_DATA_SP)
+        global whitelistSpData
         redis_add_map(REDIS_KEY_WHITELIST_DATA_SP, whitelistSpData)
         whitelistSpData.clear()
         # 通知dns服务器更新内存
@@ -506,14 +617,16 @@ def writeOpenclashNameServerPolicy():
         distribute_data(white_list_nameserver_policy, "/whiteList.txt", 10)
         white_list_nameserver_policy.clear()
         # 白名单加密
-        download_secert_file("/whiteList.txt", "/WTEN.txt", REDIS_KEY_THREADS3,
-                             threadsNum3)
+        download_secert_file("/whiteList.txt", "/WTEN.txt", 'whitelist',
+                             isOpenFunction('switch12'), isOpenFunction('switch11'),
+                             isOpenFunction('switch30'), isOpenFunction('switch31'), isOpenFunction('switch32'))
 
 
 def writeBlackList():
     if black_list_nameserver_policy and len(black_list_nameserver_policy) > 0:
         # 更新redis数据库白名单三级分层字典
         redis_del_map(REDIS_KEY_BLACKLIST_DATA_SP)
+        global blacklistSpData
         redis_add_map(REDIS_KEY_BLACKLIST_DATA_SP, blacklistSpData)
         blacklistSpData.clear()
         # 通知dns服务器更新内存
@@ -526,8 +639,9 @@ def writeBlackList():
         distribute_data(black_list_nameserver_policy, "/blackList.txt", 10)
         black_list_nameserver_policy.clear()
         # 黑名单加密
-        download_secert_file("/blackList.txt", "/BLEN.txt", REDIS_KEY_THREADS4,
-                             threadsNum4)
+        download_secert_file("/blackList.txt", "/BLEN.txt", 'blacklist', isOpenFunction('switch16'),
+                             isOpenFunction('switch17'),
+                             isOpenFunction('switch30'), isOpenFunction('switch31'), isOpenFunction('switch32'))
 
 
 def updateAdguardhomeWithelistForM3us(urls):
@@ -556,20 +670,26 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
     distribute_data(my_dict, fileName, 10)
     redis_add_map(redisKeyData, my_dict)
     if ism3u:
-        # 生成直播源域名-无加密
-        thread = threading.Thread(target=writeTvList,
-                                  args=("/tvlist.txt", '/TTADEN.txt'))
-        # 神速直播源有效性检测
-        thread2 = threading.Thread(target=check_file, args=(my_dict,))
+        # M3U域名tvlist - 无加密
+        if isOpenFunction('switch6'):
+            # 生成直播源域名-无加密
+            thread = threading.Thread(target=writeTvList,
+                                      args=("/tvlist.txt", '/TTADEN.txt'))
+            thread.start()
+        if isOpenFunction('switch'):
+            # 神速直播源有效性检测
+            thread2 = threading.Thread(target=check_file, args=(my_dict,))
+            thread2.start()
         # logo,group更新
         redis_add_map(REDIS_KEY_M3U_EPG_LOGO, CHANNEL_LOGO)
         redis_add_map(REDIS_KEY_M3U_EPG_GROUP, CHANNEL_GROUP)
         # 开启直播源加密:
         # 加密全部直播源
         thread3 = threading.Thread(target=download_secert_file,
-                                   args=(fileName, "/AEN.txt", REDIS_KEY_THREADS2, threadsNum2))
-        thread2.start()
-        thread.start()
+                                   args=(
+                                       fileName, "/AEN.txt", 'm3u', isOpenFunction('switch2'),
+                                       isOpenFunction('switch3'), isOpenFunction('switch30'),
+                                       isOpenFunction('switch31'), isOpenFunction('switch32')))
         thread3.start()
     # 域名白名单
     if processDataMethodName == 'process_data_abstract3':
@@ -578,60 +698,91 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         # 生成dnsmasq加密
         thread2 = threading.Thread(target=download_secert_file,
                                    args=(
-                                       fileName, "/DQEN.txt", REDIS_KEY_THREADS3, threadsNum3))
+                                       fileName, "/DQEN.txt", 'whitelist',
+                                       isOpenFunction('switch9'), isOpenFunction('switch10'),
+                                       isOpenFunction('switch30'), isOpenFunction('switch31'),
+                                       isOpenFunction('switch32')))
         thread.start()
         thread2.start()
     # 域名黑名单
     if processDataMethodName == 'process_data_abstract7':
         # blackList.txt
         thread = threading.Thread(target=writeBlackList)
+        thread.start()
         # 加密openclash-fallback-filter-domain.conf
         thread2 = threading.Thread(target=download_secert_file,
                                    args=(
-                                       fileName, "/OPPDEN.txt", REDIS_KEY_THREADS4, threadsNum4))
-        thread.start()
+                                       fileName, "/OPPDEN.txt", 'blacklist',
+                                       isOpenFunction('switch14'), isOpenFunction('switch15'),
+                                       isOpenFunction('switch30'), isOpenFunction('switch31'),
+                                       isOpenFunction('switch32')))
         thread2.start()
     # ipv4
     if processDataMethodName == 'process_data_abstract5':
-        # ipv4整数数组字典更新
-        old_dict_ipv4_range = redis_get_map(REDIS_KEY_WHITELIST_IPV4_DATA_INT_RANGE)
-        ipv4_int_range.update(old_dict_ipv4_range)
-        redis_add_map(REDIS_KEY_WHITELIST_IPV4_DATA_INT_RANGE, ipv4_int_range)
-        ipv4_int_range.clear()
         # 通知dns服务器更新内存,不给dns分流器使用，数据太大了
         # redis_add(REDIS_KEY_UPDATE_IPV4_LIST_FLAG, 1)
         # ipv4-加密
         thread = threading.Thread(target=download_secert_file,
-                                  args=(fileName, "/VFEN.txt", REDIS_KEY_THREADS5, threadsNum5))
+                                  args=(
+                                      fileName, "/VFEN.txt", 'ipv4',
+                                      isOpenFunction('switch18'),
+                                      isOpenFunction('switch19'), isOpenFunction('switch30'),
+                                      isOpenFunction('switch31'), isOpenFunction('switch32')))
         thread.start()
     # ipv6加密
     if processDataMethodName == 'process_data_abstract6':
         # 加密
         thread = threading.Thread(target=download_secert_file,
-                                  args=(fileName, "/VSEN.txt", REDIS_KEY_THREADS6, threadsNum6))
+                                  args=(
+                                      fileName, "/VSEN.txt", 'ipv6',
+                                      isOpenFunction('switch20'),
+                                      isOpenFunction('switch21'), isOpenFunction('switch30'),
+                                      isOpenFunction('switch31'), isOpenFunction('switch32')))
         thread.start()
     return "result"
 
 
+# 纠正url重复/问题
+def getCorrectUrl(bakenStr):
+    url_parts = bakenStr.split('/')
+    cleaned_parts = [part for part in url_parts if part != '']
+    cleaned_url = '/'.join(cleaned_parts)
+    return cleaned_url
+
+
 # 检查文件是否已经存在于gitee仓库，存在的话删除旧数据
 def removeIfExist(username, repo_name, path, access_token, file_name):
-    url = f'https://gitee.com/api/v5/repos/{username}/{repo_name}/contents{path}'
+    bakenStr = f'{username}/{repo_name}/contents/{path}/{file_name}'
+    url = f'https://gitee.com/api/v5/repos/{getCorrectUrl(bakenStr)}'
     headers = {'Authorization': f'token {access_token}'}
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
-        files = response.json()
-        for file in files:
-            if file['name'] == file_name:
-                # Delete the existing file
-                url = file['url']
-                sha = file['sha']
-                message = 'Delete existing file'
-                data = {'message': message, 'sha': sha}
-                response = requests.delete(url, headers=headers, json=data)
-                if response.status_code != 204:
-                    print(f'Failed to delete file. Status code: {response.status_code}')
-                else:
-                    print('Existing file deleted successfully.')
+        file_details = response.json()
+        sha = file_details['sha']
+        commit_message = 'Delete existing file'
+        data = {
+            "message": commit_message,
+            "sha": sha,
+        }
+        response = requests.delete(url, headers=headers, json=data)
+        if response.status_code == 200:
+            print(f'Successfully deleted file {file_name} in GITEE repository.')
+        else:
+            print(f'Error deleting file {file_name} from GITEE repository.')
+        #
+        # files = response.json()
+        # for file in files:
+        #     if file['name'] == file_name:
+        #         # Delete the existing file
+        #         url = file['url']
+        #         sha = file['sha']
+        #         message = 'Delete existing file'
+        #         data = {'message': message, 'sha': sha}
+        #         response = requests.delete(url, headers=headers, json=data)
+        #         if response.status_code != 204:
+        #             print(f'Failed to delete file. Status code: {response.status_code}')
+        #         else:
+        #             print('Existing file deleted successfully.')
 
 
 # 上传新文件到gitee
@@ -640,7 +791,8 @@ def uploadNewFileToGitee(username, repo_name, path, access_token, file_name):
     with open(f'/{file_name}', 'rb') as f:
         file_content = f.read()
     # 构建API请求URL和headers
-    url = f'https://gitee.com/api/v5/repos/{username}/{repo_name}/contents{path}/{file_name}'
+    bakenStr = f'{username}/{repo_name}/contents/{path}/{file_name}'
+    url = f'https://gitee.com/api/v5/repos/{getCorrectUrl(bakenStr)}'
     headers = {
         'Content-Type': 'application/json;charset=UTF-8',
         'Authorization': f'token {access_token}',
@@ -660,10 +812,13 @@ def uploadNewFileToGitee(username, repo_name, path, access_token, file_name):
 
 
 def updateFileToGitee(file_name):
-    username = init_gitee(REDIS_KEY_GITEE_USERNAME, gitee_username)
-    repo_name = init_gitee(REDIS_KEY_GITEE_REPONAME, gitee_reponame)
-    path = init_gitee(REDIS_KEY_GITEE_PATH, gitee_path)
-    access_token = init_gitee(REDIS_KEY_GITEE_ACCESS_TOKEN, gitee_access_token)
+    # REDIS_KEY_GITEE
+    # redisKeyGitee = {'username': '', 'reponame': '', 'path': '', 'accesstoken': ''}
+    global redisKeyGitee
+    username = init_gitee('username', REDIS_KEY_GITEE, redisKeyGitee)
+    repo_name = init_gitee('reponame', REDIS_KEY_GITEE, redisKeyGitee)
+    path = init_gitee('path', REDIS_KEY_GITEE, redisKeyGitee)
+    access_token = init_gitee('accesstoken', REDIS_KEY_GITEE, redisKeyGitee)
     try:
         removeIfExist(username, repo_name, path, access_token, file_name)
     except:
@@ -674,8 +829,145 @@ def updateFileToGitee(file_name):
         pass
 
 
+def removeIfExistGithub(username, repo_name, path, access_token, file_name):
+    bakenStr = f'{username}/{repo_name}/contents/{path}/{file_name}'
+    url = f'https://api.github.com/repos/{getCorrectUrl(bakenStr)}'
+    headers = {'Authorization': f'token {access_token}'}
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        file_details = response.json()
+        sha = file_details['sha']
+        commit_message = 'Delete existing file'
+        data = {
+            "message": commit_message,
+            "sha": sha,
+        }
+        response = requests.delete(url, headers=headers, json=data)
+        if response.status_code == 200:
+            print(f'Successfully deleted file {file_name} in Github repository.')
+        else:
+            print(f'Error deleting file {file_name} from Github repository.')
+
+
+def uploadNewFileToGithub(username, repo_name, path, access_token, file_name):
+    bakenStr = f'{username}/{repo_name}/contents/{path}/{file_name}'
+    url = f'https://api.github.com/repos/{getCorrectUrl(bakenStr)}'
+    headers = {
+        'Content-Type': 'application/json;charset=UTF-8',
+        'Authorization': f'token {access_token}',
+    }
+    with open('/' + file_name, 'rb') as f:
+        file_content = f.read()
+    b64_file_content = base64.b64encode(file_content).decode('utf-8')
+    commit_message = 'Upload a file'
+    data = {
+        'message': commit_message,
+        'content': b64_file_content,
+    }
+    response = requests.put(url, headers=headers, json=data)
+    if response.status_code == 201:
+        print(f'Successfully uploaded file {file_name} to Github repository.')
+    else:
+        print(f'Error uploading file {file_name} to Github repository.')
+
+
+def updateFileToGithub(file_name):
+    global redisKeyGithub
+    username = init_gitee('username', REDIS_KEY_GITHUB, redisKeyGithub)
+    repo_name = init_gitee('reponame', REDIS_KEY_GITHUB, redisKeyGithub)
+    path = init_gitee('path', REDIS_KEY_GITHUB, redisKeyGithub)
+    access_token = init_gitee('accesstoken', REDIS_KEY_GITHUB, redisKeyGithub)
+
+    try:
+        removeIfExistGithub(username, repo_name, path, access_token, file_name)
+    except:
+        pass
+    try:
+        uploadNewFileToGithub(username, repo_name, path, access_token, file_name)
+    except:
+        pass
+
+
+########################webdav##################################
+
+def getAgreement(agreement):
+    if "https" in agreement:
+        return 'https'
+    return 'http'
+
+
+def purgeAgreement(serverUrl):
+    if 'http' in serverUrl:
+        return serverUrl.split('//')[1]
+    else:
+        return serverUrl
+
+
+# Function to remove a file if it exists in the WebDAV repository
+def removeIfExistWebDav(server_url, username, password, base_path, file_name, port, agreement):
+    url = f"{purgeAgreement(server_url)}:{port}/{base_path}/{file_name}"
+    url = f'{getAgreement(agreement)}://{getCorrectUrl(url)}'
+    response = requests.head(url, auth=(username, password))
+    if response.status_code == 200:
+        response = requests.delete(url, auth=(username, password))
+        if response.status_code == 204:
+            print(f"Successfully deleted file {file_name} in WebDAV repository.")
+    else:
+        print(f"File {file_name} does not exist in WebDAV repository, skipping deletion.")
+
+
+# Function to upload a new file to the WebDAV repository
+def uploadNewFileToWebDAV(server_url, username, password, base_path, file_name, port, agreement):
+    url = f"{purgeAgreement(server_url)}:{port}/{base_path}/{file_name}"
+    url = f'{getAgreement(agreement)}://{getCorrectUrl(url)}'
+    with open('/' + file_name, "rb") as f:
+        file_content = f.read()
+    response = requests.put(url, auth=(username, password), data=file_content)
+    if response.status_code == 201:
+        print(f"Successfully uploaded file {file_name} to WebDAV repository.")
+
+
+def updateFileToWebDAV(file_name):
+    global redisKeyWebDav
+    username = init_gitee('username', REDIS_KEY_WEBDAV, redisKeyWebDav)
+    ip = init_gitee('ip', REDIS_KEY_WEBDAV, redisKeyWebDav)
+    port = init_gitee('port', REDIS_KEY_WEBDAV, redisKeyWebDav)
+    password = init_gitee('password', REDIS_KEY_WEBDAV, redisKeyWebDav)
+    path = init_gitee('path', REDIS_KEY_WEBDAV, redisKeyWebDav)
+    agreement = init_gitee('agreement', REDIS_KEY_WEBDAV, redisKeyWebDav)
+
+    try:
+        removeIfExistWebDav(ip, username, password, path, file_name, port, agreement)
+    except Exception as e:
+        print(e)
+        pass
+    try:
+        uploadNewFileToWebDAV(ip, username, password, path, file_name, port), agreement
+    except Exception as e:
+        print(e)
+        pass
+
+
 # 定义线程数和任务队列,防止多线程提交数据到gitee产生竞争阻塞，最终导致数据丢失
 task_queue = queue.Queue()
+
+# 定义线程数和任务队列,防止多线程提交数据到github产生竞争阻塞，最终导致数据丢失
+task_queue_github = queue.Queue()
+
+# 定义线程数和任务队列,防止多线程提交数据到webdav产生竞争阻塞，最终导致数据丢失
+task_queue_webdav = queue.Queue()
+
+
+def worker_webdav():
+    while True:
+        # 从任务队列中获取一个任务
+        task = task_queue_webdav.get()
+        if task is None:
+            continue
+        # 执行上传文件操作
+        file_name = task
+        updateFileToWebDAV(file_name)
+        time.sleep(10)
 
 
 def worker_gitee():
@@ -687,20 +979,51 @@ def worker_gitee():
         # 执行上传文件操作
         file_name = task
         updateFileToGitee(file_name)
-        time.sleep(60)
+        time.sleep(10)
+
+
+def worker_github():
+    while True:
+        # 从任务队列中获取一个任务
+        task = task_queue_github.get()
+        if task is None:
+            continue
+        # 执行上传文件操作
+        file_name = task
+        updateFileToGithub(file_name)
+        time.sleep(10)
+
+
+def isOpenFunction(functionId):
+    global function_dict
+    vaule = function_dict.get(functionId)
+    if vaule == '1':
+        return True
+    else:
+        return False
 
 
 # 把自己本地文件加密生成对应的加密文本
-def download_secert_file(fileName, secretFileName, redis_key, dict_cache):
+def download_secert_file(fileName, secretFileName, cachekey, openJiaMi, openUpload, uploadGitee,
+                         uploadGithub, uploadWebdav):
     try:
-        # 读取文件内容
-        with open(fileName, 'rb') as f:
-            ciphertext = f.read()
-        secretContent = encrypt(ciphertext, redis_key, dict_cache)
-        thread_write_bytes_to_file(secretFileName, secretContent)
-        # 加密文件上传gitee:
-        # 加密文件上传至gitee,
-        task_queue.put(os.path.basename(secretFileName))
+        if openJiaMi:
+            # 读取文件内容
+            with open(fileName, 'rb') as f:
+                ciphertext = f.read()
+            secretContent = encrypt(ciphertext, cachekey)
+            thread_write_bytes_to_file(secretFileName, secretContent)
+        # 开启上传
+        if openUpload:
+            # 加密文件上传至gitee,
+            if uploadGitee:
+                task_queue.put(os.path.basename(secretFileName))
+            # 加密文件上传至github,
+            if uploadGithub:
+                task_queue_github.put(os.path.basename(secretFileName))
+            # 加密文件上传至webdav,
+            if uploadWebdav:
+                task_queue_webdav.put(os.path.basename(secretFileName))
         # updateFileToGitee(os.path.basename(secretFileName))
         # plaintext = decrypt(password, secretContent)
         # thread_write_bytes_to_file("/解密文件.txt", plaintext)
@@ -719,6 +1042,8 @@ def thread_write_bytes_to_file(filename, bytesContent):
     with concurrent.futures.ThreadPoolExecutor() as executor:
         future = executor.submit(write_bytes_to_file, filename, bytesContent)
         future.result()
+    # 等待所有任务完成
+    concurrent.futures.wait([future])
 
 
 def write_bytes_to_file(filename, plaintext):
@@ -748,6 +1073,13 @@ def init_db():
     init_IP()
     init_function_dict()
 
+    init_pass('proxy')
+    init_pass('ipv6')
+    init_pass('ipv4')
+    init_pass('blacklist')
+    init_pass('whitelist')
+    init_pass('m3u')
+
 
 def init_function_dict():
     global function_dict
@@ -756,83 +1088,111 @@ def init_function_dict():
         keys = dict.keys()
         # 生成有效M3U
         if 'switch' not in keys:
-            dict['switch'] = 1
+            dict['switch'] = '1'
         # M3U加密
         if 'switch2' not in keys:
-            dict['switch2'] = 0
-        # 完整M3U加密上传gitee
+            dict['switch2'] = '0'
+        # 完整M3U加密上传
         if 'switch3' not in keys:
-            dict['switch3'] = 0
+            dict['switch3'] = '0'
         # 生成全部M3U
         if 'switch4' not in keys:
-            dict['switch4'] = 1
+            dict['switch4'] = '1'
         # 生成白名单M3U
         if 'switch5' not in keys:
-            dict['switch5'] = 1
+            dict['switch5'] = '1'
         # M3U域名-无加密-tvlist
         if 'switch6' not in keys:
-            dict['switch6'] = 1
-        # m3u域名加密文件上传gitee
+            dict['switch6'] = '1'
+        # m3u域名加密文件上传
         if 'switch7' not in keys:
-            dict['switch7'] = 0
+            dict['switch7'] = '0'
         # m3u域名加密文件生成
         if 'switch8' not in keys:
-            dict['switch8'] = 0
+            dict['switch8'] = '0'
         # 域名白名单生成dnsmasq加密文件
         if 'switch9' not in keys:
-            dict['switch9'] = 0
-        # dnsmasq加密文件上传gitee
+            dict['switch9'] = '0'
+        # dnsmasq加密文件上传
         if 'switch10' not in keys:
-            dict['switch10'] = 0
+            dict['switch10'] = '0'
         # 域名白名单-加密上传
         if 'switch11' not in keys:
-            dict['switch11'] = 0
+            dict['switch11'] = '0'
         # 域名白名单-加密
         if 'switch12' not in keys:
-            dict['switch12'] = 0
-        # 域名黑名单-openclash-无加密
+            dict['switch12'] = '0'
+        # 域名黑名单-定时器
         if 'switch13' not in keys:
-            dict['switch13'] = 1
+            dict['switch13'] = '1'
         # 域名黑名单-openclash-加密
         if 'switch14' not in keys:
-            dict['switch14'] = 0
-        # 域名黑名单-openclash-加密-上传gitee
+            dict['switch14'] = '0'
+        # 域名黑名单-openclash-加密-上传
         if 'switch15' not in keys:
-            dict['switch15'] = 0
+            dict['switch15'] = '0'
         # 域名黑名单-加密
         if 'switch16' not in keys:
-            dict['switch16'] = 0
-        # 域名黑名单-加密-上传gitee
+            dict['switch16'] = '0'
+        # 域名黑名单-加密-上传
         if 'switch17' not in keys:
-            dict['switch17'] = 0
+            dict['switch17'] = '0'
         # ipv4-加密
         if 'switch18' not in keys:
-            dict['switch18'] = 0
-        # ipv4-加密-上传gitee
+            dict['switch18'] = '0'
+        # ipv4-加密-上传
         if 'switch19' not in keys:
-            dict['switch19'] = 0
+            dict['switch19'] = '0'
         # ipv6-加密
         if 'switch20' not in keys:
-            dict['switch20'] = 0
-        # ipv6-加密-上传gitee
+            dict['switch20'] = '0'
+        # ipv6-加密-上传
         if 'switch21' not in keys:
-            dict['switch21'] = 0
+            dict['switch21'] = '0'
         # 节点订阅-加密
         if 'switch22' not in keys:
-            dict['switch22'] = 1
-        # 节点订阅+-加密-上传gitee
+            dict['switch22'] = '1'
+        # 节点订阅+-加密-上传
         if 'switch23' not in keys:
-            dict['switch23'] = 1
+            dict['switch23'] = '1'
         # 自动生成简易DNS黑白名单
         if 'switch24' not in keys:
-            dict['switch24'] = 1
+            dict['switch24'] = '1'
+        # m3u-定时器
+        if 'switch25' not in keys:
+            dict['switch25'] = '0'
+        # 域名白名单-定时器
+        if 'switch26' not in keys:
+            dict['switch26'] = '0'
+        # ipv4-定时器
+        if 'switch27' not in keys:
+            dict['switch27'] = '0'
+        # ipv6-定时器
+        if 'switch28' not in keys:
+            dict['switch28'] = '0'
+        # 节点订阅-定时器
+        if 'switch29' not in keys:
+            dict['switch29'] = '1'
+        # 上传至Gitee
+        if 'switch30' not in keys:
+            dict['switch30'] = '1'
+        # 上传至Github
+        if 'switch31' not in keys:
+            dict['switch31'] = '1'
+        # 上传至Webdav
+        if 'switch32' not in keys:
+            dict['switch32'] = '1'
         redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
         function_dict = dict.copy()
     else:
-        dict = {'switch': 1, 'switch2': 0, 'switch3': 0, 'switch4': 1, 'switch5': 1, 'switch6': 1, 'switch7': 0,
-                'switch8': 0, 'switch9': 0, 'switch10': 0, 'switch11': 0, 'switch12': 0, 'switch13': 1, 'switch14': 0,
-                'switch15': 0, 'switch16': 0, 'switch17': 0, 'switch18': 0, 'switch19': 0, 'switch20': 0, 'switch21': 0,
-                'switch22': 1, 'switch23': 1, 'switch24': 1}
+        dict = {'switch': '1', 'switch2': '0', 'switch3': '0', 'switch4': '1', 'switch5': '1', 'switch6': '1',
+                'switch7': '0',
+                'switch8': '0', 'switch9': '0', 'switch10': '0', 'switch11': '0', 'switch12': '0', 'switch13': '1',
+                'switch14': '0',
+                'switch15': '0', 'switch16': '0', 'switch17': '0', 'switch18': '0', 'switch19': '0', 'switch20': '0',
+                'switch21': '0',
+                'switch22': '1', 'switch23': '1', 'switch24': '1', 'switch25': '0', 'switch26': '0', 'switch27': '0'
+            , 'switch28': '0', 'switch29': '1', 'switch30': '1', 'switch31': '1', 'switch32': '1'}
         redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
         function_dict = dict.copy()
 
@@ -1078,6 +1438,7 @@ def updateBlackList(url):
 def updateBlackListSpData(domain):
     # 一级域名，类似:一级域名名字.顶级域名名字
     domain_name_str = stupidThink(domain)
+    global blacklistSpData
     blacklistSpData[domain_name_str] = ''
     # # 一级域名名字，顶级域名名字
     # start, end = domain_name_str.split('.')
@@ -1181,7 +1542,7 @@ def process_data_ipv4_collect(data, index, step, my_dict):
         if is_ipv4_network(line):
             my_dict[line] = ""
             # 转换成ipv4-整数数组字典
-            update_ipv4_int_range(line)
+            # update_ipv4_int_range(line)
 
 
 # 字符串内容处理-ipv6合并
@@ -1211,6 +1572,7 @@ def process_data_domain_collect(data, index, step, my_dict):
 def updateWhiteListSpData(domain):
     # 一级域名，类似:一级域名名字.顶级域名名字
     domain_name_str = stupidThink(domain)
+    global whitelistSpData
     whitelistSpData[domain_name_str] = ''
     # # 一级域名名字，顶级域名名字
     # start, end = domain_name_str.split('.')
@@ -1287,6 +1649,9 @@ def updateOpenclashNameServerPolicy(url):
 
 
 def updateAdguardhomeWithelistForM3u(url):
+    # 没有开启tvlist生成
+    if not isOpenFunction('switch6'):
+        return
     parsed_url = urlparse(url)
     domain = parsed_url.netloc.split(':')[0] if ':' in parsed_url.netloc else parsed_url.netloc  # 提取IP地址或域名
     if domain.replace('.', '').isnumeric():  # 判断是否为IP地址
@@ -1428,6 +1793,12 @@ tmp_url_tvg_name_dict = {}
 
 
 def addChinaChannel(tvg_name, url, fullName):
+    # 关闭有效直播源生成
+    if not isOpenFunction('switch'):
+        return
+    # 关闭白名单直播源生成
+    if not isOpenFunction('switch5'):
+        return
     for name in m3u_whitlist.keys():
         if name in tvg_name:
             tmp_url_tvg_name_dict[url] = fullName
@@ -2146,11 +2517,15 @@ def chaorongheProxies(filename):
         # with open(filename, 'wb') as f:
         #     f.write(response.content)
         thread = threading.Thread(target=download_secert_file,
-                                  args=(filename, "/CC.txt", REDIS_KEY_THREADS7, threadsNum7))
+                                  args=(
+                                      filename, "/CC.txt", 'proxy', isOpenFunction('switch22'),
+                                      isOpenFunction('switch23'), isOpenFunction('switch30'),
+                                      isOpenFunction('switch31'), isOpenFunction('switch32')))
         thread.start()
         thread_remove(remoteToLocalUrl)
         return "result"
     else:
+
         # 订阅失败处理逻辑
         print("Error:", response.status_code, response.reason)
         thread_remove(remoteToLocalUrl)
@@ -2162,10 +2537,6 @@ def thread_remove(remoteToLocalUrl):
     for key in remoteToLocalUrl.values():
         if os.path.exists(key):
             os.remove(key)
-    #     if url != "":
-    #         url += "|"
-    #     url += key
-    # remove_queue.put(url)
 
 
 # 线程池切分下载的内容写入本地
@@ -2368,73 +2739,127 @@ def init_extra_dns_server():
     return num
 
 
-def init_pass(redis_key, dictCache):
-    data = dictCache.get(redis_key)
-    if data:
+def init_pass(cacheKey):
+    # redisKeySecretPassNow = {'m3u': '', 'whitelist': '', 'blacklist': '', 'ipv4': '', 'ipv6': '', 'proxy': ''}
+    global redisKeySecretPassNow
+    data = redisKeySecretPassNow.get(cacheKey)
+    if data and data != '':
         return data
-    passwordDict = redis_get_map(redis_key)
-    if passwordDict:
-        password = passwordDict[redis_key]
-        if password == "":
-            password = generateEncryptPassword()
+    dict = redis_get_map(REDIS_KEY_SECRET_PASS_NOW)
+    if dict:
+        value = dict.get(cacheKey)
+        if value:
+            redisKeySecretPassNow[cacheKey] = value
+            return value
+        else:
+            value = generateEncryptPassword()
+            redisKeySecretPassNow[cacheKey] = value
             tmp_dict = {}
-            tmp_dict[redis_key] = password
-            # 设定默认选择的模板
-            redis_add_map(redis_key, tmp_dict)
-            dictCache[redis_key] = password
-        dictCache[redis_key] = password
-        return password
+            tmp_dict[cacheKey] = value
+            redis_add_map(REDIS_KEY_SECRET_PASS_NOW, tmp_dict)
+            return value
     else:
-        password = generateEncryptPassword()
+        value = generateEncryptPassword()
+        redisKeySecretPassNow[cacheKey] = value
         tmp_dict = {}
-        tmp_dict[redis_key] = password
-        # 设定默认选择的模板
-        redis_add_map(redis_key, tmp_dict)
-        dictCache[redis_key] = password
-        return password
+        tmp_dict[cacheKey] = value
+        redis_add_map(REDIS_KEY_SECRET_PASS_NOW, tmp_dict)
+        return value
 
 
 # 获取gitee数据
-def init_gitee(redis_key, dictCache):
-    data = dictCache.get(redis_key)
+def init_gitee(cachekey, redisKey, cache):
+    data = cache.get(cachekey)
     if data:
         return data
-    passwordDict = redis_get_map(redis_key)
-    if passwordDict:
-        password = passwordDict[redis_key]
-        if password == "":
-            password = ""
-            tmp_dict = {}
-            tmp_dict[redis_key] = password
-            # 设定默认选择的模板
-            redis_add_map(redis_key, tmp_dict)
-            dictCache[redis_key] = password
-        dictCache[redis_key] = password
-        return password
+    allDict = redis_get_map(redisKey)
+    if allDict:
+        cacheValue = allDict.get(cachekey)
+        if cacheValue:
+            cacheValue = cacheValue
+            cache[cachekey] = cacheValue
+        else:
+            cacheValue = ''
+            cache[cachekey] = cacheValue
+            tmp_dict = {cachekey: cacheValue}
+            redis_add_map(redisKey, tmp_dict)
+        return cacheValue
     else:
-        password = ""
-        tmp_dict = {}
-        tmp_dict[redis_key] = password
-        # 设定默认选择的模板
-        redis_add_map(redis_key, tmp_dict)
-        dictCache[redis_key] = password
-        return password
+        cacheValue = ''
+        cache[cachekey] = cacheValue
+        tmp_dict = {cachekey: cacheValue}
+        redis_add_map(redisKey, tmp_dict)
+        return cacheValue
 
 
 # gitee-修改数据
-def update_gitee(redis_key, dict_cache, value):
-    tmp_dict = {}
-    tmp_dict[redis_key] = value
+def update_gitee(cachekey, value, redisKey, cache):
+    tmp_dict = {cachekey: value}
     # 设定默认选择的模板
-    redis_add_map(redis_key, tmp_dict)
-    dict_cache[redis_key] = value
+    redis_add_map(redisKey, tmp_dict)
+    cache[cachekey] = value
 
 
 # 直播源订阅密码刷新
-def update_m3u_subscribe_pass(redis_key, dict_cache):
+def update_m3u_subscribe_pass_by_hand(cachekey, password):
+    if cachekey == 'm3u':
+        tagname = '直播源订阅'
+    elif cachekey == 'proxy':
+        tagname = '节点订阅'
+    elif cachekey == 'ipv6':
+        tagname = 'ipv6订阅'
+    elif cachekey == 'ipv4':
+        tagname = 'ipv4订阅'
+    elif cachekey == 'blacklist':
+        tagname = '域名黑名单订阅'
+    elif cachekey == 'whitelist':
+        tagname = '域名白名单订阅'
+    # redisKeySecretPassNow = {'m3u': '', 'whitelist': '', 'blacklist': '', 'ipv4': '', 'ipv6': '', 'proxy': ''}
+    global redisKeySecretPassNow
+    oldpass = redisKeySecretPassNow.get(cachekey)
+    if oldpass:
+        addHistorySubscribePass(oldpass, tagname)
+    else:
+        oldpassDict = redis_get_map(REDIS_KEY_SECRET_PASS_NOW)
+        if oldpassDict:
+            oldpass = oldpassDict.get(cachekey)
+            addHistorySubscribePass(oldpass.decode(), tagname)
+    tmp_dict = {}
+    tmp_dict[cachekey] = password
+    redis_add_map(REDIS_KEY_SECRET_PASS_NOW, tmp_dict)
+    redisKeySecretPassNow[cachekey] = password
+    return password
+
+
+# 直播源订阅密码刷新
+def update_m3u_subscribe_pass(cachekey):
+    if cachekey == 'm3u':
+        tagname = '直播源订阅'
+    elif cachekey == 'proxy':
+        tagname = '节点订阅'
+    elif cachekey == 'ipv6':
+        tagname = 'ipv6订阅'
+    elif cachekey == 'ipv4':
+        tagname = 'ipv4订阅'
+    elif cachekey == 'blacklist':
+        tagname = '域名黑名单订阅'
+    elif cachekey == 'whitelist':
+        tagname = '域名白名单订阅'
+    # redisKeySecretPassNow = {'m3u': '', 'whitelist': '', 'blacklist': '', 'ipv4': '', 'ipv6': '', 'proxy': ''}
+    global redisKeySecretPassNow
+    oldpass = redisKeySecretPassNow.get(cachekey)
+    if oldpass:
+        addHistorySubscribePass(oldpass, tagname)
+    else:
+        oldpassDict = redis_get_map(REDIS_KEY_SECRET_PASS_NOW)
+        if oldpassDict:
+            oldpass = oldpassDict.get(cachekey)
+            addHistorySubscribePass(oldpass.decode(), tagname)
     password = generateEncryptPassword()
-    redis_add(redis_key, password)
-    dict_cache[redis_key] = password
+    tmp_dict = {}
+    tmp_dict[cachekey] = password
+    redis_add_map(REDIS_KEY_SECRET_PASS_NOW, tmp_dict)
+    redisKeySecretPassNow[cachekey] = password
     return password
 
 
@@ -2457,8 +2882,8 @@ def getIV(passwordStr):
 
 
 # 加密函数   # bytes ciphertext
-def encrypt(plaintext, redis_key, dict_cache):
-    password = init_pass(redis_key, dict_cache)
+def encrypt(plaintext, cachekey):
+    password = init_pass(cachekey)
     arr = getIV(password)
     # generate key and iv
     key = arr[0]
@@ -2576,46 +3001,22 @@ def init_IP():
 
 
 def importToReloadCache(cachekey, dict):
-    if cachekey == REDIS_KEY_GITEE_ACCESS_TOKEN:
-        global gitee_access_token
-        gitee_access_token.clear()
-        gitee_access_token = dict.copy()
-    elif cachekey == REDIS_KEY_GITEE_PATH:
-        global gitee_path
-        gitee_path.clear()
-        gitee_path = dict.copy()
-    elif cachekey == REDIS_KEY_GITEE_REPONAME:
-        global gitee_reponame
-        gitee_reponame.clear()
-        gitee_reponame = dict.copy()
-    elif cachekey == REDIS_KEY_GITEE_USERNAME:
-        global gitee_username
-        gitee_username.clear()
-        gitee_username = dict.copy()
-    elif cachekey == REDIS_KEY_THREADS7:
-        global threadsNum7
-        threadsNum7.clear()
-        threadsNum7 = dict.copy()
-    elif cachekey == REDIS_KEY_THREADS6:
-        global threadsNum6
-        threadsNum6.clear()
-        threadsNum6 = dict.copy()
-    elif cachekey == REDIS_KEY_THREADS5:
-        global threadsNum5
-        threadsNum5.clear()
-        threadsNum5 = dict.copy()
-    elif cachekey == REDIS_KEY_THREADS4:
-        global threadsNum4
-        threadsNum4.clear()
-        threadsNum4 = dict.copy()
-    elif cachekey == REDIS_KEY_THREADS3:
-        global threadsNum3
-        threadsNum3.clear()
-        threadsNum3 = dict.copy()
-    elif cachekey == REDIS_KEY_THREADS2:
-        global threadsNum2
-        threadsNum2.clear()
-        threadsNum2 = dict.copy()
+    if cachekey == REDIS_KEY_GITEE:
+        global redisKeyGitee
+        redisKeyGitee.clear()
+        redisKeyGitee = dict.copy()
+    elif cachekey == REDIS_KEY_GITHUB:
+        global redisKeyGithub
+        redisKeyGithub.clear()
+        redisKeyGithub = dict.copy()
+    elif cachekey == REDIS_KEY_WEBDAV:
+        global redisKeyWebDav
+        redisKeyWebDav.clear()
+        redisKeyWebDav = dict.copy()
+    elif cachekey == REDIS_KEY_SECRET_PASS_NOW:
+        global redisKeySecretPassNow
+        redisKeySecretPassNow.clear()
+        redisKeySecretPassNow = dict.copy()
 
 
 # 提取一级域名
@@ -2628,38 +3029,99 @@ def stupidThink(domain_name):
     # return sub_domains[len(sub_domains) - 1]
 
 
-# 将CIDR表示的IP地址段转换为IP网段数组
-def cidr_to_ip_range(cidr):
-    cidr_parts = cidr.split('/')
-    if len(cidr_parts) != 2:
-        # 在这里处理错误，例如抛出一个自定义的异常或记录错误消息
-        pass
-    else:
-        ip, mask = cidr_parts
-        mask = int(mask)
-        # 计算网络地址
-        network = socket.inet_aton(ip)
-        network = struct.unpack("!I", network)[0] & ((1 << 32 - mask) - 1 << mask)
-        # 计算广播地址
-        broadcast = network | (1 << 32 - mask) - 1
-        # 将地址段转换为元组
-        return (network, broadcast)
-
-
-def update_ipv4_int_range(ipstr):
-    iprange = cidr_to_ip_range(ipstr)
-    if iprange:
-        ipv4_int_range[iprange] = ''
+def addHistorySubscribePass(password, name):
+    my_dict = {password: name}
+    redis_add_map(REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS, my_dict)
 
 
 ############################################################协议区####################################################
+
+
+# 获取节点订阅密码
+@app.route('/api/getExtraDnsPort3', methods=['GET'])
+def getExtraDnsPort3():
+    num = init_pass('proxy')
+    return jsonify({'button': num})
+
+
+# 获取IPV6订阅密码
+@app.route('/api/getExtraDnsPort2', methods=['GET'])
+def getExtraDnsPort2():
+    num = init_pass('ipv6')
+    return jsonify({'button': num})
+
+
+# 获取IPV4订阅密码
+@app.route('/api/getExtraDnsServer2', methods=['GET'])
+def getExtraDnsServer2():
+    num = init_pass('ipv4')
+    return jsonify({'button': num})
+
+
+# 获取域名黑名单订阅密码
+@app.route('/api/getChinaDnsPort2', methods=['GET'])
+def getChinaDnsPort2():
+    num = init_pass('blacklist')
+    return jsonify({'button': num})
+
+
+# 获取域名白名单订阅密码
+@app.route('/api/getChinaDnsServer2', methods=['GET'])
+def getChinaDnsServer2():
+    num = init_pass('whitelist')
+    return jsonify({'button': num})
+
+
+# 获取直播源订阅密码
+@app.route('/api/getThreadNum2', methods=['GET'])
+def getThreadNum2():
+    num = init_pass('m3u')
+    return jsonify({'button': num})
+
+
+# 导出加密订阅密码历史记录配置
+@app.route('/api/download_json_file14', methods=['GET'])
+def download_json_file14():
+    return download_json_file_base(REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS, "/app/temp_historysubscribepasslist.json",
+                                   "temp_historysubscribepasslist.json")
+
+
+# 删除加密订阅密码历史记录
+@app.route('/api/deletewm3u14', methods=['POST'])
+def deletewm3u14():
+    return dellist(request, REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS)
+
+
+# 拉取全部加密订阅密码历史记录
+@app.route('/api/getall14', methods=['GET'])
+def getall14():
+    return jsonify(redis_get_map(REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS))
+
+
+# 加密订阅密码历史记录-导入json配置
+@app.route('/api/upload_json_file14', methods=['POST'])
+def upload_json_file14():
+    return upload_json(request, REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS, "/tmp_data14.json")
+
+
+# 赞助-比特币
+@app.route('/api/get_image')
+def get_image():
+    filename = '/app/bitcoin.png'
+    return send_file(filename, mimetype='image/png')
+
 
 # 查询功能开启状态
 @app.route("/api/getSwitchstate", methods=['POST'])
 def getSwitchstate():
     id = request.json['id']
+    global function_dict
     status = function_dict[id]
     return jsonify({"checkresult": status})
+
+
+# 定时任务相关
+clockArr = ['switch25', 'switch26', 'switch27', 'switch28', 'switch29', 'switch13']
 
 
 # 切换功能开关
@@ -2667,8 +3129,12 @@ def getSwitchstate():
 def switchFunction():
     state = request.json['state']
     id = request.json['id']
-    function_dict[id] = int(state)
-    redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
+    if id in clockArr:
+        toggle_m3u(id, state)
+    else:
+        global function_dict
+        function_dict[id] = str(state)
+        redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
     return 'success'
 
 
@@ -2702,14 +3168,6 @@ def savequeryThreadNum():
 def getQueryThreadNum():
     num = init_dns_query_num()
     return jsonify({'button': num})
-
-
-# 删除全部简易DNS黑名单
-@app.route('/api/removem3ulinks13', methods=['GET'])
-def removem3ulinks13():
-    redis_del_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST)
-    redis_add(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG, 1)
-    return "success"
 
 
 # 导出简易DNS黑名单配置
@@ -2750,14 +3208,6 @@ def getall13():
 def upload_json_file13():
     redis_add(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG, 1)
     return upload_json(request, REDIS_KEY_DNS_SIMPLE_BLACKLIST, "/tmp_data13.json")
-
-
-# 删除全部简易DNS白名单
-@app.route('/api/removem3ulinks12', methods=['GET'])
-def removem3ulinks12():
-    redis_del_map(REDIS_KEY_DNS_SIMPLE_WHITELIST)
-    redis_add(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG, 1)
-    return "success"
 
 
 # 导出简易DNS白名单配置
@@ -2833,14 +3283,6 @@ def deletewm3u11():
     return dellist(request, REDIS_KEY_M3U_WHITELIST)
 
 
-# 删除全部M3U白名单
-@app.route('/api/removem3ulinks11', methods=['GET'])
-def removem3ulinks11():
-    m3u_whitlist.clear()
-    redis_del_map(REDIS_KEY_M3U_WHITELIST)
-    return "success"
-
-
 # 添加M3U白名单
 @app.route('/api/addnewm3u11', methods=['POST'])
 def addnewm3u11():
@@ -2866,148 +3308,58 @@ def upload_json_file11():
     return upload_json(request, REDIS_KEY_M3U_WHITELIST, "/tmp_data11.json")
 
 
-# 修改gitee账户-access token
-@app.route('/api/saveGiteeAcessToken', methods=['POST'])
-def saveGiteeAcessToken():
-    data = request.json['selected_button']
-    update_gitee(REDIS_KEY_GITEE_ACCESS_TOKEN, gitee_access_token, data)
+# 通用获取同步账户数据-cachekey,flag(bbs-gitee,pps-github,lls-webdav)
+@app.route('/api/getSyncAccountData', methods=['POST'])
+def getSyncAccountData():
+    cacheKey = request.json['cacheKey']
+    type = request.json['inputvalue']
+    if type == 'bbs':
+        global redisKeyGitee
+        num = init_gitee(cacheKey, REDIS_KEY_GITEE, redisKeyGitee)
+        return jsonify({'password': num})
+    elif type == 'pps':
+        global redisKeyGithub
+        num = init_gitee(cacheKey, REDIS_KEY_GITHUB, redisKeyGithub)
+        return jsonify({'password': num})
+    elif type == 'lls':
+        global redisKeyWebDav
+        num = init_gitee(cacheKey, REDIS_KEY_WEBDAV, redisKeyWebDav)
+        return jsonify({'password': num})
+
+
+# 修改同步账户数据    gitee-bbs github-pps webdav-lls
+@app.route('/api/changeSyncData', methods=['POST'])
+def changeSyncData():
+    cacheKey = request.json['cacheKey']
+    type = request.json['type']
+    value = request.json['inputvalue']
+    if type == 'bbs':
+        global redisKeyGitee
+        update_gitee(cacheKey, value, REDIS_KEY_GITEE, redisKeyGitee)
+    elif type == 'pps':
+        global redisKeyGithub
+        update_gitee(cacheKey, value, REDIS_KEY_GITHUB, redisKeyGithub)
+    elif type == 'lls':
+        global redisKeyWebDav
+        update_gitee(cacheKey, value, REDIS_KEY_WEBDAV, redisKeyWebDav)
     return "数据已经保存"
 
 
-# 获取gitee账户-access token
-@app.route('/api/getGiteeAcessToken', methods=['GET'])
-def getGiteeAcessToken():
-    num = init_gitee(REDIS_KEY_GITEE_ACCESS_TOKEN, gitee_access_token)
-    return jsonify({'button': num})
+# 通用随机订阅密码切换
+@app.route("/api/changeSubscribePassword", methods=['POST'])
+def changeSubscribePassword():
+    cacheKey = request.json['cacheKey']
+    num = update_m3u_subscribe_pass(cacheKey)
+    return jsonify({"password": num})
 
 
-# 修改gitee账户-仓库路径
-@app.route('/api/saveGiteePath', methods=['POST'])
-def saveGiteePath():
-    data = request.json['selected_button']
-    update_gitee(REDIS_KEY_GITEE_PATH, gitee_path, data)
-    return "数据已经保存"
-
-
-# 获取gitee账户-仓库路径
-@app.route('/api/getGiteePathCache', methods=['GET'])
-def getGiteePathCache():
-    num = init_gitee(REDIS_KEY_GITEE_PATH, gitee_path)
-    return jsonify({'button': num})
-
-
-# 修改gitee账户-仓库名字
-@app.route('/api/saveGiteeRePoname', methods=['POST'])
-def saveGiteeRePoname():
-    data = request.json['selected_button']
-    update_gitee(REDIS_KEY_GITEE_REPONAME, gitee_reponame, data)
-    return "数据已经保存"
-
-
-# 获取gitee账户-仓库名字
-@app.route('/api/getGiteeRePoname', methods=['GET'])
-def getGiteeRePoname():
-    num = init_gitee(REDIS_KEY_GITEE_REPONAME, gitee_reponame)
-    return jsonify({'button': num})
-
-
-# 修改gitee账户-用户名
-@app.route('/api/saveGiteeUsername', methods=['POST'])
-def saveGiteeUsername():
-    data = request.json['selected_button']
-    update_gitee(REDIS_KEY_GITEE_USERNAME, gitee_username, data)
-    return "数据已经保存"
-
-
-# 获取gitee账户-用户名
-@app.route('/api/getGiteeUsername', methods=['GET'])
-def getGiteeUsername():
-    num = init_gitee(REDIS_KEY_GITEE_USERNAME, gitee_username)
-    return jsonify({'button': num})
-
-
-# 修改节点订阅密码
-@app.route('/api/changeProxyListPassword', methods=['GET'])
-def changeProxyListPassword():
-    num = update_m3u_subscribe_pass(REDIS_KEY_THREADS7, threadsNum7)
-    return jsonify({'password': num})
-
-
-# 获取节点订阅密码
-@app.route('/api/getExtraDnsPort3', methods=['GET'])
-def getExtraDnsPort3():
-    num = init_pass(REDIS_KEY_THREADS7, threadsNum7)
-    return jsonify({'button': num})
-
-
-# 修改IPV6订阅密码
-@app.route('/api/changeIPV6ListPassword', methods=['GET'])
-def changeIPV6ListPassword():
-    num = update_m3u_subscribe_pass(REDIS_KEY_THREADS6, threadsNum6)
-    return jsonify({'password': num})
-
-
-# 获取IPV6订阅密码
-@app.route('/api/getExtraDnsPort2', methods=['GET'])
-def getExtraDnsPort2():
-    num = init_pass(REDIS_KEY_THREADS6, threadsNum6)
-    return jsonify({'button': num})
-
-
-# 修改IPV4订阅密码
-@app.route('/api/changeIPV4ListPassword', methods=['GET'])
-def changeIPV4ListPassword():
-    num = update_m3u_subscribe_pass(REDIS_KEY_THREADS5, threadsNum5)
-    return jsonify({'password': num})
-
-
-# 获取IPV4订阅密码
-@app.route('/api/getExtraDnsServer2', methods=['GET'])
-def getExtraDnsServer2():
-    num = init_pass(REDIS_KEY_THREADS5, threadsNum5)
-    return jsonify({'button': num})
-
-
-# 修改域名黑名单订阅密码
-@app.route('/api/changeBlackListPassword', methods=['GET'])
-def changeBlackListPassword():
-    num = update_m3u_subscribe_pass(REDIS_KEY_THREADS4, threadsNum4)
-    return jsonify({'password': num})
-
-
-# 获取域名黑名单订阅密码
-@app.route('/api/getChinaDnsPort2', methods=['GET'])
-def getChinaDnsPort2():
-    num = init_pass(REDIS_KEY_THREADS4, threadsNum4)
-    return jsonify({'button': num})
-
-
-# 修改域名白名单订阅密码
-@app.route('/api/changeWhiteListPassword', methods=['GET'])
-def changeWhiteListPassword():
-    num = update_m3u_subscribe_pass(REDIS_KEY_THREADS3, threadsNum3)
-    return jsonify({'password': num})
-
-
-# 获取域名白名单订阅密码
-@app.route('/api/getChinaDnsServer2', methods=['GET'])
-def getChinaDnsServer2():
-    num = init_pass(REDIS_KEY_THREADS3, threadsNum3)
-    return jsonify({'button': num})
-
-
-# 获取直播源订阅密码
-@app.route('/api/changeM3uPassword', methods=['GET'])
-def changeM3uPassword():
-    num = update_m3u_subscribe_pass(REDIS_KEY_THREADS2, threadsNum2)
-    return jsonify({'password': num})
-
-
-# 获取直播源订阅密码
-@app.route('/api/getThreadNum2', methods=['GET'])
-def getThreadNum2():
-    num = init_pass(REDIS_KEY_THREADS2, threadsNum2)
-    return jsonify({'button': num})
+# 通用订阅密码手动修改
+@app.route("/api/changeSubscribePasswordByHand", methods=['POST'])
+def changeSubscribePasswordByHand():
+    cacheKey = request.json['cacheKey']
+    password = request.json['inputvalue']
+    num = update_m3u_subscribe_pass_by_hand(cacheKey, password)
+    return jsonify({"password": num})
 
 
 # 获取外国DNS端口
@@ -3173,15 +3525,6 @@ def upload_json_file10():
     return upload_json(request, REDIS_KEY_PROXIES_SERVER, "/tmp_data10.json")
 
 
-# 删除全部节点后端服务器配置
-@app.route('/api/removem3ulinks10', methods=['GET'])
-def removem3ulinks10():
-    redis_del_map(REDIS_KEY_PROXIES_SERVER)
-    redis_del_map(REDIS_KEY_PROXIES_SERVER_CHOSEN)
-    initProxyServer()
-    return "success"
-
-
 # 导出节点远程订阅配置
 @app.route('/api/download_json_file10', methods=['GET'])
 def download_json_file10():
@@ -3207,15 +3550,6 @@ def addnewm3u10():
 @app.route('/api/getall10', methods=['GET'])
 def getall10():
     return jsonify(redis_get_map(REDIS_KEY_PROXIES_SERVER))
-
-
-# 删除全部节点远程配置订阅
-@app.route('/api/removem3ulinks9', methods=['GET'])
-def removem3ulinks9():
-    redis_del_map(REDIS_KEY_PROXIES_MODEL)
-    redis_del_map(REDIS_KEY_PROXIES_MODEL_CHOSEN)
-    initProxyModel()
-    return "success"
 
 
 # 导出节点远程订阅配置
@@ -3265,13 +3599,6 @@ def chooseProxy():
     dict = {}
     dict[REDIS_KEY_PROXIES_TYPE] = button
     redis_add_map(REDIS_KEY_PROXIES_TYPE, dict)
-    return "success"
-
-
-# 删除全部节点订阅
-@app.route('/api/removem3ulinks8', methods=['GET'])
-def removem3ulinks8():
-    redis_del_map(REDIS_KEY_PROXIES_LINK)
     return "success"
 
 
@@ -3360,24 +3687,10 @@ def getall6():
     return jsonify(redis_get_map(REDIS_KEY_PASSWORD_LINK))
 
 
-# 删除全部密码
-@app.route('/api/removem3ulinks6', methods=['GET'])
-def removem3ulinks6():
-    redis_del_map(REDIS_KEY_PASSWORD_LINK)
-    return "success"
-
-
 # 上传密码本配置集合文件
 @app.route('/api/upload_json_file6', methods=['POST'])
 def upload_json_file6():
     return upload_json(request, REDIS_KEY_PASSWORD_LINK, "/tmp_data6.json")
-
-
-# 删除全部ipv6订阅链接
-@app.route('/api/removem3ulinks5', methods=['GET'])
-def removem3ulinks5():
-    redis_del_map(REDIS_KEY_WHITELIST_IPV6_LINK)
-    return "success"
 
 
 # 全部ipv6订阅链接超融合
@@ -3433,13 +3746,6 @@ def addnewm3u4():
     return addlist(request, REDIS_KEY_WHITELIST_IPV4_LINK)
 
 
-# 删除全部ipv4订阅链接
-@app.route('/api/removem3ulinks4', methods=['GET'])
-def removem3ulinks4():
-    redis_del_map(REDIS_KEY_WHITELIST_IPV4_LINK)
-    return "success"
-
-
 # 全部ipv4订阅链接超融合
 @app.route('/api/chaoronghe4', methods=['GET'])
 def chaoronghe4():
@@ -3482,13 +3788,6 @@ def chaoronghe3():
         return "empty"
 
 
-# 删除全部白名单源订阅链接
-@app.route('/api/removem3ulinks3', methods=['GET'])
-def removem3ulinks3():
-    redis_del_map(REDIS_KEY_BLACKLIST_LINK)
-    return "success"
-
-
 # 导出域名黑名单订阅配置
 @app.route('/api/download_json_file3', methods=['GET'])
 def download_json_file3():
@@ -3517,13 +3816,6 @@ def getall3():
 @app.route('/api/upload_json_file3', methods=['POST'])
 def upload_json_file3():
     return upload_json(request, REDIS_KEY_BLACKLIST_LINK, "/tmp_data3.json")
-
-
-# 删除全部白名单源订阅链接
-@app.route('/api/removem3ulinks2', methods=['GET'])
-def removem3ulinks2():
-    redis_del_map(REDIS_KEY_WHITELIST_LINK)
-    return "success"
 
 
 # 导出域名白名单订阅配置
@@ -3574,6 +3866,97 @@ def upload_json_file2():
 @app.route('/api/removeallm3u', methods=['GET'])
 def removeallm3u():
     redis_del_map(REDIS_KEY_M3U_DATA)
+    return "success"
+
+
+# 删除全部加密订阅密码历史记录
+@app.route('/api/removem3ulinks14', methods=['GET'])
+def removem3ulinks14():
+    redis_del_map(REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS)
+    return "success"
+
+
+# 删除全部简易DNS黑名单
+@app.route('/api/removem3ulinks13', methods=['GET'])
+def removem3ulinks13():
+    redis_del_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST)
+    redis_add(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG, 1)
+    return "success"
+
+
+# 删除全部简易DNS白名单
+@app.route('/api/removem3ulinks12', methods=['GET'])
+def removem3ulinks12():
+    redis_del_map(REDIS_KEY_DNS_SIMPLE_WHITELIST)
+    redis_add(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG, 1)
+    return "success"
+
+
+# 删除全部M3U白名单
+@app.route('/api/removem3ulinks11', methods=['GET'])
+def removem3ulinks11():
+    m3u_whitlist.clear()
+    redis_del_map(REDIS_KEY_M3U_WHITELIST)
+    return "success"
+
+
+# 删除全部节点后端服务器配置
+@app.route('/api/removem3ulinks10', methods=['GET'])
+def removem3ulinks10():
+    redis_del_map(REDIS_KEY_PROXIES_SERVER)
+    redis_del_map(REDIS_KEY_PROXIES_SERVER_CHOSEN)
+    initProxyServer()
+    return "success"
+
+
+# 删除全部节点远程配置订阅
+@app.route('/api/removem3ulinks9', methods=['GET'])
+def removem3ulinks9():
+    redis_del_map(REDIS_KEY_PROXIES_MODEL)
+    redis_del_map(REDIS_KEY_PROXIES_MODEL_CHOSEN)
+    initProxyModel()
+    return "success"
+
+
+# 删除全部节点订阅
+@app.route('/api/removem3ulinks8', methods=['GET'])
+def removem3ulinks8():
+    redis_del_map(REDIS_KEY_PROXIES_LINK)
+    return "success"
+
+
+# 删除全部密码本
+@app.route('/api/removem3ulinks6', methods=['GET'])
+def removem3ulinks6():
+    redis_del_map(REDIS_KEY_PASSWORD_LINK)
+    return "success"
+
+
+# 删除全部ipv6订阅链接
+@app.route('/api/removem3ulinks5', methods=['GET'])
+def removem3ulinks5():
+    redis_del_map(REDIS_KEY_WHITELIST_IPV6_LINK)
+    return "success"
+
+
+# 删除全部ipv4订阅链接
+@app.route('/api/removem3ulinks4', methods=['GET'])
+def removem3ulinks4():
+    redis_del_map(REDIS_KEY_WHITELIST_IPV4_LINK)
+    return "success"
+
+
+# 删除全部白名单源订阅链接
+@app.route('/api/removem3ulinks3', methods=['GET'])
+def removem3ulinks3():
+    redis_del_map(REDIS_KEY_BLACKLIST_LINK)
+    return "success"
+
+
+# 删除全部白名单源订阅链接
+@app.route('/api/removem3ulinks2', methods=['GET'])
+def removem3ulinks2():
+    redis_del_map(REDIS_KEY_WHITELIST_LINK)
     return "success"
 
 
@@ -3699,21 +4082,24 @@ def process_file():
 
 def main():
     init_db()
-    timer_thread1 = threading.Thread(target=execute, args=('chaoronghe', 86400), daemon=True)
+    timer_thread1 = threading.Thread(target=executeM3u, args=(86400,), daemon=True)
     timer_thread1.start()
-    timer_thread2 = threading.Thread(target=execute, args=('chaoronghe2', 86400), daemon=True)
+    timer_thread2 = threading.Thread(target=executeWhitelist, args=(86400,), daemon=True)
     timer_thread2.start()
-    timer_thread3 = threading.Thread(target=execute, args=('chaoronghe3', 86400), daemon=True)
+    timer_thread3 = threading.Thread(target=executeBlacklist, args=(86400,), daemon=True)
     timer_thread3.start()
-    timer_thread4 = threading.Thread(target=execute, args=('chaoronghe4', 86400), daemon=True)
+    timer_thread4 = threading.Thread(target=executeIPV4list, args=(86400,), daemon=True)
     timer_thread4.start()
-    timer_thread5 = threading.Thread(target=execute, args=('chaoronghe5', 86400), daemon=True)
+    timer_thread5 = threading.Thread(target=executeIPV6list, args=(86400,), daemon=True)
     timer_thread5.start()
-    timer_thread6 = threading.Thread(target=execute, args=('chaoronghe6', 10800), daemon=True)
+    timer_thread6 = threading.Thread(target=executeProxylist, args=(10800,), daemon=True)
     timer_thread6.start()
     # 启动工作线程消费上传数据至gitee
     t = threading.Thread(target=worker_gitee, daemon=True)
     t.start()
+    # 启动工作线程消费上传数据至github
+    t2 = threading.Thread(target=worker_github, daemon=True)
+    t2.start()
     try:
         app.run(debug=True, host='0.0.0.0', port=5000)
     finally:

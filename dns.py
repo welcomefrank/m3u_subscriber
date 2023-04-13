@@ -1,7 +1,5 @@
 import concurrent.futures
-import heapq
 import socket
-import struct
 import threading
 import time
 import dnslib
@@ -20,8 +18,6 @@ white_list_nameserver_policy = {}
 
 # 白名单中国大陆IPV4下载数据
 REDIS_KEY_WHITELIST_IPV4_DATA = "whitelistipv4data"
-# 白名单中国大陆IPV4下载数据转换成的整数数组
-REDIS_KEY_WHITELIST_IPV4_DATA_INT_RANGE = "whitelistipv4dataintrange"
 # ipv4总命中缓存网段规则，数据中等，是实际命中的规则缓存
 ipv4_list_tmp_policy = {}
 # ipv4全部数据库数据
@@ -138,41 +134,6 @@ dnstimeout = {REDIS_KEY_DNS_TIMEOUT: 20}
 #     return host_ip
 
 #####################################################ip判断####################################################
-
-# IP地址转换为32位整数
-def ip_to_int(ip):
-    return struct.unpack("!I", socket.inet_aton(ip))[0]
-
-
-def find_ip_range_cache(ip):
-    ip_ranges = ipv4_list_tmp_policy.keys()
-    left, right = 0, len(ip_ranges) - 1
-    while left <= right:
-        mid = (left + right) // 2
-        if ip_ranges[mid][0] <= ip <= ip_ranges[mid][1]:
-            return ip_ranges[mid]
-        elif ip < ip_ranges[mid][0]:
-            right = mid - 1
-        else:
-            left = mid + 1
-    return None
-
-
-# 二分查找IP网段
-def find_ip_range(ip_ranges, ip):
-    global ipv4_list_tmp_policy
-    left, right = 0, len(ip_ranges) - 1
-    while left <= right:
-        mid = (left + right) // 2
-        if ip_ranges[mid][0] <= ip <= ip_ranges[mid][1]:
-            ipv4_list_tmp_policy[ip_ranges[mid]] = ''
-            ipv4_list_tmp_policy = rank_dict(ipv4_list_tmp_policy)
-            return ip_ranges[mid]
-        elif ip < ip_ranges[mid][0]:
-            right = mid - 1
-        else:
-            left = mid + 1
-    return None
 
 
 port = 80
@@ -546,8 +507,8 @@ def isChinaDomain(data):
     if domain_name_str in ipCheckDomian:
         return False
     ##########################################中国特色顶级域名，申请必须要经过大陆审批通过，默认全部当成大陆域名#############
-    if domain_name_str.endswith(".cn") or domain_name_str.endswith(".中国"):
-        return True
+    # if domain_name_str.endswith(".cn") or domain_name_str.endswith(".中国"):
+    #     return True
     ###########################################个人日常冲浪的域名分流策略，自己维护##############################
     # 在已经命中的简易外国域名查找，直接丢给5335
     if inSimpleBlackListCache(domain_name_str):
@@ -773,30 +734,87 @@ def initBlackListSP():
 #     if blacklist and len(blacklist) > 0:
 #         black_list_policy.update(blacklist)
 
+################################################ipv4暂时不能解决根据域名查找ipv4
+# # IP地址转换为32位整数
+# def ip_to_int(ip):
+#     return struct.unpack("!I", socket.inet_aton(ip))[0]
+#
+#
+# def find_ip_range_cache(ip):
+#     ip_ranges = ipv4_list_tmp_policy.keys()
+#     left, right = 0, len(ip_ranges) - 1
+#     while left <= right:
+#         mid = (left + right) // 2
+#         if ip_ranges[mid][0] <= ip <= ip_ranges[mid][1]:
+#             return ip_ranges[mid]
+#         elif ip < ip_ranges[mid][0]:
+#             right = mid - 1
+#         else:
+#             left = mid + 1
+#     return None
+#
+# # 二分查找IP网段
+# def find_ip_range(ip_ranges, ip):
+#     global ipv4_list_tmp_policy
+#     left, right = 0, len(ip_ranges) - 1
+#     while left <= right:
+#         mid = (left + right) // 2
+#         if ip_ranges[mid][0] <= ip <= ip_ranges[mid][1]:
+#             ipv4_list_tmp_policy[ip_ranges[mid]] = ''
+#             ipv4_list_tmp_policy = rank_dict(ipv4_list_tmp_policy)
+#             return ip_ranges[mid]
+#         elif ip < ip_ranges[mid][0]:
+#             right = mid - 1
+#         else:
+#             left = mid + 1
+#     return None
 
-def rank_dict(dict_orign):
-    # 使用heapq将字典的键按照从小到大的顺序排序
-    sorted_keys = heapq.nsmallest(len(dict_orign), dict_orign.keys())
-    # 构造排序后的字典
-    sorted_data = {key: dict_orign[key] for key in sorted_keys}
-    dict_orign.clear()
-    return sorted_data.copy()
-
-
+# def rank_dict(dict_orign):
+#     # 使用heapq将字典的键按照从小到大的顺序排序
+#     sorted_keys = heapq.nsmallest(len(dict_orign), dict_orign.keys())
+#     # 构造排序后的字典
+#     sorted_data = {key: dict_orign[key] for key in sorted_keys}
+#     dict_orign.clear()
+#     return sorted_data.copy()
+#
+#
+# # 拉取ipv4数据时进行整数数组转换
+# def update_ipv4_int_range(ipstr):
+#     iprange = cidr_to_ip_range(ipstr)
+#     if iprange:
+#         IPV4_INT_ARR[iprange] = ''
+#
+#
 # def initIPV4List():
-#     ipv4list = redis_get_map(REDIS_KEY_WHITELIST_IPV4_DATA_INT_RANGE)
+#     ipv4list = redis_get_map(REDIS_KEY_UPDATE_IPV4_LIST_FLAG)
 #     if ipv4list and len(ipv4list) > 0:
 #         global IPV4_INT_ARR
-#         IPV4_INT_ARR.update(ipv4list)
-#         # for ipstr in ipv4list.keys():
-#         #     iprange = cidr_to_ip_range(ipstr)
-#         #     if iprange:
-#         #         IPV4_INT_ARR[iprange] = ''
+#         IPV4_INT_ARR.clear()
+#         for ipv4 in ipv4list.keys():
+#             update_ipv4_int_range(ipv4)
 #         # 简单排序
 #         # IPV4_INT_ARR = dict(sorted(IPV4_INT_ARR.items(), key=lambda x: x[0]))
 #         # 使用heapq将字典的键按照从小到大的顺序排序
 #         IPV4_INT_ARR = rank_dict(IPV4_INT_ARR)
-
+#
+#
+# # 将CIDR表示的IP地址段转换为IP网段数组
+# def cidr_to_ip_range(cidr):
+#     cidr_parts = cidr.split('/')
+#     if len(cidr_parts) != 2:
+#         # 在这里处理错误，例如抛出一个自定义的异常或记录错误消息
+#         pass
+#     else:
+#         ip, mask = cidr_parts
+#         mask = int(mask)
+#         # 计算网络地址
+#         network = socket.inet_aton(ip)
+#         network = struct.unpack("!I", network)[0] & ((1 << 32 - mask) - 1 << mask)
+#         # 计算广播地址
+#         broadcast = network | (1 << 32 - mask) - 1
+#         # 将地址段转换为元组
+#         return (network, broadcast)
+################################################ipv4暂时不能解决根据域名查找ipv4
 
 # redis增加和修改
 def redis_add(key, value):
