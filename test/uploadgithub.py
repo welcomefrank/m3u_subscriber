@@ -63,10 +63,10 @@ def updateFileToGithub(file_name):
     global github_access_token
 
     # Initialize variables from Redis or config file
-    username = 'paperbluster'
-    repo_name = 'ppap'
+    username = '111111'
+    repo_name = '1111'
     path = '/'
-    access_token = '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'
+    access_token = '11111'
 
     try:
         removeIfExist(username, repo_name, path, access_token, file_name)
@@ -158,7 +158,7 @@ def updateFileToWebDAV(file_name):
     server_url = '192.168.5.1'
     port = '5244'
     username = 'pi'
-    password = 'wanjun310'
+    password = '1111111'
     base_path = '/dav/local/'
 
     try:

@@ -3,13 +3,13 @@ import base64
 import requests
 
 # Gitee仓库信息
-username = 'jksjldggz'
-repo_name = 'type'
+username = '111111'
+repo_name = '1111'
 path = '/'
 file_name = 'test.txt'
 
 # 访问令牌（token）用于验证身份
-access_token = 'd2006e527547b9483406cf7d5d559055'
+access_token = '111111'
 
 
 # 检查文件是否已经存在于gitee仓库，存在的话删除旧数据
