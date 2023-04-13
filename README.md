@@ -5,7 +5,11 @@
 
 
 ![image](https://github.com/paperbluster/m3u_subscriber/blob/main/%E5%9B%BE%E7%89%871.png?raw=true)
-
+![image](https://github.com/paperbluster/m3u_subscriber/blob/main/%E5%9B%BE%E7%89%872.png?raw=true)
+![image](https://github.com/paperbluster/m3u_subscriber/blob/main/%E5%9B%BE%E7%89%873.png?raw=true)
+![image](https://github.com/paperbluster/m3u_subscriber/blob/main/%E5%9B%BE%E7%89%874.png?raw=true)
+![image](https://github.com/paperbluster/m3u_subscriber/blob/main/%E5%9B%BE%E7%89%875.png?raw=true)
+![image](https://github.com/paperbluster/m3u_subscriber/blob/main/%E5%9B%BE%E7%89%876.png?raw=true)
 ### 安装步骤:
 
 #### 一、host模式:推荐使用，可以减少一层路由，利好dns分流器
