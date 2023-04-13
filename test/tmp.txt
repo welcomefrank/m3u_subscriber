@@ -1,25 +1,6 @@
-else if (selectedPage === pages[17].id) {
-            reloadFunctionOpenButton('switch')
-            reloadFunctionOpenButton('switch2')
-            reloadFunctionOpenButton('switch3')
-            reloadFunctionOpenButton('switch4')
-            reloadFunctionOpenButton('switch5')
-            reloadFunctionOpenButton('switch6')
-            reloadFunctionOpenButton('switch7')
-            reloadFunctionOpenButton('switch8')
-            reloadFunctionOpenButton('switch9')
-            reloadFunctionOpenButton('switch10')
-            reloadFunctionOpenButton('switch11')
-            reloadFunctionOpenButton('switch12')
-            reloadFunctionOpenButton('switch13')
-            reloadFunctionOpenButton('switch14')
-            reloadFunctionOpenButton('switch15')
-            reloadFunctionOpenButton('switch16')
-            reloadFunctionOpenButton('switch17')
-            reloadFunctionOpenButton('switch18')
-            reloadFunctionOpenButton('switch19')
-            reloadFunctionOpenButton('switch20')
-            reloadFunctionOpenButton('switch21')
-            reloadFunctionOpenButton('switch22')
-            reloadFunctionOpenButton('switch23')
-        }
+5QB?fh5j=&/sFKukpaperblusterZtnk4LpSgZ4ysQuq79sVTQ==
+^r+h}A5}ZV8*K`A]paperblusterrXYG4WQ0dhL5JsS1Fz7Yqw==
+qLCCT$R@GDZtqV!^paperblusteryiwsBfLthGKl33O70kZbSQ==
+53>UV;\;r'*V`fukpaperbluster0fu6aIEVYwGa+MofOJYLeA==
+a4(#v=d.HCy|[~QLpaperblusterZvdeFilaC6HxRkD5yxDqDA==
+)NRC}`L4MSVg:J1opaperblusterelUyVRj8rgmSCzt205jwaw==
