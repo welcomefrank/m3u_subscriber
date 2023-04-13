@@ -806,9 +806,9 @@ def uploadNewFileToGitee(username, repo_name, path, access_token, file_name):
     response = requests.post(url, headers=headers, json=data)
     # 处理响应结果
     if response.status_code == 201:
-        print('File uploaded successfully!')
+        print('File uploaded to gitee successfully!')
     else:
-        print(f'Failed to upload file. Status code: {response.status_code}')
+        print(f'Failed to upload file to gitee. Status code: {response.status_code}')
 
 
 def updateFileToGitee(file_name):
@@ -942,7 +942,7 @@ def updateFileToWebDAV(file_name):
         print(e)
         pass
     try:
-        uploadNewFileToWebDAV(ip, username, password, path, file_name, port), agreement
+        uploadNewFileToWebDAV(ip, username, password, path, file_name, port, agreement)
     except Exception as e:
         print(e)
         pass
@@ -4100,6 +4100,9 @@ def main():
     # 启动工作线程消费上传数据至github
     t2 = threading.Thread(target=worker_github, daemon=True)
     t2.start()
+    # 启动工作线程消费上传数据至webdav
+    t3 = threading.Thread(target=worker_webdav, daemon=True)
+    t3.start()
     try:
         app.run(debug=True, host='0.0.0.0', port=5000)
     finally:

@@ -63,10 +63,10 @@ def updateFileToGithub(file_name):
     global github_access_token
 
     # Initialize variables from Redis or config file
-    username = '111111'
-    repo_name = '1111'
+    username = '11'
+    repo_name = '111'
     path = '/'
-    access_token = '11111'
+    access_token = '111111'
 
     try:
         removeIfExist(username, repo_name, path, access_token, file_name)
@@ -174,4 +174,5 @@ def updateFileToWebDAV(file_name):
 
 
 if __name__ == '__main__':
-    updateFileToWebDAV("openclash-fallback-filter-domain.conf")
+    updateFileToGithub("BDnsmasq.conf")
+    #updateFileToWebDAV("openclash-fallback-filter-domain.conf")
