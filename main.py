@@ -20,14 +20,17 @@ import requests
 import time
 from urllib.parse import urlparse, unquote
 # import yaml
-from flask import Flask, jsonify, request, send_file, render_template
+from flask import Flask, jsonify, request, send_file, render_template, send_from_directory
 
 import chardet
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 
 app = Flask(__name__)
-app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.config['TEMPLATES_AUTO_RELOAD'] = True  # 实时更新模板文件
+app.config['MAX_CONTENT_LENGTH'] = 1000 * 1024 * 1024  # 上传文件最大限制1000 MB
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # 静态文件缓存时间，默认值为 12 小时。可以通过将其设为 0 来禁止浏览器缓存静态文件
+app.config['JSONIFY_TIMEOUT'] = 6000  # 设置响应超时时间为 6000 秒
 
 r = redis.Redis(host='localhost', port=22772)
 
@@ -115,8 +118,8 @@ blacklistSpData = {}
 allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_LINK, REDIS_KEY_WHITELIST_IPV4_LINK,
               REDIS_KEY_WHITELIST_IPV6_LINK, REDIS_KEY_PASSWORD_LINK, REDIS_KEY_PROXIES_LINK, REDIS_KEY_PROXIES_TYPE,
               REDIS_KEY_PROXIES_MODEL, REDIS_KEY_PROXIES_MODEL_CHOSEN, REDIS_KEY_PROXIES_SERVER,
-              REDIS_KEY_PROXIES_SERVER_CHOSEN, REDIS_KEY_GITEE,REDIS_KEY_GITHUB,
-              REDIS_KEY_M3U_WHITELIST, REDIS_KEY_SECRET_PASS_NOW,REDIS_KEY_WEBDAV,
+              REDIS_KEY_PROXIES_SERVER_CHOSEN, REDIS_KEY_GITEE, REDIS_KEY_GITHUB,
+              REDIS_KEY_M3U_WHITELIST, REDIS_KEY_SECRET_PASS_NOW, REDIS_KEY_WEBDAV,
               REDIS_KEY_M3U_BLACKLIST, REDIS_KEY_DNS_SIMPLE_WHITELIST, REDIS_KEY_DNS_SIMPLE_BLACKLIST,
               REDIS_KEY_FUNCTION_DICT, REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS]
 
@@ -199,6 +202,26 @@ ip = {REDIS_KEY_IP: ""}
 @app.route('/')
 def index():
     return render_template('index.html')
+
+
+# 公共路径，放的全部是加密文件，在公共服务器开放这个路径访问
+public_path = '/app/ini/'
+# 隐私路径，放的全部是明文文件，在公共服务器不要开放这个路径访问
+secret_path = '/app/secret/'
+
+
+# 路由隐藏真实路径-公共路径
+@app.route('/url/<path:filename>')
+def serve_files(filename):
+    root_dir = public_path  # 根目录
+    return send_from_directory(root_dir, filename, as_attachment=True)
+
+
+# 路由隐藏真实路径-隐私路径
+@app.route('/secret/<path:filename>')
+def serve_files2(filename):
+    root_dir = secret_path  # 根目录
+    return send_from_directory(root_dir, filename, as_attachment=True)
 
 
 ##########################################################redis数据库操作#############################################
@@ -424,7 +447,7 @@ async def checkWriteHealthM3u(url):
         return
     name = tmp_url_tvg_name_dict.get(url)
     if name:
-        async with aiofiles.open('/healthm3u.m3u', 'a', encoding='utf-8') as f:  # 异步的方式写入内容
+        async with aiofiles.open(f'{secret_path}healthm3u.m3u', 'a', encoding='utf-8') as f:  # 异步的方式写入内容
             await f.write(f'{name}{url}\n')
         del tmp_url_tvg_name_dict[url]
     else:
@@ -435,7 +458,7 @@ async def download_url(session, url, value, sem):
     try:
         async with sem, session.get(url) as resp:  # 使用asyncio.Semaphore限制TCP连接的数量
             if resp.status == 200:
-                async with aiofiles.open('/alive.m3u', 'a', encoding='utf-8') as f:  # 异步的方式写入内容
+                async with aiofiles.open(f'{secret_path}alive.m3u', 'a', encoding='utf-8') as f:  # 异步的方式写入内容
                     await f.write(f'{value}{url}\n')
                 await checkWriteHealthM3u(url)
     except aiohttp.ClientSSLError as ssl_err:
@@ -461,11 +484,11 @@ def check_file(m3u_dict):
             """
         if len(m3u_dict) == 0:
             return
-        if os.path.exists("/alive.m3u"):
-            os.remove("/alive.m3u")
+        if os.path.exists(f'{secret_path}alive.m3u'):
+            os.remove(f'{secret_path}alive.m3u')
         if isOpenFunction('switch5'):
-            if os.path.exists("/healthm3u.m3u"):
-                os.remove("/healthm3u.m3u")
+            if os.path.exists(f'{secret_path}healthm3u.m3u'):
+                os.remove(f'{secret_path}healthm3u.m3u')
             # 异步缓慢检测出有效链接
         asyncio.run(asynctask(m3u_dict))
     except:
@@ -614,10 +637,10 @@ def writeOpenclashNameServerPolicy():
         # redis_add(REDIS_KEY_UPDATE_WHITE_LIST_FLAG, 1)
         # 更新redis数据库白名单
         # redis_add_map(REDIS_KEY_WHITE_DOMAINS, white_list_nameserver_policy)
-        distribute_data(white_list_nameserver_policy, "/whiteList.txt", 10)
+        distribute_data(white_list_nameserver_policy, f"{secret_path}whiteList.txt", 10)
         white_list_nameserver_policy.clear()
         # 白名单加密
-        download_secert_file("/whiteList.txt", "/WTEN.txt", 'whitelist',
+        download_secert_file(f"{secret_path}whiteList.txt", f"{public_path}WTEN.txt", 'whitelist',
                              isOpenFunction('switch12'), isOpenFunction('switch11'),
                              isOpenFunction('switch30'), isOpenFunction('switch31'), isOpenFunction('switch32'))
 
@@ -636,10 +659,11 @@ def writeBlackList():
         # redis_add_map(REDIS_KEY_BLACK_DOMAINS, black_list_nameserver_policy)
         # 通知dns服务器更新内存
         # redis_add(REDIS_KEY_UPDATE_BLACK_LIST_FLAG, 1)
-        distribute_data(black_list_nameserver_policy, "/blackList.txt", 10)
+        distribute_data(black_list_nameserver_policy, f"{secret_path}blackList.txt", 10)
         black_list_nameserver_policy.clear()
         # 黑名单加密
-        download_secert_file("/blackList.txt", "/BLEN.txt", 'blacklist', isOpenFunction('switch16'),
+        download_secert_file(f"{secret_path}blackList.txt", f"{public_path}BLEN.txt", 'blacklist',
+                             isOpenFunction('switch16'),
                              isOpenFunction('switch17'),
                              isOpenFunction('switch30'), isOpenFunction('switch31'), isOpenFunction('switch32'))
 
@@ -674,7 +698,7 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         if isOpenFunction('switch6'):
             # 生成直播源域名-无加密
             thread = threading.Thread(target=writeTvList,
-                                      args=("/tvlist.txt", '/TTADEN.txt'))
+                                      args=(f"{secret_path}tvlist.txt", f'{public_path}TTADEN.txt'))
             thread.start()
         if isOpenFunction('switch'):
             # 神速直播源有效性检测
@@ -687,7 +711,7 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         # 加密全部直播源
         thread3 = threading.Thread(target=download_secert_file,
                                    args=(
-                                       fileName, "/AEN.txt", 'm3u', isOpenFunction('switch2'),
+                                       fileName, f"{public_path}AEN.txt", 'm3u', isOpenFunction('switch2'),
                                        isOpenFunction('switch3'), isOpenFunction('switch30'),
                                        isOpenFunction('switch31'), isOpenFunction('switch32')))
         thread3.start()
@@ -698,7 +722,7 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         # 生成dnsmasq加密
         thread2 = threading.Thread(target=download_secert_file,
                                    args=(
-                                       fileName, "/DQEN.txt", 'whitelist',
+                                       fileName, f"{public_path}DQEN.txt", 'whitelist',
                                        isOpenFunction('switch9'), isOpenFunction('switch10'),
                                        isOpenFunction('switch30'), isOpenFunction('switch31'),
                                        isOpenFunction('switch32')))
@@ -712,7 +736,7 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         # 加密openclash-fallback-filter-domain.conf
         thread2 = threading.Thread(target=download_secert_file,
                                    args=(
-                                       fileName, "/OPPDEN.txt", 'blacklist',
+                                       fileName, f"{public_path}OPPDEN.txt", 'blacklist',
                                        isOpenFunction('switch14'), isOpenFunction('switch15'),
                                        isOpenFunction('switch30'), isOpenFunction('switch31'),
                                        isOpenFunction('switch32')))
@@ -724,7 +748,7 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         # ipv4-加密
         thread = threading.Thread(target=download_secert_file,
                                   args=(
-                                      fileName, "/VFEN.txt", 'ipv4',
+                                      fileName, f"{public_path}VFEN.txt", 'ipv4',
                                       isOpenFunction('switch18'),
                                       isOpenFunction('switch19'), isOpenFunction('switch30'),
                                       isOpenFunction('switch31'), isOpenFunction('switch32')))
@@ -734,7 +758,7 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         # 加密
         thread = threading.Thread(target=download_secert_file,
                                   args=(
-                                      fileName, "/VSEN.txt", 'ipv6',
+                                      fileName, f"{public_path}VSEN.txt", 'ipv6',
                                       isOpenFunction('switch20'),
                                       isOpenFunction('switch21'), isOpenFunction('switch30'),
                                       isOpenFunction('switch31'), isOpenFunction('switch32')))
@@ -788,7 +812,7 @@ def removeIfExist(username, repo_name, path, access_token, file_name):
 # 上传新文件到gitee
 def uploadNewFileToGitee(username, repo_name, path, access_token, file_name):
     # # 读取要上传的文件内容（bytes比特流）
-    with open(f'/{file_name}', 'rb') as f:
+    with open(f'{public_path}{file_name}', 'rb') as f:
         file_content = f.read()
     # 构建API请求URL和headers
     bakenStr = f'{username}/{repo_name}/contents/{path}/{file_name}'
@@ -856,7 +880,7 @@ def uploadNewFileToGithub(username, repo_name, path, access_token, file_name):
         'Content-Type': 'application/json;charset=UTF-8',
         'Authorization': f'token {access_token}',
     }
-    with open('/' + file_name, 'rb') as f:
+    with open(public_path + file_name, 'rb') as f:
         file_content = f.read()
     b64_file_content = base64.b64encode(file_content).decode('utf-8')
     commit_message = 'Upload a file'
@@ -920,7 +944,7 @@ def removeIfExistWebDav(server_url, username, password, base_path, file_name, po
 def uploadNewFileToWebDAV(server_url, username, password, base_path, file_name, port, agreement):
     url = f"{purgeAgreement(server_url)}:{port}/{base_path}/{file_name}"
     url = f'{getAgreement(agreement)}://{getCorrectUrl(url)}'
-    with open('/' + file_name, "rb") as f:
+    with open(public_path + file_name, "rb") as f:
         file_content = f.read()
     response = requests.put(url, auth=(username, password), data=file_content)
     if response.status_code == 201:
@@ -1438,8 +1462,9 @@ def updateBlackList(url):
 def updateBlackListSpData(domain):
     # 一级域名，类似:一级域名名字.顶级域名名字
     domain_name_str = stupidThink(domain)
-    global blacklistSpData
-    blacklistSpData[domain_name_str] = ''
+    if domain_name_str!='':
+       global blacklistSpData
+       blacklistSpData[domain_name_str] = ''
     # # 一级域名名字，顶级域名名字
     # start, end = domain_name_str.split('.')
     # # 一级域名字符串数组
@@ -1572,8 +1597,9 @@ def process_data_domain_collect(data, index, step, my_dict):
 def updateWhiteListSpData(domain):
     # 一级域名，类似:一级域名名字.顶级域名名字
     domain_name_str = stupidThink(domain)
-    global whitelistSpData
-    whitelistSpData[domain_name_str] = ''
+    if domain_name_str!='':
+       global whitelistSpData
+       whitelistSpData[domain_name_str] = ''
     # # 一级域名名字，顶级域名名字
     # start, end = domain_name_str.split('.')
     # # 一级域名字符串数组
@@ -2047,7 +2073,7 @@ def dellist(request, rediskey):
     return jsonify({'deleteresult': "delete success"})
 
 
-def download_json_file_base(redislinkKey, filename, outname):
+def download_json_file_base(redislinkKey, filename):
     # 生成JSON文件数据
     json_data = generate_json_string(redislinkKey)
     if os.path.exists(filename):
@@ -2056,7 +2082,7 @@ def download_json_file_base(redislinkKey, filename, outname):
     with open(filename, 'w') as f:
         f.write(json_data)
     # 发送JSON文件到前端
-    return send_file(outname, as_attachment=True)
+    return send_file(filename, as_attachment=True)
 
 
 def formatdata_multithread(data, num_threads):
@@ -2472,11 +2498,11 @@ def download_files_for_encryp_proxy(urls, redis_dict):
                 while index < round:
                     middleStr += nameArr[i]
                     index = index + 1
-                tmp_file = f"/{current_timestamp}{middleStr}.yaml"
-                with open(tmp_file, 'w'):
+                tmp_file = f"{current_timestamp}{middleStr}.yaml"
+                with open(f"{secret_path}{tmp_file}", 'w'):
                     pass
-                write_content_to_file(result.encode("utf-8"), tmp_file, 10)
-                proxy_dict[f"http://{ip}:22771/url" + tmp_file] = tmp_file
+                write_content_to_file(result.encode("utf-8"), f"{secret_path}{tmp_file}", 10)
+                proxy_dict[f"http://{ip}:22771/secret/" + tmp_file] = f"{secret_path}{tmp_file}"
                 i = i + 1
     return proxy_dict
 
@@ -2518,7 +2544,7 @@ def chaorongheProxies(filename):
         #     f.write(response.content)
         thread = threading.Thread(target=download_secert_file,
                                   args=(
-                                      filename, "/CC.txt", 'proxy', isOpenFunction('switch22'),
+                                      filename, f"{secret_path}CC.txt", 'proxy', isOpenFunction('switch22'),
                                       isOpenFunction('switch23'), isOpenFunction('switch30'),
                                       isOpenFunction('switch31'), isOpenFunction('switch32')))
         thread.start()
@@ -3082,8 +3108,8 @@ def getThreadNum2():
 # 导出加密订阅密码历史记录配置
 @app.route('/api/download_json_file14', methods=['GET'])
 def download_json_file14():
-    return download_json_file_base(REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS, "/app/temp_historysubscribepasslist.json",
-                                   "temp_historysubscribepasslist.json")
+    return download_json_file_base(REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS, f"{secret_path}temp_historysubscribepasslist.json"
+                                   )
 
 
 # 删除加密订阅密码历史记录
@@ -3101,13 +3127,13 @@ def getall14():
 # 加密订阅密码历史记录-导入json配置
 @app.route('/api/upload_json_file14', methods=['POST'])
 def upload_json_file14():
-    return upload_json(request, REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS, "/tmp_data14.json")
+    return upload_json(request, REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS, f"{secret_path}tmp_data14.json")
 
 
 # 赞助-比特币
 @app.route('/api/get_image')
 def get_image():
-    filename = '/app/bitcoin.png'
+    filename = '/app/img/bitcoin.png'
     return send_file(filename, mimetype='image/png')
 
 
@@ -3173,8 +3199,7 @@ def getQueryThreadNum():
 # 导出简易DNS黑名单配置
 @app.route('/api/download_json_file13', methods=['GET'])
 def download_json_file13():
-    return download_json_file_base(REDIS_KEY_DNS_SIMPLE_BLACKLIST, "/app/temp_dnssimpleblacklist.json",
-                                   "temp_dnssimpleblacklist.json")
+    return download_json_file_base(REDIS_KEY_DNS_SIMPLE_BLACKLIST, f"{secret_path}temp_dnssimpleblacklist.json")
 
 
 # 删除DNS简易黑名单
@@ -3207,14 +3232,13 @@ def getall13():
 @app.route('/api/upload_json_file13', methods=['POST'])
 def upload_json_file13():
     redis_add(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG, 1)
-    return upload_json(request, REDIS_KEY_DNS_SIMPLE_BLACKLIST, "/tmp_data13.json")
+    return upload_json(request, REDIS_KEY_DNS_SIMPLE_BLACKLIST, f"{secret_path}tmp_data13.json")
 
 
 # 导出简易DNS白名单配置
 @app.route('/api/download_json_file12', methods=['GET'])
 def download_json_file12():
-    return download_json_file_base(REDIS_KEY_DNS_SIMPLE_WHITELIST, "/app/temp_dnssimplewhitelist.json",
-                                   "temp_dnssimplewhitelist.json")
+    return download_json_file_base(REDIS_KEY_DNS_SIMPLE_WHITELIST, f"{secret_path}temp_dnssimplewhitelist.json")
 
 
 # 删除DNS简易白名单
@@ -3247,7 +3271,7 @@ def getall12():
 @app.route('/api/upload_json_file12', methods=['POST'])
 def upload_json_file12():
     redis_add(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG, 1)
-    return upload_json(request, REDIS_KEY_DNS_SIMPLE_WHITELIST, "/tmp_data12.json")
+    return upload_json(request, REDIS_KEY_DNS_SIMPLE_WHITELIST, f"{secret_path}tmp_data12.json")
 
 
 # 获取主机IP
@@ -3271,8 +3295,7 @@ def changeIP():
 # 导出m3u白名单配置
 @app.route('/api/download_json_file11', methods=['GET'])
 def download_json_file11():
-    return download_json_file_base(REDIS_KEY_M3U_WHITELIST, "/app/temp_m3uwhitelist.json",
-                                   "temp_m3uwhitelist.json")
+    return download_json_file_base(REDIS_KEY_M3U_WHITELIST, f"{secret_path}temp_m3uwhitelist.json")
 
 
 # 删除M3U白名单
@@ -3305,7 +3328,7 @@ def getall11():
 # 上传m3u白名单json文件
 @app.route('/api/upload_json_file11', methods=['POST'])
 def upload_json_file11():
-    return upload_json(request, REDIS_KEY_M3U_WHITELIST, "/tmp_data11.json")
+    return upload_json(request, REDIS_KEY_M3U_WHITELIST, f"{secret_path}tmp_data11.json")
 
 
 # 通用获取同步账户数据-cachekey,flag(bbs-gitee,pps-github,lls-webdav)
@@ -3522,14 +3545,13 @@ def reloadProxyModels():
 # 上传节点后端服务器json文件
 @app.route('/api/upload_json_file10', methods=['POST'])
 def upload_json_file10():
-    return upload_json(request, REDIS_KEY_PROXIES_SERVER, "/tmp_data10.json")
+    return upload_json(request, REDIS_KEY_PROXIES_SERVER, f"{secret_path}tmp_data10.json")
 
 
 # 导出节点远程订阅配置
 @app.route('/api/download_json_file10', methods=['GET'])
 def download_json_file10():
-    return download_json_file_base(REDIS_KEY_PROXIES_SERVER, "/app/temp_proxyserverlistlink.json",
-                                   "temp_proxyserverlistlink.json")
+    return download_json_file_base(REDIS_KEY_PROXIES_SERVER, f"{secret_path}temp_proxyserverlistlink.json")
 
 
 # 删除节点远程后端服务器订阅
@@ -3555,8 +3577,7 @@ def getall10():
 # 导出节点远程订阅配置
 @app.route('/api/download_json_file9', methods=['GET'])
 def download_json_file9():
-    return download_json_file_base(REDIS_KEY_PROXIES_MODEL, "/app/temp_proxyremotemodellistlink.json",
-                                   "temp_proxyremotemodellistlink.json")
+    return download_json_file_base(REDIS_KEY_PROXIES_MODEL, f"{secret_path}temp_proxyremotemodellistlink.json")
 
 
 # 删除节点远程配置订阅
@@ -3582,7 +3603,7 @@ def getall9():
 # 上传节点远程配置json文件
 @app.route('/api/upload_json_file9', methods=['POST'])
 def upload_json_file9():
-    return upload_json(request, REDIS_KEY_PROXIES_MODEL, "/tmp_data9.json")
+    return upload_json(request, REDIS_KEY_PROXIES_MODEL, f"{secret_path}tmp_data9.json")
 
 
 # 服务器启动时加载选择的节点类型id
@@ -3623,15 +3644,14 @@ def getall8():
 # 导出节点订阅配置
 @app.route('/api/download_json_file8', methods=['GET'])
 def download_json_file8():
-    return download_json_file_base(REDIS_KEY_PROXIES_LINK, "/app/temp_proxieslistlink.json",
-                                   "temp_proxieslistlink.json")
+    return download_json_file_base(REDIS_KEY_PROXIES_LINK, f"{secret_path}temp_proxieslistlink.json")
 
 
 # 全部节点订阅链接超融合
 @app.route('/api/chaoronghe6', methods=['GET'])
 def chaoronghe6():
     try:
-        return chaorongheProxies('/config.yaml')
+        return chaorongheProxies(f'{secret_path}config.yaml')
     except:
         return "empty"
 
@@ -3639,13 +3659,13 @@ def chaoronghe6():
 # 上传节点配置json文件
 @app.route('/api/upload_json_file8', methods=['POST'])
 def upload_json_file8():
-    return upload_json(request, REDIS_KEY_PROXIES_LINK, "/tmp_data8.json")
+    return upload_json(request, REDIS_KEY_PROXIES_LINK, f"{secret_path}tmp_data8.json")
 
 
 # 一键上传全部配置集合文件
 @app.route('/api/upload_json_file7', methods=['POST'])
 def upload_json_file7():
-    return upload_oneKey_json(request, "/tmp_data7.json")
+    return upload_oneKey_json(request, f"{secret_path}tmp_data7.json")
 
 
 # 一键导出全部配置
@@ -3653,13 +3673,13 @@ def upload_json_file7():
 def download_json_file7():
     # 生成JSON文件数据
     json_data = generate_multi_json_string(allListArr)
-    if os.path.exists("/app/allData.json"):
-        os.remove("/app/allData.json")
+    if os.path.exists(f"{secret_path}allData.json"):
+        os.remove(f"{secret_path}allData.json")
     # 保存JSON数据到临时文件
-    with open("/app/allData.json", 'w') as f:
+    with open(f"{secret_path}allData.json", 'w') as f:
         f.write(json_data)
     # 发送JSON文件到前端
-    return send_file("allData.json", as_attachment=True)
+    return send_file(f"{secret_path}allData.json", as_attachment=True)
 
 
 # 删除密码
@@ -3677,8 +3697,7 @@ def addnewm3u6():
 # 导出密码配置
 @app.route('/api/download_json_file6', methods=['GET'])
 def download_json_file6():
-    return download_json_file_base(REDIS_KEY_PASSWORD_LINK, "/app/temp_passwordlist.json",
-                                   "temp_passwordlist.json")
+    return download_json_file_base(REDIS_KEY_PASSWORD_LINK, f"{secret_path}temp_passwordlist.json")
 
 
 # 拉取全部密码
@@ -3690,7 +3709,7 @@ def getall6():
 # 上传密码本配置集合文件
 @app.route('/api/upload_json_file6', methods=['POST'])
 def upload_json_file6():
-    return upload_json(request, REDIS_KEY_PASSWORD_LINK, "/tmp_data6.json")
+    return upload_json(request, REDIS_KEY_PASSWORD_LINK, f"{secret_path}tmp_data6.json")
 
 
 # 全部ipv6订阅链接超融合
@@ -3698,7 +3717,7 @@ def upload_json_file6():
 def chaoronghe5():
     try:
         return chaorongheBase(REDIS_KEY_WHITELIST_IPV6_LINK, 'process_data_abstract6',
-                              REDIS_KEY_WHITELIST_IPV6_DATA, "/ipv6.txt")
+                              REDIS_KEY_WHITELIST_IPV6_DATA, f'{secret_path}ipv6.txt')
     except:
         return "empty"
 
@@ -3706,8 +3725,7 @@ def chaoronghe5():
 # 导出ipv6订阅配置
 @app.route('/api/download_json_file5', methods=['GET'])
 def download_json_file5():
-    return download_json_file_base(REDIS_KEY_WHITELIST_IPV6_LINK, "/app/temp_ipv6listlink.json",
-                                   "temp_ipv6listlink.json")
+    return download_json_file_base(REDIS_KEY_WHITELIST_IPV6_LINK, f"{secret_path}temp_ipv6listlink.json")
 
 
 # 拉取全部ipv6订阅
@@ -3731,7 +3749,7 @@ def addnewm3u5():
 # 上传中国ipv6订阅配置集合文件
 @app.route('/api/upload_json_file5', methods=['POST'])
 def upload_json_file5():
-    return upload_json(request, REDIS_KEY_WHITELIST_IPV6_LINK, "/tmp_data5.json")
+    return upload_json(request, REDIS_KEY_WHITELIST_IPV6_LINK, f"{secret_path}tmp_data5.json")
 
 
 # 删除ipv4订阅
@@ -3751,7 +3769,7 @@ def addnewm3u4():
 def chaoronghe4():
     try:
         return chaorongheBase(REDIS_KEY_WHITELIST_IPV4_LINK, 'process_data_abstract5',
-                              REDIS_KEY_WHITELIST_IPV4_DATA, "/ipv4.txt")
+                              REDIS_KEY_WHITELIST_IPV4_DATA, f"{secret_path}ipv4.txt")
     except:
         return "empty"
 
@@ -3759,8 +3777,7 @@ def chaoronghe4():
 # 导出ipv4订阅配置
 @app.route('/api/download_json_file4', methods=['GET'])
 def download_json_file4():
-    return download_json_file_base(REDIS_KEY_WHITELIST_IPV4_LINK, "/app/temp_ipv4listlink.json",
-                                   "temp_ipv4listlink.json")
+    return download_json_file_base(REDIS_KEY_WHITELIST_IPV4_LINK, f"{secret_path}temp_ipv4listlink.json")
 
 
 # 拉取全部ipv4订阅
@@ -3772,7 +3789,7 @@ def getall4():
 # 上传中国ipv4订阅配置集合文件
 @app.route('/api/upload_json_file4', methods=['POST'])
 def upload_json_file4():
-    return upload_json(request, REDIS_KEY_WHITELIST_IPV4_LINK, "/tmp_data4.json")
+    return upload_json(request, REDIS_KEY_WHITELIST_IPV4_LINK, f"{secret_path}tmp_data4.json")
 
 
 # 全部域名黑名单订阅链接超融合
@@ -3781,7 +3798,7 @@ def chaoronghe3():
     try:
         return chaorongheBase(REDIS_KEY_BLACKLIST_LINK, 'process_data_abstract7',
                               REDIS_KEY_BLACKLIST_OPENCLASH_FALLBACK_FILTER_DOMAIN_DATA,
-                              "/openclash-fallback-filter-domain.conf")
+                              f"{secret_path}openclash-fallback-filter-domain.conf")
         # return chaorongheBase(REDIS_KEY_BLACKLIST_LINK, 'process_data_abstract2',
         #                       REDIS_KEY_BLACKLIST_DATA, "/C.txt")
     except:
@@ -3791,7 +3808,7 @@ def chaoronghe3():
 # 导出域名黑名单订阅配置
 @app.route('/api/download_json_file3', methods=['GET'])
 def download_json_file3():
-    return download_json_file_base(REDIS_KEY_BLACKLIST_LINK, "/app/temp_blacklistlink.json", "temp_blacklistlink.json")
+    return download_json_file_base(REDIS_KEY_BLACKLIST_LINK, f"{secret_path}temp_blacklistlink.json")
 
 
 # 删除黑名单订阅
@@ -3815,13 +3832,13 @@ def getall3():
 # 上传黑名单订阅配置集合文件
 @app.route('/api/upload_json_file3', methods=['POST'])
 def upload_json_file3():
-    return upload_json(request, REDIS_KEY_BLACKLIST_LINK, "/tmp_data3.json")
+    return upload_json(request, REDIS_KEY_BLACKLIST_LINK, f"{secret_path}tmp_data3.json")
 
 
 # 导出域名白名单订阅配置
 @app.route('/api/download_json_file2', methods=['GET'])
 def download_json_file2():
-    return download_json_file_base(REDIS_KEY_WHITELIST_LINK, "/app/temp_whitelistlink.json", "temp_whitelistlink.json")
+    return download_json_file_base(REDIS_KEY_WHITELIST_LINK, f"{secret_path}temp_whitelistlink.json")
 
 
 # 全部域名白名单订阅链接超融合
@@ -3831,7 +3848,7 @@ def chaoronghe2():
         # chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract4',
         #                REDIS_KEY_DOMAIN_DATA, "/WhiteDomain.txt")
         return chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract3',
-                              REDIS_KEY_WHITELIST_DATA_DNSMASQ, "/BDnsmasq.conf")
+                              REDIS_KEY_WHITELIST_DATA_DNSMASQ, f"{secret_path}BDnsmasq.conf")
         # return chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract2',
         #                       REDIS_KEY_WHITELIST_DATA, "/B.txt")
     except:
@@ -3859,7 +3876,7 @@ def deletewm3u2():
 # 上传白名单订阅配置集合文件
 @app.route('/api/upload_json_file2', methods=['POST'])
 def upload_json_file2():
-    return upload_json(request, REDIS_KEY_WHITELIST_LINK, "/tmp_data2.json")
+    return upload_json(request, REDIS_KEY_WHITELIST_LINK, f"{secret_path}tmp_data2.json")
 
 
 # 删除全部本地直播源
@@ -3971,9 +3988,9 @@ def removem3ulinks():
 @app.route('/api/download_m3u_file', methods=['GET'])
 def download_m3u_file():
     my_dict = redis_get_map(REDIS_KEY_M3U_DATA)
-    distribute_data(my_dict, "/app/temp_m3u.m3u", 10)
+    distribute_data(my_dict, f"{secret_path}temp_m3u.m3u", 10)
     # 发送JSON文件到前端
-    return send_file("temp_m3u.m3u", as_attachment=True)
+    return send_file(f"{secret_path}temp_m3u.m3u", as_attachment=True)
 
 
 # 手动上传m3u文件把直播源保存到数据库
@@ -4049,7 +4066,7 @@ def getall():
 def chaoronghe():
     try:
         return chaorongheBase(REDIS_KEY_M3U_LINK, 'process_data_abstract', REDIS_KEY_M3U_DATA,
-                              "/A.m3u")
+                              f"{secret_path}A.m3u")
     except:
         return "empty"
 
@@ -4057,13 +4074,13 @@ def chaoronghe():
 # 导出直播源订阅配置
 @app.route('/api/download_json_file', methods=['GET'])
 def download_json_file():
-    return download_json_file_base(REDIS_KEY_M3U_LINK, "/app/temp_m3ulink.json", "temp_m3ulink.json")
+    return download_json_file_base(REDIS_KEY_M3U_LINK, f"{secret_path}temp_m3ulink.json")
 
 
 # 上传直播源订阅配置集合文件
 @app.route('/api/upload_json_file', methods=['POST'])
 def upload_json_file():
-    return upload_json(request, REDIS_KEY_M3U_LINK, "/tmp_data.json")
+    return upload_json(request, REDIS_KEY_M3U_LINK, f"{secret_path}tmp_data.json")
 
 
 # 手动上传m3u文件格式化统一转换
@@ -4076,8 +4093,8 @@ def process_file():
     my_dict = formatdata_multithread(file_content.splitlines(), 10)
     # my_dict = formattxt_multithread(file_content.splitlines(), 100)
     # my_dict = formatdata_multithread(file.readlines(), 100)
-    distribute_data(my_dict, "/app/tmp.m3u", 10)
-    return send_file("tmp.m3u", as_attachment=True)
+    distribute_data(my_dict, f"{secret_path}tmp.m3u", 10)
+    return send_file(f"{secret_path}tmp.m3u", as_attachment=True)
 
 
 def main():

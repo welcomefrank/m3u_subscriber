@@ -1,4 +1,5 @@
 import concurrent.futures
+import queue
 import socket
 import threading
 import time
@@ -96,7 +97,6 @@ dnsquerynum = {REDIS_KEY_DNS_QUERY_NUM: 150}
 
 REDIS_KEY_DNS_TIMEOUT = "dnstimeout"
 dnstimeout = {REDIS_KEY_DNS_TIMEOUT: 20}
-
 
 # 获取软路由主路由ip
 # def getMasterIp():
@@ -221,34 +221,40 @@ def inSimpleBlackListPolicy(domain_name_str):
         chunk_size = length // trueThreadNum
         left = length - chunk_size * trueThreadNum
         finalindex = trueThreadNum - 1
-        with concurrent.futures.ThreadPoolExecutor(max_workers=trueThreadNum) as executor:
-            futures = []
-            for i in range(trueThreadNum):
-                start_index = i * chunk_size
-                if i == finalindex:
-                    end_index = min(start_index + chunk_size + left, length)
-                else:
-                    end_index = min(start_index + chunk_size, length)
-                black_list_chunk = items[start_index:end_index]
-                future = executor.submit(check_domain_inSimpleBlackListPolicy, domain_name_str, black_list_chunk)
-                futures.append(future)
-                # if future.result():
-                #     return True
-            for future in concurrent.futures.as_completed(futures):
-                if future.result():
-                    return True
-            return False
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=trueThreadNum) as executor:
+                futures = []
+                for i in range(trueThreadNum):
+                    start_index = i * chunk_size
+                    if i == finalindex:
+                        end_index = min(start_index + chunk_size + left, length)
+                    else:
+                        end_index = min(start_index + chunk_size, length)
+                    black_list_chunk = items[start_index:end_index]
+                    future = executor.submit(check_domain_inSimpleBlackListPolicy, domain_name_str, black_list_chunk)
+                    futures.append(future)
+                    # if future.result():
+                    #     return True
+                for future in concurrent.futures.as_completed(futures):
+                    if future.result():
+                        return True
+                return False
+        finally:
+            executor.shutdown(wait=False)
     else:
         return False
 
 
 def check_domain_inSimpleBlackListPolicy(domain_name_str, black_list_chunk):
-    for key in black_list_chunk:
-        # 缓存域名在新域名里有匹配
-        if domain_name_str in key:
-            black_list_simple_tmp_cache[domain_name_str] = ""
-            black_list_simple_tmp_policy[key] = ""
-            return True
+    try:
+        for key in black_list_chunk:
+            # 缓存域名在新域名里有匹配
+            if domain_name_str in key:
+                black_list_simple_tmp_cache[domain_name_str] = ""
+                black_list_simple_tmp_policy[key] = ""
+                return True
+    except Exception as e:
+        pass
 
 
 # 检测域名是否在记录的黑名单域名策略缓存  是-true  不是-false
@@ -304,23 +310,25 @@ def inSimpleWhiteListPolicy(domain_name_str):
         chunk_size = length // trueThreadNum
         left = length - chunk_size * trueThreadNum
         finalIndex = trueThreadNum - 1
-        with concurrent.futures.ThreadPoolExecutor(max_workers=trueThreadNum) as executor:
-            futures = []
-            for i in range(0, trueThreadNum):
-                start_index = i * chunk_size
-                if i == finalIndex:
-                    end_index = min(start_index + chunk_size + left, length)
-                else:
-                    end_index = min(start_index + chunk_size, length)
-                white_list_chunk = items[start_index:end_index]
-                future = executor.submit(check_domain_inSimpleWhiteListPolicy, domain_name_str, white_list_chunk)
-                futures.append(future)
-                # if future.result():
-                #     return True
-            for future in concurrent.futures.as_completed(futures):
-                if future.result():
-                    return True
-
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=trueThreadNum) as executor:
+                futures = []
+                for i in range(0, trueThreadNum):
+                    start_index = i * chunk_size
+                    if i == finalIndex:
+                        end_index = min(start_index + chunk_size + left, length)
+                    else:
+                        end_index = min(start_index + chunk_size, length)
+                    white_list_chunk = items[start_index:end_index]
+                    future = executor.submit(check_domain_inSimpleWhiteListPolicy, domain_name_str, white_list_chunk)
+                    futures.append(future)
+                    # if future.result():
+                    #     return True
+                for future in concurrent.futures.as_completed(futures):
+                    if future.result():
+                        return True
+        finally:
+            executor.shutdown(wait=False)
         return False
 
     else:
@@ -328,13 +336,15 @@ def inSimpleWhiteListPolicy(domain_name_str):
 
 
 def check_domain_inSimpleWhiteListPolicy(domain_name_str, white_list_chunk):
-    for key in white_list_chunk:
-        # 新域名在全部规则里有类似域名，更新whiteDomainPolicy
-        if domain_name_str in key:
-            white_list_simple_tmp_cache[domain_name_str] = ""
-            white_list_simple_tmp_policy[key] = ""
-            return True
-    return False
+    try:
+        for key in white_list_chunk:
+            # 新域名在全部规则里有类似域名，更新whiteDomainPolicy
+            if domain_name_str in key:
+                white_list_simple_tmp_cache[domain_name_str] = ""
+                white_list_simple_tmp_policy[key] = ""
+                return True
+    except Exception as e:
+        pass
 
 
 # 检测域名是否在记录的白名单域名缓存  是-true  不是-false
@@ -370,23 +380,25 @@ def inBlackListPolicy(domain_name_str):
         chunk_size = length // trueThreadNum
         left = length - chunk_size * trueThreadNum
         finalindex = trueThreadNum - 1
-        with concurrent.futures.ThreadPoolExecutor(max_workers=trueThreadNum) as executor:
-            futures = []
-            for i in range(trueThreadNum):
-                start_index = i * chunk_size
-                if i == finalindex:
-                    end_index = min(start_index + chunk_size + left, length)
-                else:
-                    end_index = min(start_index + chunk_size, length)
-                black_list_chunk = items[start_index:end_index]
-                future = executor.submit(check_domain_inBlackListPolicy, domain_name_str, black_list_chunk)
-                futures.append(future)
-                # if future.result():
-                #     return True
-            for future in concurrent.futures.as_completed(futures):
-                if future.result():
-                    return True
-
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=trueThreadNum) as executor:
+                futures = []
+                for i in range(trueThreadNum):
+                    start_index = i * chunk_size
+                    if i == finalindex:
+                        end_index = min(start_index + chunk_size + left, length)
+                    else:
+                        end_index = min(start_index + chunk_size, length)
+                    black_list_chunk = items[start_index:end_index]
+                    future = executor.submit(check_domain_inBlackListPolicy, domain_name_str, black_list_chunk)
+                    futures.append(future)
+                    # if future.result():
+                    #     return True
+                for future in concurrent.futures.as_completed(futures):
+                    if future.result():
+                        return True
+        finally:
+            executor.shutdown(wait=False)
         return False
 
     else:
@@ -394,12 +406,15 @@ def inBlackListPolicy(domain_name_str):
 
 
 def check_domain_inBlackListPolicy(domain_name_str, black_list_chunk):
-    for key in black_list_chunk:
-        # 缓存域名在新域名里有匹配
-        if domain_name_str in key:
-            black_list_tmp_cache[domain_name_str] = ""
-            black_list_tmp_policy[key] = ""
-            return True
+    try:
+        for key in black_list_chunk:
+            # 缓存域名在新域名里有匹配
+            if domain_name_str in key:
+                black_list_tmp_cache[domain_name_str] = ""
+                black_list_tmp_policy[key] = ""
+                return True
+    except Exception as e:
+        pass
 
 
 # 检测域名是否在全部白名单域名策略  是-true  不是-false
@@ -415,23 +430,25 @@ def inWhiteListPolicy(domain_name_str):
         chunk_size = length // trueThreadNum
         left = length - chunk_size * trueThreadNum
         finalIndex = trueThreadNum - 1
-        with concurrent.futures.ThreadPoolExecutor(max_workers=trueThreadNum) as executor:
-            futures = []
-            for i in range(0, trueThreadNum):
-                start_index = i * chunk_size
-                if i == finalIndex:
-                    end_index = min(start_index + chunk_size + left, length)
-                else:
-                    end_index = min(start_index + chunk_size, length)
-                white_list_chunk = items[start_index:end_index]
-                future = executor.submit(check_domain_inWhiteListPolicy, domain_name_str, white_list_chunk)
-                futures.append(future)
-                # if future.result():
-                #     return True
-            for future in concurrent.futures.as_completed(futures):
-                if future.result():
-                    return True
-
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=trueThreadNum) as executor:
+                futures = []
+                for i in range(0, trueThreadNum):
+                    start_index = i * chunk_size
+                    if i == finalIndex:
+                        end_index = min(start_index + chunk_size + left, length)
+                    else:
+                        end_index = min(start_index + chunk_size, length)
+                    white_list_chunk = items[start_index:end_index]
+                    future = executor.submit(check_domain_inWhiteListPolicy, domain_name_str, white_list_chunk)
+                    futures.append(future)
+                    # if future.result():
+                    #     return True
+                for future in concurrent.futures.as_completed(futures):
+                    if future.result():
+                        return True
+        finally:
+            executor.shutdown(wait=False)
         return False
 
     else:
@@ -439,13 +456,15 @@ def inWhiteListPolicy(domain_name_str):
 
 
 def check_domain_inWhiteListPolicy(domain_name_str, white_list_chunk):
-    for key in white_list_chunk:
-        # 新域名在全部规则里有类似域名，更新whiteDomainPolicy
-        if domain_name_str in key:
-            white_list_tmp_cache[domain_name_str] = ""
-            white_list_tmp_policy[key] = ""
-            return True
-    return False
+    try:
+        for key in white_list_chunk:
+            # 新域名在全部规则里有类似域名，更新whiteDomainPolicy
+            if domain_name_str in key:
+                white_list_tmp_cache[domain_name_str] = ""
+                white_list_tmp_policy[key] = ""
+                return True
+    except Exception as e:
+        pass
 
 
 def stupidThink(domain_name):
@@ -650,26 +669,32 @@ def updateSimpleWhiteListSpData(domain_name_str):
 
 
 def updateWhiteListSpData(domain_name_str):
-    # 一级域名，类似:一级域名名字.顶级域名名字
-    # 一级域名名字，顶级域名名字
-    start, end = domain_name_str.split('.')
-    # 一级域名字符串数组
-    arr = [char for char in start]
-    # 一级域名字符串数组长度
-    length = str(len(arr))
-    # 一级域名数组首位字符串
-    startStr = arr[0]
-    # 字典主键依据顺序为:顶级域名,一级域名长度,一级域名首位;最底层值是字典:一级域名数据,空字符串
-    if end not in whitelistSpData:
-        whitelistSpData[end] = {}
-    endDict = whitelistSpData[end]
-    if length not in endDict:
-        endDict[length] = {}
-    lengthDict = endDict[length]
-    if startStr not in lengthDict:
-        lengthDict[startStr] = {}
-    startStrDict = lengthDict[startStr]
-    startStrDict[domain_name_str] = ''
+    try:
+        # 一级域名，类似:一级域名名字.顶级域名名字
+        # 一级域名名字，顶级域名名字
+        start, end = domain_name_str.split('.')
+        # 一级域名字符串数组
+        arr = [char for char in start]
+        # 一级域名字符串数组长度
+        length = str(len(arr))
+        # 一级域名数组首位字符串
+        startStr = arr[0]
+        # 字典主键依据顺序为:顶级域名,一级域名长度,一级域名首位;最底层值是字典:一级域名数据,空字符串
+        if end not in whitelistSpData:
+            whitelistSpData[end] = {}
+        endDict = whitelistSpData[end]
+        if length not in endDict:
+            endDict[length] = {}
+        lengthDict = endDict[length]
+        if startStr not in lengthDict:
+            lengthDict[startStr] = {}
+        startStrDict = lengthDict[startStr]
+        startStrDict[domain_name_str] = ''
+    except Exception as e:
+        # 只有顶级域名，不处理
+        # print(domain_name_str)
+        # print(e)
+        pass
 
 
 def initWhiteListSP():
@@ -681,26 +706,29 @@ def initWhiteListSP():
 
 
 def updateBlackListSpData(domain_name_str):
-    # 一级域名，类似:一级域名名字.顶级域名名字
-    # 一级域名名字，顶级域名名字
-    start, end = domain_name_str.split('.')
-    # 一级域名字符串数组
-    arr = [char for char in start]
-    # 一级域名字符串数组长度
-    length = str(len(arr))
-    # 一级域名数组首位字符串
-    startStr = arr[0]
-    # 字典主键依据顺序为:顶级域名,一级域名长度,一级域名首位;最底层值是字典:一级域名数据,空字符串
-    if end not in blacklistSpData:
-        blacklistSpData[end] = {}
-    endDict = blacklistSpData[end]
-    if length not in endDict:
-        endDict[length] = {}
-    lengthDict = endDict[length]
-    if startStr not in lengthDict:
-        lengthDict[startStr] = {}
-    startStrDict = lengthDict[startStr]
-    startStrDict[domain_name_str] = ''
+    try:
+        # 一级域名，类似:一级域名名字.顶级域名名字
+        # 一级域名名字，顶级域名名字
+        start, end = domain_name_str.split('.')
+        # 一级域名字符串数组
+        arr = [char for char in start]
+        # 一级域名字符串数组长度
+        length = str(len(arr))
+        # 一级域名数组首位字符串
+        startStr = arr[0]
+        # 字典主键依据顺序为:顶级域名,一级域名长度,一级域名首位;最底层值是字典:一级域名数据,空字符串
+        if end not in blacklistSpData:
+            blacklistSpData[end] = {}
+        endDict = blacklistSpData[end]
+        if length not in endDict:
+            endDict[length] = {}
+        lengthDict = endDict[length]
+        if startStr not in lengthDict:
+            lengthDict[startStr] = {}
+        startStrDict = lengthDict[startStr]
+        startStrDict[domain_name_str] = ''
+    except Exception as e:
+        pass
 
 
 def initBlackListSP():
@@ -1060,7 +1088,7 @@ def dns_query(data, china_dns_socket, waiguo_dns_socket, china_dns_server, china
 
 # 定义可调用对象
 def handle_request(sock, executor, china_dns_socket, waiguo_dns_socket, china_dns_server, china_port, waiguo_dns_server,
-                   waiguo_port):
+                   waiguo_port, q):
     # 接收DNS请求
     try:
         data, addr = sock.recvfrom(4096)
@@ -1068,8 +1096,10 @@ def handle_request(sock, executor, china_dns_socket, waiguo_dns_socket, china_dn
         response = executor.submit(dns_query, data, china_dns_socket, waiguo_dns_socket, china_dns_server, china_port,
                                    waiguo_dns_server,
                                    waiguo_port)
-        # 发送DNS响应
-        sock.sendto(response.result(), addr)
+        # # 发送DNS响应
+        # sock.sendto(response.result(), addr)
+        # 将响应和地址加入队列
+        q.put((response.result(), addr))
     except socket.error as e:
         print(f'handle_request error: {e}')
 
@@ -1123,11 +1153,16 @@ def main():
                     try:
                         # 创建一个线程池对象
                         with concurrent.futures.ThreadPoolExecutor(max_workers=message_num) as executor:
+                            q = queue.Queue()
                             while True:
                                 try:
                                     handle_request(sock, executor, china_dns_socket, waiguo_dns_socket,
                                                    china_dns_server,
-                                                   china_port, waiguo_dns_server, waiguo_port)
+                                                   china_port, waiguo_dns_server, waiguo_port, q)
+                                    # 从队列中取出响应并发送
+                                    while not q.empty():
+                                        response, addr = q.get()
+                                        sock.sendto(response, addr)
                                 except:
                                     pass
                     except:
@@ -1147,7 +1182,7 @@ if __name__ == '__main__':
             # 关闭旧连接
             r.close()
             # 创建新的Redis连接
-            r = redis.Redis(host='127.0.0.1', port=22772)#6379
+            r = redis.Redis(host='127.0.0.1', port=22772)  # 6379
             print('!!!!!!!!!!!!!!!!!!!!!!!Redis is not ready dns.py\n')
         else:
             print('!!!!!!!!!!!!!!!!!!!!!!!Redis is ready dns.py\n')
