@@ -5,7 +5,11 @@
 
 
 ![image](https://github.com/paperbluster/m3u_subscriber/blob/main/%E5%9B%BE%E7%89%871.png?raw=true)
-
+![image](https://github.com/paperbluster/m3u_subscriber/blob/main/%E5%9B%BE%E7%89%872.png?raw=true)
+![image](https://github.com/paperbluster/m3u_subscriber/blob/main/%E5%9B%BE%E7%89%873.png?raw=true)
+![image](https://github.com/paperbluster/m3u_subscriber/blob/main/%E5%9B%BE%E7%89%874.png?raw=true)
+![image](https://github.com/paperbluster/m3u_subscriber/blob/main/%E5%9B%BE%E7%89%875.png?raw=true)
+![image](https://github.com/paperbluster/m3u_subscriber/blob/main/%E5%9B%BE%E7%89%876.png?raw=true)
 ### 安装步骤:
 
 #### 一、host模式:推荐使用，可以减少一层路由，利好dns分流器
@@ -64,7 +68,7 @@ docker run -d --name m3usubscriber -v /mnt/redis/redis.conf:/etc/redis/redis.con
 
 12-添加了白名单、黑名单、ipv4\ipv6订阅，主要是拿来喂养openclash，自用喂养DNS分流器功能
 
-#### 13-添加了类似acl4ssr的功能，测试效果比较弱鸡,自用
+#### 13-添加了类似acl4ssr的功能，测试效果比较弱鸡,自用,需要额外安装docker容器subconverter或者公共转换服务器
 
 #### 14-增加了基于redis的dns分流器，配合白名单和黑名单进行分流，转发7874端口(外国+中国域名漏网之鱼，可以使用openclash)，转发5336端口(大部分命中的中国域名，可以使用
 
@@ -79,6 +83,14 @@ adguardhome)，dns监听端口-22770(在软路由dhcp/dns设置转发127.0.0.1#2
 这样子顺便可以集中使用adguardhome插件的广告过滤
 
 #### 15-增加了加密订阅功能，可以套娃订阅别人的加密订阅，在备注输入密码就可以自动解密加密文件下载
+
+#### 16-增加了简易DNS分流黑白名单，可以选择手动维护，也可以选择开启系统自动维护，该部分主要是记录个人日常冲浪习惯的域名，黑白名单订阅是这个数据的来源和兜底
+
+17-加了开关细化控制各个功能
+
+#### 18-同步账户支持GITEE,GITHUB,WEBDAV。用途只有一个，把文件加密后同步到公共平台
+
+19-增加了搜索功能
 
 ### 接下来，您只需要按照以下步骤即可使用本工具：
 
@@ -96,13 +108,11 @@ http://局域网docker所在主机ip:当前页面端口/url/A.m3u
 
 http://192.168.5.1:22771/url/A.m3u
 
-#### 16-增加了简易DNS分流黑白名单，可以选择手动维护，也可以选择开启系统自动维护，该部分主要是记录个人日常冲浪习惯的域名，黑白名单订阅是这个数据的来源和兜底
-
 ### 本人也必须坦诚地告诉您，本工具也存在一些缺点，包括：
 
 1-直播源有效性检测效果一般，但是应该可以在网络直播源方面把tvheadend踩在脚下了，有点狂妄哈哈哈
 
-2-镜像有点大，因为这是本人第一次自己构建镜像，针对镜像的大小后期会尝试优化减少
+2-镜像有点大，已经压缩到200兆了，有在考虑要不要放弃nginx
 
 3-主要是为了自己网上冲浪畅通无阻写的，其他人使用起来应该很痛苦吧哈哈哈哈哈哈哈哈哈
 
@@ -134,4 +144,5 @@ subconverter很强大，我无法对其进行参考改造合并，尝试自己�
 
 4-仅供个人使用，请勿商用，代码已经全部开源，后果自负
 
+5-该镜像主要是辅助openclash使用的，可以稍微解决国内分流的糟糕体验
 
