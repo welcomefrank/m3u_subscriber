@@ -29,7 +29,7 @@ from cryptography.hazmat.backends import default_backend
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
-r = redis.Redis(host='localhost', port=6379)
+r = redis.Redis(host='localhost', port=22772)
 
 ##########################################################redis key#############################################
 REDIS_KEY_M3U_LINK = "m3ulink"
@@ -4117,7 +4117,7 @@ if __name__ == '__main__':
             # 关闭旧连接
             r.close()
             # 创建新的Redis连接
-            r = redis.Redis(host='127.0.0.1', port=6379)
+            r = redis.Redis(host='127.0.0.1', port=22772)
             print('!!!!!!!!!!!!!!!!!!!!!!!Redis is not ready main.py\n')
         else:
             print('!!!!!!!!!!!!!!!!!!!!!!!Redis is ready main.py\n')

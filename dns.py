@@ -5,7 +5,7 @@ import time
 import dnslib
 import redis
 
-r = redis.Redis(host='localhost', port=6379)
+r = redis.Redis(host='localhost', port=22772)
 
 # 下载的域名白名单存储到redis服务器里
 REDIS_KEY_WHITE_DOMAINS = "whitedomains"
@@ -1147,7 +1147,7 @@ if __name__ == '__main__':
             # 关闭旧连接
             r.close()
             # 创建新的Redis连接
-            r = redis.Redis(host='127.0.0.1', port=6379)
+            r = redis.Redis(host='127.0.0.1', port=22772)#6379
             print('!!!!!!!!!!!!!!!!!!!!!!!Redis is not ready dns.py\n')
         else:
             print('!!!!!!!!!!!!!!!!!!!!!!!Redis is ready dns.py\n')
