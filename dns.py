@@ -84,9 +84,9 @@ black_list_simple_tmp_cache_queue = queue.Queue(maxsize=100)
 
 # 并发检测白名单黑名单线程数主键
 REDIS_KEY_THREADS = "threadsnum"
-threadsNum = {REDIS_KEY_THREADS: 100}
+threadsNum = {REDIS_KEY_THREADS: 1000}
 
-MAXTHREAD = 100
+MAXTHREAD = 1000
 
 # 中国DNS服务器主键
 REDIS_KEY_CHINA_DNS_SERVER = "chinadnsserver"
@@ -987,13 +987,13 @@ def init_threads_num():
     if num:
         num = int(num.decode())
         if num == 0:
-            num = 100
+            num = 1000
             threadsNum[REDIS_KEY_THREADS] = num
             MAXTHREAD = num
         threadsNum[REDIS_KEY_THREADS] = num
         MAXTHREAD = num
     else:
-        num = 100
+        num = 1000
         threadsNum[REDIS_KEY_THREADS] = num
         MAXTHREAD = num
 

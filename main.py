@@ -2642,13 +2642,13 @@ def init_threads_num():
     if num:
         num = int(num.decode())
         if num == 0:
-            num = 100
+            num = 1000
             redis_add(REDIS_KEY_THREADS, num)
             threadsNum[REDIS_KEY_THREADS] = num
             redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 1)
         threadsNum[REDIS_KEY_THREADS] = num
     else:
-        num = 100
+        num = 1000
         redis_add(REDIS_KEY_THREADS, num)
         threadsNum[REDIS_KEY_THREADS] = num
         redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 1)
