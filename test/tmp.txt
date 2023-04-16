@@ -1,24 +1,23 @@
-FROM python:3.9-slim-buster
-
-COPY ./*.py /app/
-COPY ./*.ini /app/ini/
-COPY ./bitcoin.png /app/img/
-COPY index.html /app/templates/
-# 将Python依赖包复制到容器中
-COPY requirements.txt /app/requirements.txt
-WORKDIR /app
-
-RUN apt-get update && \
-    apt-get install -yqq --no-install-recommends redis-server && \
-    pip3 install --no-cache-dir -r requirements.txt && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-EXPOSE 22771 22770 22772
-
-# 启动多个程序进程
-COPY run.sh /app/run.sh
-COPY redis.conf /etc/redis/redis.conf
-RUN chmod +x /app/run.sh
-CMD ["/bin/bash", "-c", "/app/run.sh"]
+# 订阅文件名字字典，命名自由化
+file_name_dict = {
+'allM3u': 'allM3u',
+'allM3uSecret': 'allM3uSecret',
+'aliveM3u': 'aliveM3u',
+ 'healthM3u': 'healthM3u',
+                  'tvDomainForAdguardhome': 'tvDomainForAdguardhome',
+                  'tvDomainForAdguardhomeSecret': 'tvDomainForAdguardhomeSecret',
+                  'whiteListDnsmasq': 'whiteListDnsmasq',
+                   'whiteListDnsmasqSecret': 'whiteListDnsmasqSecret',
+                  'whiteListDomian': 'whiteListDomian',
+                  'whiteListDomianSecret': 'whiteListDomianSecret',
+                  'openclashFallbackFilterDomain': 'openclashFallbackFilterDomain',
+                  'openclashFallbackFilterDomainSecret': 'openclashFallbackFilterDomainSecret',
+                  'blackListDomain': 'blackListDomain',
+                  'blackListDomainSecret': 'blackListDomainSecret',
+                  'ipv4': 'ipv4',
+                  'ipv4Secret': 'ipv4Secret',
+                  'ipv6': 'ipv6',
+                  'ipv6Secret': 'ipv6Secret',
+                   'proxyConfig': 'proxyConfig',
+                   'proxyConfigSecret': 'proxyConfigSecret'}
 

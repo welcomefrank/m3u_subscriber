@@ -1,19 +1,10 @@
-import qrcode
-import Image
+import pyqrcode
 
-# 定义一个函数，将链接转换为二维码
-def generate_qrcode(url):
-    # 创建QRCode实例，传入链接
-    qr = qrcode.QRCode(version=2, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=1)
-    qr.add_data(url)
-    qr.make(fit=True)
+url = "http://192.168.5.1:22771/secret/config.yaml"
 
-    # 生成二维码图片
-    img = qr.make_image(fill_color="black", back_color="white")
+# Generate QR code instance
+qr = pyqrcode.create(url)
 
-    # 显示并保存图片
-    img.show()
-    img.save("qrcode.png")
-
-# 调用函数
-generate_qrcode("https://www.baidu.com")
+# Save the image as PNG file
+with open('/qrcode.png', 'wb') as f:
+    qr.png(f, scale=10)

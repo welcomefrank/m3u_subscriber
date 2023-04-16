@@ -114,12 +114,27 @@ REDIS_KEY_BLACKLIST_DATA_SP = "blacklistdatasp"
 # 黑名单三段字典:顶级域名,一级域名长度,一级域名首位,一级域名数据
 blacklistSpData = {}
 
+REDIS_KEY_FILE_NAME = "redisKeyFileName"
+# 订阅文件名字字典，命名自由化
+file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u': 'aliveM3u', 'healthM3u': 'healthM3u',
+                  'tvDomainForAdguardhome': 'tvDomainForAdguardhome',
+                  'tvDomainForAdguardhomeSecret': 'tvDomainForAdguardhomeSecret',
+                  'whiteListDnsmasq': 'whiteListDnsmasq', 'whiteListDnsmasqSecret': 'whiteListDnsmasqSecret',
+                  'whiteListDomian': 'whiteListDomian',
+                  'whiteListDomianSecret': 'whiteListDomianSecret',
+                  'openclashFallbackFilterDomain': 'openclashFallbackFilterDomain',
+                  'openclashFallbackFilterDomainSecret': 'openclashFallbackFilterDomainSecret',
+                  'blackListDomain': 'blackListDomain',
+                  'blackListDomainSecret': 'blackListDomainSecret', 'ipv4': 'ipv4', 'ipv4Secret': 'ipv4Secret',
+                  'ipv6': 'ipv6',
+                  'ipv6Secret': 'ipv6Secret', 'proxyConfig': 'proxyConfig', 'proxyConfigSecret': 'proxyConfigSecret'}
+
 # 全部有redis备份字典key
 allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_LINK, REDIS_KEY_WHITELIST_IPV4_LINK,
               REDIS_KEY_WHITELIST_IPV6_LINK, REDIS_KEY_PASSWORD_LINK, REDIS_KEY_PROXIES_LINK, REDIS_KEY_PROXIES_TYPE,
               REDIS_KEY_PROXIES_MODEL, REDIS_KEY_PROXIES_MODEL_CHOSEN, REDIS_KEY_PROXIES_SERVER,
               REDIS_KEY_PROXIES_SERVER_CHOSEN, REDIS_KEY_GITEE, REDIS_KEY_GITHUB,
-              REDIS_KEY_M3U_WHITELIST, REDIS_KEY_SECRET_PASS_NOW, REDIS_KEY_WEBDAV,
+              REDIS_KEY_M3U_WHITELIST, REDIS_KEY_SECRET_PASS_NOW, REDIS_KEY_WEBDAV, REDIS_KEY_FILE_NAME,
               REDIS_KEY_M3U_BLACKLIST, REDIS_KEY_DNS_SIMPLE_WHITELIST, REDIS_KEY_DNS_SIMPLE_BLACKLIST,
               REDIS_KEY_FUNCTION_DICT, REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS]
 
@@ -175,25 +190,25 @@ REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG = "updatewhitelistspflag"
 REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG = "updateblacklistspflag"
 
 REDIS_KEY_THREADS = "threadsnum"
-threadsNum = {REDIS_KEY_THREADS: 100}
+threadsNum = {REDIS_KEY_THREADS: 0}
 
 REDIS_KEY_CHINA_DNS_SERVER = "chinadnsserver"
 chinadnsserver = {REDIS_KEY_CHINA_DNS_SERVER: ""}
 
 REDIS_KEY_CHINA_DNS_PORT = "chinadnsport"
-chinadnsport = {REDIS_KEY_CHINA_DNS_PORT: 5336}
+chinadnsport = {REDIS_KEY_CHINA_DNS_PORT: 0}
 
 REDIS_KEY_EXTRA_DNS_SERVER = "extradnsserver"
 extradnsserver = {REDIS_KEY_EXTRA_DNS_SERVER: ""}
 
 REDIS_KEY_EXTRA_DNS_PORT = "extradnsport"
-extradnsport = {REDIS_KEY_EXTRA_DNS_PORT: 7874}
+extradnsport = {REDIS_KEY_EXTRA_DNS_PORT: 0}
 
 REDIS_KEY_DNS_QUERY_NUM = "dnsquerynum"
-dnsquerynum = {REDIS_KEY_DNS_QUERY_NUM: 150}
+dnsquerynum = {REDIS_KEY_DNS_QUERY_NUM: 0}
 
 REDIS_KEY_DNS_TIMEOUT = "dnstimeout"
-dnstimeout = {REDIS_KEY_DNS_TIMEOUT: 20}
+dnstimeout = {REDIS_KEY_DNS_TIMEOUT: 0}
 
 REDIS_KEY_IP = "ip"
 ip = {REDIS_KEY_IP: ""}
@@ -398,7 +413,11 @@ def executeWhitelist(sleepSecond):
 
 def toggle_m3u(functionId, value):
     global function_dict
-    if functionId == 'switch25':
+    if functionId == 'switch24':
+        function_dict[functionId] = str(value)
+        redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
+        redis_add(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG, 1)
+    elif functionId == 'switch25':
         with timer_condition_m3u:
             function_dict[functionId] = str(value)
             redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
@@ -447,7 +466,8 @@ async def checkWriteHealthM3u(url):
         return
     name = tmp_url_tvg_name_dict.get(url)
     if name:
-        async with aiofiles.open(f'{secret_path}healthm3u.m3u', 'a', encoding='utf-8') as f:  # 异步的方式写入内容
+        path2 = f"{secret_path}{getFileNameByTagName('healthM3u')}.m3u"
+        async with aiofiles.open(path2, 'a', encoding='utf-8') as f:  # 异步的方式写入内容
             await f.write(f'{name}{url}\n')
         del tmp_url_tvg_name_dict[url]
     else:
@@ -458,7 +478,8 @@ async def download_url(session, url, value, sem):
     try:
         async with sem, session.get(url) as resp:  # 使用asyncio.Semaphore限制TCP连接的数量
             if resp.status == 200:
-                async with aiofiles.open(f'{secret_path}alive.m3u', 'a', encoding='utf-8') as f:  # 异步的方式写入内容
+                path = f"{secret_path}{getFileNameByTagName('aliveM3u')}.m3u"
+                async with aiofiles.open(path, 'a', encoding='utf-8') as f:  # 异步的方式写入内容
                     await f.write(f'{value}{url}\n')
                 await checkWriteHealthM3u(url)
     except aiohttp.ClientSSLError as ssl_err:
@@ -480,15 +501,17 @@ async def asynctask(m3u_dict):
 def check_file(m3u_dict):
     try:
         """
-            检查A.m3u文件是否存在且没有被占用
+            检查直播源文件是否存在且没有被占用
             """
         if len(m3u_dict) == 0:
             return
-        if os.path.exists(f'{secret_path}alive.m3u'):
-            os.remove(f'{secret_path}alive.m3u')
+        path = f"{secret_path}{getFileNameByTagName('aliveM3u')}.m3u"
+        if os.path.exists(path):
+            os.remove(path)
+        path2 = f"{secret_path}{getFileNameByTagName('healthM3u')}.m3u"
         if isOpenFunction('switch5'):
-            if os.path.exists(f'{secret_path}healthm3u.m3u'):
-                os.remove(f'{secret_path}healthm3u.m3u')
+            if os.path.exists(path2):
+                os.remove(path2)
             # 异步缓慢检测出有效链接
         asyncio.run(asynctask(m3u_dict))
     except:
@@ -637,10 +660,11 @@ def writeOpenclashNameServerPolicy():
         # redis_add(REDIS_KEY_UPDATE_WHITE_LIST_FLAG, 1)
         # 更新redis数据库白名单
         # redis_add_map(REDIS_KEY_WHITE_DOMAINS, white_list_nameserver_policy)
-        distribute_data(white_list_nameserver_policy, f"{secret_path}whiteList.txt", 10)
+        path = f"{secret_path}{getFileNameByTagName('whiteListDomian')}.txt"
+        distribute_data(white_list_nameserver_policy, path, 10)
         white_list_nameserver_policy.clear()
         # 白名单加密
-        download_secert_file(f"{secret_path}whiteList.txt", f"{public_path}WTEN.txt", 'whitelist',
+        download_secert_file(path, f"{public_path}{getFileNameByTagName('whiteListDomianSecret')}.txt", 'whitelist',
                              isOpenFunction('switch12'), isOpenFunction('switch11'),
                              isOpenFunction('switch30'), isOpenFunction('switch31'), isOpenFunction('switch32'))
 
@@ -659,10 +683,11 @@ def writeBlackList():
         # redis_add_map(REDIS_KEY_BLACK_DOMAINS, black_list_nameserver_policy)
         # 通知dns服务器更新内存
         # redis_add(REDIS_KEY_UPDATE_BLACK_LIST_FLAG, 1)
-        distribute_data(black_list_nameserver_policy, f"{secret_path}blackList.txt", 10)
+        path = f"{secret_path}{getFileNameByTagName('blackListDomain')}.txt"
+        distribute_data(black_list_nameserver_policy, path, 10)
         black_list_nameserver_policy.clear()
         # 黑名单加密
-        download_secert_file(f"{secret_path}blackList.txt", f"{public_path}BLEN.txt", 'blacklist',
+        download_secert_file(path, f"{public_path}{getFileNameByTagName('blackListDomainSecret')}.txt", 'blacklist',
                              isOpenFunction('switch16'),
                              isOpenFunction('switch17'),
                              isOpenFunction('switch30'), isOpenFunction('switch31'), isOpenFunction('switch32'))
@@ -697,8 +722,10 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         # M3U域名tvlist - 无加密
         if isOpenFunction('switch6'):
             # 生成直播源域名-无加密
+            path2 = f"{secret_path}{getFileNameByTagName('healthM3u')}.m3u"
             thread = threading.Thread(target=writeTvList,
-                                      args=(f"{secret_path}tvlist.txt", f'{public_path}TTADEN.txt'))
+                                      args=(f"{secret_path}{getFileNameByTagName('tvDomainForAdguardhome')}.txt",
+                                            f"{public_path}{getFileNameByTagName('tvDomainForAdguardhomeSecret')}.txt"))
             thread.start()
         if isOpenFunction('switch'):
             # 神速直播源有效性检测
@@ -711,7 +738,8 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         # 加密全部直播源
         thread3 = threading.Thread(target=download_secert_file,
                                    args=(
-                                       fileName, f"{public_path}AEN.txt", 'm3u', isOpenFunction('switch2'),
+                                       fileName, f"{public_path}{getFileNameByTagName('allM3uSecret')}.txt", 'm3u',
+                                       isOpenFunction('switch2'),
                                        isOpenFunction('switch3'), isOpenFunction('switch30'),
                                        isOpenFunction('switch31'), isOpenFunction('switch32')))
         thread3.start()
@@ -722,7 +750,8 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         # 生成dnsmasq加密
         thread2 = threading.Thread(target=download_secert_file,
                                    args=(
-                                       fileName, f"{public_path}DQEN.txt", 'whitelist',
+                                       fileName, f"{public_path}{getFileNameByTagName('whiteListDnsmasqSecret')}.txt",
+                                       'whitelist',
                                        isOpenFunction('switch9'), isOpenFunction('switch10'),
                                        isOpenFunction('switch30'), isOpenFunction('switch31'),
                                        isOpenFunction('switch32')))
@@ -736,7 +765,9 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         # 加密openclash-fallback-filter-domain.conf
         thread2 = threading.Thread(target=download_secert_file,
                                    args=(
-                                       fileName, f"{public_path}OPPDEN.txt", 'blacklist',
+                                       fileName,
+                                       f"{public_path}{getFileNameByTagName('openclashFallbackFilterDomainSecret')}.txt",
+                                       'blacklist',
                                        isOpenFunction('switch14'), isOpenFunction('switch15'),
                                        isOpenFunction('switch30'), isOpenFunction('switch31'),
                                        isOpenFunction('switch32')))
@@ -748,7 +779,7 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         # ipv4-加密
         thread = threading.Thread(target=download_secert_file,
                                   args=(
-                                      fileName, f"{public_path}VFEN.txt", 'ipv4',
+                                      fileName, f"{public_path}{getFileNameByTagName('ipv4Secret')}.txt", 'ipv4',
                                       isOpenFunction('switch18'),
                                       isOpenFunction('switch19'), isOpenFunction('switch30'),
                                       isOpenFunction('switch31'), isOpenFunction('switch32')))
@@ -758,7 +789,7 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         # 加密
         thread = threading.Thread(target=download_secert_file,
                                   args=(
-                                      fileName, f"{public_path}VSEN.txt", 'ipv6',
+                                      fileName, f"{public_path}{getFileNameByTagName('ipv6Secret')}.txt", 'ipv6',
                                       isOpenFunction('switch20'),
                                       isOpenFunction('switch21'), isOpenFunction('switch30'),
                                       isOpenFunction('switch31'), isOpenFunction('switch32')))
@@ -1096,7 +1127,7 @@ def init_db():
     init_m3u_whitelist()
     init_IP()
     init_function_dict()
-
+    init_file_name()
     init_pass('proxy')
     init_pass('ipv6')
     init_pass('ipv4')
@@ -1199,13 +1230,13 @@ def init_function_dict():
             dict['switch29'] = '1'
         # 上传至Gitee
         if 'switch30' not in keys:
-            dict['switch30'] = '1'
+            dict['switch30'] = '0'
         # 上传至Github
         if 'switch31' not in keys:
-            dict['switch31'] = '1'
+            dict['switch31'] = '0'
         # 上传至Webdav
         if 'switch32' not in keys:
-            dict['switch32'] = '1'
+            dict['switch32'] = '0'
         redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
         function_dict = dict.copy()
     else:
@@ -1216,7 +1247,7 @@ def init_function_dict():
                 'switch15': '0', 'switch16': '0', 'switch17': '0', 'switch18': '0', 'switch19': '0', 'switch20': '0',
                 'switch21': '0',
                 'switch22': '1', 'switch23': '1', 'switch24': '1', 'switch25': '0', 'switch26': '0', 'switch27': '0'
-            , 'switch28': '0', 'switch29': '1', 'switch30': '1', 'switch31': '1', 'switch32': '1'}
+            , 'switch28': '0', 'switch29': '1', 'switch30': '0', 'switch31': '0', 'switch32': '0'}
         redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
         function_dict = dict.copy()
 
@@ -1294,7 +1325,7 @@ def initProxyModel():
             pass
 
 
-# 多线程写入A.m3u
+# 多线程写入
 def distribute_data(data, file, num_threads):
     if len(data.items()) == 0:
         return
@@ -1462,28 +1493,9 @@ def updateBlackList(url):
 def updateBlackListSpData(domain):
     # 一级域名，类似:一级域名名字.顶级域名名字
     domain_name_str = stupidThink(domain)
-    if domain_name_str!='':
-       global blacklistSpData
-       blacklistSpData[domain_name_str] = ''
-    # # 一级域名名字，顶级域名名字
-    # start, end = domain_name_str.split('.')
-    # # 一级域名字符串数组
-    # arr = start.split('.')
-    # # 一级域名字符串数组长度
-    # length = str(len(arr))
-    # # 一级域名数组首位字符串
-    # startStr = arr[0]
-    # # 字典主键依据顺序为:顶级域名,一级域名长度,一级域名首位;最底层值是字典:一级域名数据,空字符串
-    # if end not in blacklistSpData:
-    #     blacklistSpData[end] = {}
-    # endDict = blacklistSpData[end]
-    # if length not in endDict:
-    #     endDict[length] = {}
-    # lengthDict = endDict[length]
-    # if startStr not in lengthDict:
-    #     lengthDict[startStr] = {}
-    # startStrDict = lengthDict[startStr]
-    # startStrDict[domain_name_str] = ''
+    if domain_name_str != '':
+        global blacklistSpData
+        blacklistSpData[domain_name_str] = ''
 
 
 # 字符串内容处理-域名转openclash-fallbackfilter-domain
@@ -1597,28 +1609,9 @@ def process_data_domain_collect(data, index, step, my_dict):
 def updateWhiteListSpData(domain):
     # 一级域名，类似:一级域名名字.顶级域名名字
     domain_name_str = stupidThink(domain)
-    if domain_name_str!='':
-       global whitelistSpData
-       whitelistSpData[domain_name_str] = ''
-    # # 一级域名名字，顶级域名名字
-    # start, end = domain_name_str.split('.')
-    # # 一级域名字符串数组
-    # arr = start.split('.')
-    # # 一级域名字符串数组长度
-    # length = str(len(arr))
-    # # 一级域名数组首位字符串
-    # startStr = arr[0]
-    # # 字典主键依据顺序为:顶级域名,一级域名长度,一级域名首位;最底层值是字典:一级域名数据,空字符串
-    # if end not in whitelistSpData:
-    #     whitelistSpData[end] = {}
-    # endDict = whitelistSpData[end]
-    # if length not in endDict:
-    #     endDict[length] = {}
-    # lengthDict = endDict[length]
-    # if startStr not in lengthDict:
-    #     lengthDict[startStr] = {}
-    # startStrDict = lengthDict[startStr]
-    # startStrDict[domain_name_str] = ''
+    if domain_name_str != '':
+        global whitelistSpData
+        whitelistSpData[domain_name_str] = ''
 
 
 # 字符串内容处理-域名转dnsmasq白名单
@@ -1653,21 +1646,6 @@ def process_data_domain_dnsmasq(data, index, step, my_dict):
             lineEncoder = line.encode()
             updateOpenclashNameServerPolicy((lineEncoder.substring(2)).decode())
             my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
-        # # 判断是不是域名或者*.域名
-        # if re.match(domain_regex, line) or re.match(wildcard_regex, line):
-        #     my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
-        #     if re.match(domain_regex, line):
-        #         updateOpenclashNameServerPolicy(line)
-        #     lineEncoder = line.encode()
-        #     if lineEncoder.startswith((b"*.", b"+.")):
-        #         updateOpenclashNameServerPolicy((lineEncoder.substring(2)).decode())
-        #     if lineEncoder.startswith(b"www."):
-        #         updateOpenclashNameServerPolicy((lineEncoder.substring(4)).decode())
-        #     if not lineEncoder.startswith((b"www", b".", b"*")):
-        #         my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + "*." + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
-        #     if lineEncoder.startswith(b"."):
-        #         updateOpenclashNameServerPolicy((lineEncoder.substring(1)).encode())
-        #         my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + "*" + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
 
 
 def updateOpenclashNameServerPolicy(url):
@@ -1711,14 +1689,12 @@ def decode_text(text):
     except UnicodeEncodeError:
         pass
 
-    # try to decode using UTF-8 encoding
     try:
         decoded_text = text.decode('utf-8')
         return decoded_text
     except UnicodeDecodeError:
         pass
 
-    # try to decode using GBK encoding
     try:
         decoded_text = text.decode('gbk')
         return decoded_text
@@ -2544,7 +2520,8 @@ def chaorongheProxies(filename):
         #     f.write(response.content)
         thread = threading.Thread(target=download_secert_file,
                                   args=(
-                                      filename, f"{secret_path}CC.txt", 'proxy', isOpenFunction('switch22'),
+                                      filename, f"{secret_path}{getFileNameByTagName('proxyConfigSecret')}.txt",
+                                      'proxy', isOpenFunction('switch22'),
                                       isOpenFunction('switch23'), isOpenFunction('switch30'),
                                       isOpenFunction('switch31'), isOpenFunction('switch32')))
         thread.start()
@@ -2724,7 +2701,7 @@ def init_extra_dns_port():
 # 中国DNS服务器获取
 def init_china_dns_server():
     data = chinadnsserver.get(REDIS_KEY_CHINA_DNS_SERVER)
-    if data:
+    if data and data != '':
         return data
     num = redis_get(REDIS_KEY_CHINA_DNS_SERVER)
     if num:
@@ -2746,7 +2723,7 @@ def init_china_dns_server():
 # 外国DNS服务器获取
 def init_extra_dns_server():
     data = extradnsserver.get(REDIS_KEY_EXTRA_DNS_SERVER)
-    if data:
+    if data and data != '':
         return data
     num = redis_get(REDIS_KEY_EXTRA_DNS_SERVER)
     if num:
@@ -2826,6 +2803,15 @@ def update_gitee(cachekey, value, redisKey, cache):
     cache[cachekey] = value
 
 
+def changeFileName2(cachekey, newFileName):
+    global file_name_dict
+    tmp_dict = {}
+    tmp_dict[cachekey] = newFileName
+    redis_add_map(REDIS_KEY_FILE_NAME, tmp_dict)
+    file_name_dict[cachekey] = newFileName
+    return newFileName
+
+
 # 直播源订阅密码刷新
 def update_m3u_subscribe_pass_by_hand(cachekey, password):
     if cachekey == 'm3u':
@@ -2859,6 +2845,7 @@ def update_m3u_subscribe_pass_by_hand(cachekey, password):
 
 # 直播源订阅密码刷新
 def update_m3u_subscribe_pass(cachekey):
+    tagname = ''
     if cachekey == 'm3u':
         tagname = '直播源订阅'
     elif cachekey == 'proxy':
@@ -3009,7 +2996,7 @@ def getMasterIp():
 # 外国DNS服务器获取
 def init_IP():
     data = ip.get(REDIS_KEY_IP)
-    if data:
+    if data and data != '':
         return data
     num = redis_get(REDIS_KEY_IP)
     if num:
@@ -3031,6 +3018,10 @@ def importToReloadCache(cachekey, dict):
         global redisKeyGitee
         redisKeyGitee.clear()
         redisKeyGitee = dict.copy()
+    elif cachekey == REDIS_KEY_FILE_NAME:
+        global file_name_dict
+        file_name_dict.clear()
+        file_name_dict = dict.copy()
     elif cachekey == REDIS_KEY_GITHUB:
         global redisKeyGithub
         redisKeyGithub.clear()
@@ -3043,6 +3034,10 @@ def importToReloadCache(cachekey, dict):
         global redisKeySecretPassNow
         redisKeySecretPassNow.clear()
         redisKeySecretPassNow = dict.copy()
+    elif cachekey == REDIS_KEY_FUNCTION_DICT:
+        global function_dict
+        function_dict.clear()
+        function_dict = dict.copy()
 
 
 # 提取一级域名
@@ -3058,6 +3053,55 @@ def stupidThink(domain_name):
 def addHistorySubscribePass(password, name):
     my_dict = {password: name}
     redis_add_map(REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS, my_dict)
+
+
+file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u': 'aliveM3u',
+                          'healthM3u': 'healthM3u',
+                          'tvDomainForAdguardhome': 'tvDomainForAdguardhome',
+                          'tvDomainForAdguardhomeSecret': 'tvDomainForAdguardhomeSecret',
+                          'whiteListDnsmasq': 'whiteListDnsmasq', 'whiteListDnsmasqSecret': 'whiteListDnsmasqSecret',
+                          'whiteListDomian': 'whiteListDomian',
+                          'whiteListDomianSecret': 'whiteListDomianSecret',
+                          'openclashFallbackFilterDomain': 'openclashFallbackFilterDomain',
+                          'openclashFallbackFilterDomainSecret': 'openclashFallbackFilterDomainSecret',
+                          'blackListDomain': 'blackListDomain',
+                          'blackListDomainSecret': 'blackListDomainSecret', 'ipv4': 'ipv4', 'ipv4Secret': 'ipv4Secret',
+                          'ipv6': 'ipv6',
+                          'ipv6Secret': 'ipv6Secret', 'proxyConfig': 'proxyConfig',
+                          'proxyConfigSecret': 'proxyConfigSecret'}
+
+
+def init_file_name():
+    dict = redis_get_map(REDIS_KEY_FILE_NAME)
+    if dict:
+        global file_name_dict
+        file_name_dict.clear()
+        file_name_dict = dict.copy()
+    else:
+        redis_add_map(REDIS_KEY_FILE_NAME, file_name_dict_default)
+
+
+def getFileNameByTagName(tagname):
+    name = file_name_dict.get(tagname)
+    if name and name != '':
+        return name
+    else:
+        dict = redis_get_map(REDIS_KEY_FILE_NAME)
+        if dict:
+            name = dict.get(tagname)
+            if name and name != '':
+                file_name_dict[tagname] = name
+                return name
+            else:
+                name = file_name_dict_default.get(tagname)
+                file_name_dict[tagname] = name
+                redis_add_map(REDIS_KEY_FILE_NAME, {tagname: name})
+                return name
+        else:
+            name = file_name_dict_default.get(tagname)
+            file_name_dict[tagname] = name
+            redis_add_map(REDIS_KEY_FILE_NAME, {tagname: name})
+            return name
 
 
 ############################################################协议区####################################################
@@ -3108,7 +3152,8 @@ def getThreadNum2():
 # 导出加密订阅密码历史记录配置
 @app.route('/api/download_json_file14', methods=['GET'])
 def download_json_file14():
-    return download_json_file_base(REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS, f"{secret_path}temp_historysubscribepasslist.json"
+    return download_json_file_base(REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS,
+                                   f"{secret_path}temp_historysubscribepasslist.json"
                                    )
 
 
@@ -3146,8 +3191,8 @@ def getSwitchstate():
     return jsonify({"checkresult": status})
 
 
-# 定时任务相关
-clockArr = ['switch25', 'switch26', 'switch27', 'switch28', 'switch29', 'switch13']
+# 需要额外操作的
+clockArr = ['switch25', 'switch26', 'switch27', 'switch28', 'switch29', 'switch13', 'switch25']
 
 
 # 切换功能开关
@@ -3155,12 +3200,89 @@ clockArr = ['switch25', 'switch26', 'switch27', 'switch28', 'switch29', 'switch1
 def switchFunction():
     state = request.json['state']
     id = request.json['id']
+    switchSingleFunction(id, state)
+    return 'success'
+
+
+def switchSingleFunction(id, state):
     if id in clockArr:
         toggle_m3u(id, state)
     else:
         global function_dict
         function_dict[id] = str(state)
         redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
+
+
+# 批量切换功能开关
+@app.route('/api/serverMode', methods=['POST'])
+def serverMode():
+    mode = request.json['mode']
+    if mode == 'server':
+        switchSingleFunction('switch2', '1')
+        switchSingleFunction('switch3', '1')
+        switchSingleFunction('switch', '1')
+        switchSingleFunction('switch4', '1')
+        switchSingleFunction('switch5', '1')
+        switchSingleFunction('switch6', '0')
+        switchSingleFunction('switch7', '1')
+        switchSingleFunction('switch8', '1')
+        switchSingleFunction('switch9', '1')
+        switchSingleFunction('switch10', '1')
+        switchSingleFunction('switch11', '1')
+        switchSingleFunction('switch12', '1')
+        switchSingleFunction('switch13', '1')
+        switchSingleFunction('switch14', '1')
+        switchSingleFunction('switch15', '1')
+        switchSingleFunction('switch16', '1')
+        switchSingleFunction('switch17', '1')
+        switchSingleFunction('switch18', '1')
+        switchSingleFunction('switch19', '1')
+        switchSingleFunction('switch20', '1')
+        switchSingleFunction('switch21', '1')
+        switchSingleFunction('switch22', '1')
+        switchSingleFunction('switch23', '1')
+        switchSingleFunction('switch24', '1')
+        switchSingleFunction('switch25', '1')
+        switchSingleFunction('switch26', '1')
+        switchSingleFunction('switch27', '1')
+        switchSingleFunction('switch28', '1')
+        switchSingleFunction('switch29', '1')
+        switchSingleFunction('switch30', '1')
+        switchSingleFunction('switch31', '1')
+        switchSingleFunction('switch32', '1')
+    elif mode == 'client':
+        switchSingleFunction('switch2', '0')
+        switchSingleFunction('switch3', '0')
+        switchSingleFunction('switch', '0')
+        switchSingleFunction('switch4', '0')
+        switchSingleFunction('switch5', '0')
+        switchSingleFunction('switch6', '0')
+        switchSingleFunction('switch7', '0')
+        switchSingleFunction('switch8', '0')
+        switchSingleFunction('switch9', '0')
+        switchSingleFunction('switch10', '0')
+        switchSingleFunction('switch11', '0')
+        switchSingleFunction('switch12', '0')
+        switchSingleFunction('switch13', '0')
+        switchSingleFunction('switch14', '0')
+        switchSingleFunction('switch15', '0')
+        switchSingleFunction('switch16', '0')
+        switchSingleFunction('switch17', '0')
+        switchSingleFunction('switch18', '0')
+        switchSingleFunction('switch19', '0')
+        switchSingleFunction('switch20', '0')
+        switchSingleFunction('switch21', '0')
+        switchSingleFunction('switch22', '0')
+        switchSingleFunction('switch23', '0')
+        switchSingleFunction('switch24', '1')
+        switchSingleFunction('switch25', '0')
+        switchSingleFunction('switch26', '1')
+        switchSingleFunction('switch27', '1')
+        switchSingleFunction('switch28', '1')
+        switchSingleFunction('switch29', '1')
+        switchSingleFunction('switch30', '0')
+        switchSingleFunction('switch31', '0')
+        switchSingleFunction('switch32', '0')
     return 'success'
 
 
@@ -3373,6 +3495,23 @@ def changeSyncData():
 def changeSubscribePassword():
     cacheKey = request.json['cacheKey']
     num = update_m3u_subscribe_pass(cacheKey)
+    return jsonify({"password": num})
+
+
+# 查询订阅文件名字
+@app.route("/api/getFileName", methods=['POST'])
+def getFileName():
+    cacheKey = request.json['cacheKey']
+    num = getFileNameByTagName(cacheKey)
+    return jsonify({"password": num})
+
+
+# 通用订阅文件名字手动修改
+@app.route("/api/changeFileName", methods=['POST'])
+def changeFileName():
+    cacheKey = request.json['cacheKey']
+    newName = request.json['inputvalue']
+    num = changeFileName2(cacheKey, newName)
     return jsonify({"password": num})
 
 
@@ -3651,7 +3790,7 @@ def download_json_file8():
 @app.route('/api/chaoronghe6', methods=['GET'])
 def chaoronghe6():
     try:
-        return chaorongheProxies(f'{secret_path}config.yaml')
+        return chaorongheProxies(f"{secret_path}{getFileNameByTagName('proxyConfig')}.yaml")
     except:
         return "empty"
 
@@ -3717,7 +3856,7 @@ def upload_json_file6():
 def chaoronghe5():
     try:
         return chaorongheBase(REDIS_KEY_WHITELIST_IPV6_LINK, 'process_data_abstract6',
-                              REDIS_KEY_WHITELIST_IPV6_DATA, f'{secret_path}ipv6.txt')
+                              REDIS_KEY_WHITELIST_IPV6_DATA, f"{secret_path}{getFileNameByTagName('ipv6')}.txt")
     except:
         return "empty"
 
@@ -3769,7 +3908,7 @@ def addnewm3u4():
 def chaoronghe4():
     try:
         return chaorongheBase(REDIS_KEY_WHITELIST_IPV4_LINK, 'process_data_abstract5',
-                              REDIS_KEY_WHITELIST_IPV4_DATA, f"{secret_path}ipv4.txt")
+                              REDIS_KEY_WHITELIST_IPV4_DATA, f"{secret_path}{getFileNameByTagName('ipv4')}.txt")
     except:
         return "empty"
 
@@ -3798,7 +3937,7 @@ def chaoronghe3():
     try:
         return chaorongheBase(REDIS_KEY_BLACKLIST_LINK, 'process_data_abstract7',
                               REDIS_KEY_BLACKLIST_OPENCLASH_FALLBACK_FILTER_DOMAIN_DATA,
-                              f"{secret_path}openclash-fallback-filter-domain.conf")
+                              f"{secret_path}{getFileNameByTagName('openclashFallbackFilterDomain')}.conf")
         # return chaorongheBase(REDIS_KEY_BLACKLIST_LINK, 'process_data_abstract2',
         #                       REDIS_KEY_BLACKLIST_DATA, "/C.txt")
     except:
@@ -3848,7 +3987,8 @@ def chaoronghe2():
         # chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract4',
         #                REDIS_KEY_DOMAIN_DATA, "/WhiteDomain.txt")
         return chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract3',
-                              REDIS_KEY_WHITELIST_DATA_DNSMASQ, f"{secret_path}BDnsmasq.conf")
+                              REDIS_KEY_WHITELIST_DATA_DNSMASQ,
+                              f"{secret_path}{getFileNameByTagName('whiteListDnsmasq')}.conf")
         # return chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract2',
         #                       REDIS_KEY_WHITELIST_DATA, "/B.txt")
     except:
@@ -4066,7 +4206,7 @@ def getall():
 def chaoronghe():
     try:
         return chaorongheBase(REDIS_KEY_M3U_LINK, 'process_data_abstract', REDIS_KEY_M3U_DATA,
-                              f"{secret_path}A.m3u")
+                              f"{secret_path}{getFileNameByTagName('allM3u')}.m3u")
     except:
         return "empty"
 
@@ -4129,16 +4269,14 @@ def main():
 if __name__ == '__main__':
     start = False
     while True:
-        # 检查Redis连接状态
-        if not r.ping():
-            # 关闭旧连接
-            r.close()
-            # 创建新的Redis连接
-            r = redis.Redis(host='127.0.0.1', port=22772)
-            print('!!!!!!!!!!!!!!!!!!!!!!!Redis is not ready main.py\n')
-        else:
+        try:
+            # 检查Redis连接状态
+            r.ping()
             print('!!!!!!!!!!!!!!!!!!!!!!!Redis is ready main.py\n')
             start = True
             break
+        except redis.ConnectionError:
+            # 连接失败，等待一段时间后重试
+            time.sleep(1)
     if start:
         main()

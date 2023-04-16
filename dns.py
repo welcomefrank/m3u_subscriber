@@ -223,7 +223,6 @@ def inSimpleBlackListPolicy(domain_name_str):
         finalindex = trueThreadNum - 1
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=trueThreadNum) as executor:
-                futures = []
                 for i in range(trueThreadNum):
                     start_index = i * chunk_size
                     if i == finalindex:
@@ -232,10 +231,6 @@ def inSimpleBlackListPolicy(domain_name_str):
                         end_index = min(start_index + chunk_size, length)
                     black_list_chunk = items[start_index:end_index]
                     future = executor.submit(check_domain_inSimpleBlackListPolicy, domain_name_str, black_list_chunk)
-                    futures.append(future)
-                    # if future.result():
-                    #     return True
-                for future in concurrent.futures.as_completed(futures):
                     if future.result():
                         return True
                 return False
@@ -312,7 +307,6 @@ def inSimpleWhiteListPolicy(domain_name_str):
         finalIndex = trueThreadNum - 1
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=trueThreadNum) as executor:
-                futures = []
                 for i in range(0, trueThreadNum):
                     start_index = i * chunk_size
                     if i == finalIndex:
@@ -321,10 +315,6 @@ def inSimpleWhiteListPolicy(domain_name_str):
                         end_index = min(start_index + chunk_size, length)
                     white_list_chunk = items[start_index:end_index]
                     future = executor.submit(check_domain_inSimpleWhiteListPolicy, domain_name_str, white_list_chunk)
-                    futures.append(future)
-                    # if future.result():
-                    #     return True
-                for future in concurrent.futures.as_completed(futures):
                     if future.result():
                         return True
         finally:
@@ -382,7 +372,6 @@ def inBlackListPolicy(domain_name_str):
         finalindex = trueThreadNum - 1
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=trueThreadNum) as executor:
-                futures = []
                 for i in range(trueThreadNum):
                     start_index = i * chunk_size
                     if i == finalindex:
@@ -391,10 +380,6 @@ def inBlackListPolicy(domain_name_str):
                         end_index = min(start_index + chunk_size, length)
                     black_list_chunk = items[start_index:end_index]
                     future = executor.submit(check_domain_inBlackListPolicy, domain_name_str, black_list_chunk)
-                    futures.append(future)
-                    # if future.result():
-                    #     return True
-                for future in concurrent.futures.as_completed(futures):
                     if future.result():
                         return True
         finally:
@@ -432,7 +417,6 @@ def inWhiteListPolicy(domain_name_str):
         finalIndex = trueThreadNum - 1
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=trueThreadNum) as executor:
-                futures = []
                 for i in range(0, trueThreadNum):
                     start_index = i * chunk_size
                     if i == finalIndex:
@@ -441,10 +425,6 @@ def inWhiteListPolicy(domain_name_str):
                         end_index = min(start_index + chunk_size, length)
                     white_list_chunk = items[start_index:end_index]
                     future = executor.submit(check_domain_inWhiteListPolicy, domain_name_str, white_list_chunk)
-                    futures.append(future)
-                    # if future.result():
-                    #     return True
-                for future in concurrent.futures.as_completed(futures):
                     if future.result():
                         return True
         finally:
@@ -612,23 +592,24 @@ def updateSimpleBlackListSpData(domain_name_str):
     # 一级域名，类似:一级域名名字.顶级域名名字
     # 一级域名名字，顶级域名名字
     start, end = domain_name_str.split('.')
-    # 一级域名字符串数组
-    arr = [char for char in start]
-    # 一级域名字符串数组长度
-    length = str(len(arr))
-    # 一级域名数组首位字符串
-    startStr = arr[0]
-    # 字典主键依据顺序为:顶级域名,一级域名长度,一级域名首位;最底层值是字典:一级域名数据,空字符串
-    if end not in black_list_simple_policy:
-        black_list_simple_policy[end] = {}
-    endDict = black_list_simple_policy[end]
-    if length not in endDict:
-        endDict[length] = {}
-    lengthDict = endDict[length]
-    if startStr not in lengthDict:
-        lengthDict[startStr] = {}
-    startStrDict = lengthDict[startStr]
-    startStrDict[domain_name_str] = ''
+    if start != '':
+        # 一级域名字符串数组
+        arr = [char for char in start]
+        # 一级域名字符串数组长度
+        length = str(len(arr))
+        # 一级域名数组首位字符串
+        startStr = arr[0]
+        # 字典主键依据顺序为:顶级域名,一级域名长度,一级域名首位;最底层值是字典:一级域名数据,空字符串
+        if end not in black_list_simple_policy:
+            black_list_simple_policy[end] = {}
+        endDict = black_list_simple_policy[end]
+        if length not in endDict:
+            endDict[length] = {}
+        lengthDict = endDict[length]
+        if startStr not in lengthDict:
+            lengthDict[startStr] = {}
+        startStrDict = lengthDict[startStr]
+        startStrDict[domain_name_str] = ''
 
 
 def initSimpleWhiteList():
@@ -643,23 +624,24 @@ def updateSimpleWhiteListSpData(domain_name_str):
     # 一级域名，类似:一级域名名字.顶级域名名字
     # 一级域名名字，顶级域名名字
     start, end = domain_name_str.split('.')
-    # 一级域名字符串数组
-    arr = [char for char in start]
-    # 一级域名字符串数组长度
-    length = str(len(arr))
-    # 一级域名数组首位字符串
-    startStr = arr[0]
-    # 字典主键依据顺序为:顶级域名,一级域名长度,一级域名首位;最底层值是字典:一级域名数据,空字符串
-    if end not in white_list_simple_nameserver_policy:
-        white_list_simple_nameserver_policy[end] = {}
-    endDict = white_list_simple_nameserver_policy[end]
-    if length not in endDict:
-        endDict[length] = {}
-    lengthDict = endDict[length]
-    if startStr not in lengthDict:
-        lengthDict[startStr] = {}
-    startStrDict = lengthDict[startStr]
-    startStrDict[domain_name_str] = ''
+    if start != '':
+        # 一级域名字符串数组
+        arr = [char for char in start]
+        # 一级域名字符串数组长度
+        length = str(len(arr))
+        # 一级域名数组首位字符串
+        startStr = arr[0]
+        # 字典主键依据顺序为:顶级域名,一级域名长度,一级域名首位;最底层值是字典:一级域名数据,空字符串
+        if end not in white_list_simple_nameserver_policy:
+            white_list_simple_nameserver_policy[end] = {}
+        endDict = white_list_simple_nameserver_policy[end]
+        if length not in endDict:
+            endDict[length] = {}
+        lengthDict = endDict[length]
+        if startStr not in lengthDict:
+            lengthDict[startStr] = {}
+        startStrDict = lengthDict[startStr]
+        startStrDict[domain_name_str] = ''
 
 
 # def initWhiteList():
@@ -922,7 +904,7 @@ def init(sleepSecond):
 
 REDIS_KEY_FUNCTION_DICT = "functiondict"
 # 是否开启自动维护生成简易黑白名单：0-不开启，1-开启
-AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST = 1
+AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST = '1'
 
 
 # 检测是否开启自动维护简易黑白名单
@@ -931,7 +913,7 @@ def openAutoUpdateSimpleWhiteAndBlackList():
     dict = redis_get_map(REDIS_KEY_FUNCTION_DICT)
     if dict:
         if 'switch24' in dict.keys():
-            AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST = int(dict['switch24'])
+            AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST = str(dict['switch24'])
         else:
             return
     else:
@@ -940,7 +922,7 @@ def openAutoUpdateSimpleWhiteAndBlackList():
 
 # 更新维护简易黑白名单
 def updateSimpleBlackAndWhiteList():
-    if AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST == 1:
+    if AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST == '1':
         try:
             redis_add_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST, black_list_simple_policy)
             redis_add_map(REDIS_KEY_DNS_SIMPLE_WHITELIST, white_list_simple_nameserver_policy)
@@ -949,7 +931,7 @@ def updateSimpleBlackAndWhiteList():
 
 
 def checkAndUpdateSimpleList(isBlack, domain):
-    if AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST == 0:
+    if AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST == '0':
         return
     if isBlack:
         black_list_simple_policy.update({domain: ''})
@@ -1101,7 +1083,8 @@ def handle_request(sock, executor, china_dns_socket, waiguo_dns_socket, china_dn
         # 将响应和地址加入队列
         q.put((response.result(), addr))
     except socket.error as e:
-        print(f'handle_request error: {e}')
+        pass
+        # print(f'handle_request error: {e}')
 
 
 # redis存储map字典，字典主键唯一，重复主键只会复写
@@ -1138,7 +1121,7 @@ def main():
     timeout = dnstimeout[REDIS_KEY_DNS_TIMEOUT]
     # 开始接收客户端的DNS请求
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-        sock.bind(('0.0.0.0', 22770))
+        sock.bind(('0.0.0.0', 22770))#22770  53
         # 设置等待时长为30s
         sock.settimeout(timeout)
         # 创建一个UDP socket
@@ -1177,16 +1160,14 @@ def main():
 if __name__ == '__main__':
     start = False
     while True:
-        # 检查Redis连接状态
-        if not r.ping():
-            # 关闭旧连接
-            r.close()
-            # 创建新的Redis连接
-            r = redis.Redis(host='127.0.0.1', port=22772)  # 6379
-            print('!!!!!!!!!!!!!!!!!!!!!!!Redis is not ready dns.py\n')
-        else:
+        try:
+            # 检查Redis连接状态
+            r.ping()
             print('!!!!!!!!!!!!!!!!!!!!!!!Redis is ready dns.py\n')
             start = True
             break
+        except redis.ConnectionError:
+            # 连接失败，等待一段时间后重试
+            time.sleep(1)
     if start:
         main()

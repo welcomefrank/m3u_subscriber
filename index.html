@@ -320,19 +320,23 @@
         <input type="radio" name="page" id="page21">
         <span>打赏频道</span>
     </label>
+    <label>
+        <input type="radio" name="page" id="page22">
+        <span>订阅文件重命名</span>
+    </label>
 </div>
 <div id="choice">
     <div id="page1" style="display: block;">
         <h1>直播源订阅:从网络下载直播源</h1>
         <div style="float: left;width: 70%">
             <h3>后台默认24小时自动执行生成操作,同时触发有效直播源在后台缓慢检测</h3>
-            <h3>M3U超融合直播源订阅地址:docker主机地址:端口/url/A.m3u</h3>
-            <h3 class="urllink">全部直播源-无加密: http://192.168.5.1:22771/secret/A.m3u</h3>
-            <h3 class="urllink">全部直播源-加密: http://192.168.5.1:22771/url/AEN.txt</h3>
-            <h3 class="urllink">有效直播源-无加密: http://192.168.5.1:22771/secret/alive.m3u</h3>
-            <h3 class="urllink">电视盒子专用-华语电视台-有效直播源-无加密: http://192.168.5.1:22771/secret/healthm3u.m3u</h3>
-            <h3 class="urllink">adguardhome放行域名-无加密: http://192.168.5.1:22771/secret/tvlist.txt</h3>
-            <h3 class="urllink">adguardhome放行域名-加密: http://192.168.5.1:22771/url/TTADEN.txt</h3>
+            <h3>M3U超融合直播源订阅地址:docker主机地址:端口/url/allM3u.m3u</h3>
+            <h3 class="urllink">全部直播源-无加密: http://192.168.5.1:22771/secret/allM3u.m3u</h3>
+            <h3 class="urllink">全部直播源-加密: http://192.168.5.1:22771/url/allM3uSecret.txt</h3>
+            <h3 class="urllink">有效直播源-无加密: http://192.168.5.1:22771/secret/aliveM3u.m3u</h3>
+            <h3 class="urllink">电视盒子专用-华语电视台-有效直播源-无加密: http://192.168.5.1:22771/secret/healthM3u.m3u</h3>
+            <h3 class="urllink">adguardhome放行直播源域名-无加密: http://192.168.5.1:22771/secret/tvDomainForAdguardhome.txt</h3>
+            <h3 class="urllink">adguardhome放行直播源域名-加密: http://192.168.5.1:22771/url/tvDomainForAdguardhomeSecret.txt</h3>
             <h3>上传文件导入合并M3U超融合备份</h3>
         </div>
         <div style="float: right;width: 30%">
@@ -467,10 +471,10 @@
             <h3>后台默认24小时自动执行生成操作</h3>
             <h3>超融合白名单订阅地址:参考M3U格式</h3>
             <h3 class="urllink">停止生成adguardhome:http://192.168.5.1:22771/secret/B.txt</h3>
-            <h3 class="urllink">dnsmasq-无加密:http://192.168.5.1:22771/secret/BDnsmasq.conf</h3>
-            <h3 class="urllink">dnsmasq-加密:http://192.168.5.1:22771/url/DQEN.txt</h3>
-            <h3 class="urllink">whitelist-无加密:http://192.168.5.1:22771/secret/whiteList.txt</h3>
-            <h3 class="urllink">whitelist-加密:http://192.168.5.1:22771/url/WTEN.txt</h3>
+            <h3 class="urllink">dnsmasq-无加密:http://192.168.5.1:22771/secret/whiteListDnsmasq.conf</h3>
+            <h3 class="urllink">dnsmasq-加密:http://192.168.5.1:22771/url/whiteListDnsmasqSecret.txt</h3>
+            <h3 class="urllink">whitelist-无加密:http://192.168.5.1:22771/secret/whiteListDomian.txt</h3>
+            <h3 class="urllink">whitelist-加密:http://192.168.5.1:22771/url/whiteListDomianSecret.txt</h3>
             <h3 class="urllink">停止生成domain:http://192.168.5.1:22771/secret/WhiteDomain.txt</h3>
             <h3 >上传文件导入合并白名单订阅</h3>
         </div>
@@ -510,10 +514,10 @@
             <h3>后台默认24小时自动执行生成操作</h3>
             <h3>超融合Adguardhome黑名单订阅地址:</h3>
             <h3 class="urllink">停止生成:http://192.168.5.1:22771/secret/C.txt</h3>
-            <h3 class="urllink">OP-无加密:http://192.168.5.1:22771/secret/openclash-fallback-filter-domain.conf</h3>
-            <h3 class="urllink">OP-加密:http://192.168.5.1:22771/url/OPPDEN.txt</h3>
-            <h3 class="urllink">黑名单-无加密:http://192.168.5.1:22771/secret/blackList.txt</h3>
-            <h3 class="urllink">黑名单-加密:http://192.168.5.1:22771/url/BLEN.txt</h3>
+            <h3 class="urllink">黑名单-OP-无加密:http://192.168.5.1:22771/secret/openclashFallbackFilterDomain.conf</h3>
+            <h3 class="urllink">黑名单-OP-加密:http://192.168.5.1:22771/url/openclashFallbackFilterDomainSecret.txt</h3>
+            <h3 class="urllink">黑名单-无加密:http://192.168.5.1:22771/secret/blackListDomain.txt</h3>
+            <h3 class="urllink">黑名单-加密:http://192.168.5.1:22771/url/blackListDomainSecret.txt</h3>
             <h3>上传文件导入合并黑名单订阅</h3>
         </div>
         <div style="width:100%">
@@ -552,7 +556,7 @@
             <h3>后台默认24小时自动执行生成操作</h3>
             <h3>超融合ipv4订阅地址:参考m3u格式</h3>
             <h3 class="urllink">ipv4-无加密:http://192.168.5.1:22771/secret/ipv4.txt</h3>
-            <h3 class="urllink">ipv4-加密:http://192.168.5.1:22771/url/VFEN.txt</h3>
+            <h3 class="urllink">ipv4-加密:http://192.168.5.1:22771/url/ipv4Secret.txt</h3>
             <h3>上传文件导入合并ipv4订阅</h3>
         </div>
         <div style="width:100%">
@@ -591,7 +595,7 @@
             <h3>后台默认24小时自动执行生成操作</h3>
             <h3>超融合ipv6订阅地址:参考m3u格式</h3>
             <h3 class="urllink">IPV6-无加密:http://192.168.5.1:22771/secret/ipv6.txt</h3>
-            <h3 class="urllink">IPV6-加密:http://192.168.5.1:22771/url/VSEN.txt</h3>
+            <h3 class="urllink">IPV6-加密:http://192.168.5.1:22771/url/ipv6Secret.txt</h3>
             <h3>上传文件导入合并ipv6订阅</h3>
         </div>
         <div style="width:100%">
@@ -663,8 +667,8 @@
             <div style="float: left;width: 50%">
                 <h3>后台默认24小时自动执行生成操作</h3>
                 <h3>超融合节点订阅地址:参考m3u格式</h3>
-                <h3 class="urllink">无加密:http://192.168.5.1:22771/secret/config.yaml</h3>
-                <h3 class="urllink">加密:http://192.168.5.1:22771/url/CC.txt</h3>
+                <h3 class="urllink">无加密代理:http://192.168.5.1:22771/secret/proxyConfig.yaml</h3>
+                <h3 class="urllink">加密代理:http://192.168.5.1:22771/url/proxyConfigSecret.txt</h3>
                 <h3>上传文件导入合并节点订阅</h3>
             </div>
             <div style="width: 100%;display: flex;flex-direction: column;height: 100%">
@@ -1070,6 +1074,14 @@
     </div>
     <div id="page18" style="display: none;">
         <h1>功能开关</h1>
+        <div style="padding-right: 60px">
+            <button onclick="serverMode()" class="stubbonsave">服务器模式</button>
+            <button onclick="clientMode()" class="stubbonsave">客户机模式</button>
+            <br>
+            <br>
+            <br>
+            <br>
+        </div>
         <div class="grid-container">
             <div class="grid-item">
                 <button id="switch" class="switchfunctionbutton" onclick="toggleSwitch('switch')">已关闭</button>
@@ -1277,6 +1289,153 @@
         <h4>比特币(bitcoin)</h4>
          <li id="bitcoin" ><img id="bitcoin-image" src="#" alt="Bitcoin"></li>
     </div>
+    <div id="page22" style="display: none;">
+        <h1>订阅文件重命名</h1>
+        <div style="float: left;width: 70%">
+            <h3>不要使用默认名称，尽可能勤快的换名字</h3>
+            <h3>不可以命名文件格式</h3>
+        </div>
+        <div style="display: flex;width: 100%;">
+            全部直播源-无加密:allM3u
+        </div>
+        <div style="width:100%">
+            <input type="text" id="allM3u" class="stubboninput" placeholder="allM3u"/>
+            <button  onclick="changeFileName('allM3u', 'allM3u', allM3u)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            全部直播源-加密:allM3uSecret
+        </div>
+        <div style="width:100%">
+            <input type="text" id="allM3uSecret" class="stubboninput" placeholder="allM3uSecret"/>
+            <button  onclick="changeFileName('allM3uSecret', 'allM3uSecret', allM3uSecret)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            有效直播源-无加密:aliveM3u
+        </div>
+        <div style="width:100%">
+            <input type="text" id="aliveM3u" class="stubboninput" placeholder="aliveM3u"/>
+            <button  onclick="changeFileName('aliveM3u', 'aliveM3u', aliveM3u)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            电视盒子专用-华语电视台-有效直播源-无加密:healthM3u
+        </div>
+        <div style="width:100%">
+            <input type="text" id="healthM3u" class="stubboninput" placeholder="healthM3u"/>
+            <button  onclick="changeFileName('healthM3u', 'healthM3u', healthM3u)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            adguardhome放行TV域名-无加密:tvDomainForAdguardhome
+        </div>
+        <div style="width:100%">
+            <input type="text" id="tvDomainForAdguardhome" class="stubboninput" placeholder="tvDomainForAdguardhome"/>
+            <button  onclick="changeFileName('tvDomainForAdguardhome', 'tvDomainForAdguardhome', tvDomainForAdguardhome)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            adguardhome放行TV域名-加密:tvDomainForAdguardhomeSecret
+        </div>
+        <div style="width:100%">
+            <input type="text" id="tvDomainForAdguardhomeSecret" class="stubboninput" placeholder="tvDomainForAdguardhomeSecret"/>
+            <button  onclick="changeFileName('tvDomainForAdguardhomeSecret', 'tvDomainForAdguardhomeSecret', tvDomainForAdguardhomeSecret)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            域名白名单-dnsmasq-无加密:whiteListDnsmasq
+        </div>
+        <div style="width:100%">
+            <input type="text" id="whiteListDnsmasq" class="stubboninput" placeholder="whiteListDnsmasq"/>
+            <button  onclick="changeFileName('whiteListDnsmasq', 'whiteListDnsmasq', whiteListDnsmasq)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            域名白名单-dnsmasq-加密:whiteListDnsmasqSecret
+        </div>
+        <div style="width:100%">
+            <input type="text" id="whiteListDnsmasqSecret" class="stubboninput" placeholder="whiteListDnsmasqSecret"/>
+            <button  onclick="changeFileName('whiteListDnsmasqSecret', 'whiteListDnsmasqSecret', whiteListDnsmasqSecret)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            域名白名单-whitelist-无加密:whiteListDomian
+        </div>
+        <div style="width:100%">
+            <input type="text" id="whiteListDomian" class="stubboninput" placeholder="whiteListDomian"/>
+            <button  onclick="changeFileName('whiteListDomian', 'whiteListDomian', whiteListDomian)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            域名白名单-whitelist-加密:whiteListDomianSecret
+        </div>
+        <div style="width:100%">
+            <input type="text" id="whiteListDomianSecret" class="stubboninput" placeholder="whiteListDomianSecret"/>
+            <button  onclick="changeFileName('whiteListDomianSecret', 'whiteListDomianSecret', whiteListDomianSecret)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            域名黑名单-OP-无加密:openclashFallbackFilterDomain
+        </div>
+        <div style="width:100%">
+            <input type="text" id="openclashFallbackFilterDomain" class="stubboninput" placeholder="openclashFallbackFilterDomain"/>
+            <button  onclick="changeFileName('openclashFallbackFilterDomain', 'openclashFallbackFilterDomain', openclashFallbackFilterDomain)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            域名黑名单-OP-加密:openclashFallbackFilterDomainSecret
+        </div>
+        <div style="width:100%">
+            <input type="text" id="openclashFallbackFilterDomainSecret" class="stubboninput" placeholder="openclashFallbackFilterDomainSecret"/>
+            <button  onclick="changeFileName('openclashFallbackFilterDomainSecret', 'openclashFallbackFilterDomainSecret', openclashFallbackFilterDomainSecret)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            域名黑名单-无加密:blackListDomain
+        </div>
+        <div style="width:100%">
+            <input type="text" id="blackListDomain" class="stubboninput" placeholder="blackListDomain"/>
+            <button  onclick="changeFileName('blackListDomain', 'blackListDomain', blackListDomain)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            域名黑名单-加密:blackListDomainSecret
+        </div>
+        <div style="width:100%">
+            <input type="text" id="blackListDomainSecret" class="stubboninput" placeholder="blackListDomainSecret"/>
+            <button  onclick="changeFileName('blackListDomainSecret', 'blackListDomainSecret', blackListDomainSecret)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            ipv4-无加密:ipv4
+        </div>
+        <div style="width:100%">
+            <input type="text" id="ipv4" class="stubboninput" placeholder="ipv4"/>
+            <button  onclick="changeFileName('ipv4', 'ipv4', ipv4)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            ipv4-加密:ipv4Secret
+        </div>
+        <div style="width:100%">
+            <input type="text" id="ipv4Secret" class="stubboninput" placeholder="ipv4Secret"/>
+            <button  onclick="changeFileName('ipv4Secret', 'ipv4Secret', ipv4Secret)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            ipv6-无加密:ipv6
+        </div>
+        <div style="width:100%">
+            <input type="text" id="ipv6" class="stubboninput" placeholder="ipv6"/>
+            <button  onclick="changeFileName('ipv6', 'ipv6', ipv6)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            ipv6-加密:ipv6Secret
+        </div>
+        <div style="width:100%">
+            <input type="text" id="ipv6Secret" class="stubboninput" placeholder="ipv6Secret"/>
+            <button  onclick="changeFileName('ipv6Secret', 'ipv6Secret', ipv6Secret)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            节点订阅-无加密:proxyConfig
+        </div>
+        <div style="width:100%">
+            <input type="text" id="proxyConfig" class="stubboninput" placeholder="proxyConfig"/>
+            <button  onclick="changeFileName('proxyConfig', 'proxyConfig', proxyConfig)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            节点订阅-加密:proxyConfigSecret
+        </div>
+        <div style="width:100%">
+            <input type="text" id="proxyConfigSecret" class="stubboninput" placeholder="proxyConfigSecret"/>
+            <button  onclick="changeFileName('proxyConfigSecret', 'proxyConfigSecret', proxyConfigSecret)" class="stubbonsave">修改</button>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -1435,6 +1594,27 @@
     const webdavPort = document.getElementById('webdavPort');
     // 输入框显示webdav账户地址
     const webdavIp = document.getElementById('webdavIp');
+
+    const allM3u = document.getElementById('allM3u');
+    const allM3uSecret = document.getElementById('allM3uSecret');
+    const aliveM3u = document.getElementById('aliveM3u');
+    const healthM3u = document.getElementById('healthM3u');
+    const tvDomainForAdguardhome = document.getElementById('tvDomainForAdguardhome');
+    const tvDomainForAdguardhomeSecret = document.getElementById('tvDomainForAdguardhomeSecret');
+    const whiteListDnsmasq = document.getElementById('whiteListDnsmasq');
+    const whiteListDnsmasqSecret = document.getElementById('whiteListDnsmasqSecret');
+    const whiteListDomian = document.getElementById('whiteListDomian');
+    const whiteListDomianSecret = document.getElementById('whiteListDomianSecret');
+    const openclashFallbackFilterDomain = document.getElementById('openclashFallbackFilterDomain');
+    const openclashFallbackFilterDomainSecret = document.getElementById('openclashFallbackFilterDomainSecret');
+    const blackListDomain = document.getElementById('blackListDomain');
+    const blackListDomainSecret = document.getElementById('blackListDomainSecret');
+    const ipv4 = document.getElementById('ipv4');
+    const ipv4Secret = document.getElementById('ipv4Secret');
+    const ipv6 = document.getElementById('ipv6');
+    const ipv6Secret = document.getElementById('ipv6Secret');
+    const proxyConfig = document.getElementById('proxyConfig');
+    const proxyConfigSecret = document.getElementById('proxyConfigSecret');
 
     const fileInput11 = document.getElementById('upload-json-btn11');
     const addRowButton11 = document.getElementById('add-row11');
@@ -1602,6 +1782,24 @@
         }).catch(error => console.error(error));
     }
 
+    function serverMode() {
+        fetch('/api/serverMode', {
+            method: 'POST',
+            body: JSON.stringify({'mode': 'server'}),
+            headers: {'Content-Type': 'application/json'}
+        }).catch(error => console.error(error));
+        location.reload()
+    }
+
+    function clientMode() {
+        fetch('/api/serverMode', {
+            method: 'POST',
+            body: JSON.stringify({'mode': 'client'}),
+            headers: {'Content-Type': 'application/json'}
+        }).catch(error => console.error(error));
+        location.reload()
+    }
+
     // 切换开关状态
     function toggleSwitch(id) {
         var switchButton = document.getElementById(id);
@@ -1640,21 +1838,33 @@
         window.open(url, "_blank");
     }
 
-    function changeUrls() {
+    function changeUrls(pageTags) {
         // 获取所有具有类名 "urllink" 的 h3 元素
         var elements = document.getElementsByClassName("urllink");
-
         // 遍历所有元素并更改它们的内容
         for (var i = 0; i < elements.length; i++) {
             // 分解文本为三个部分
             var text = elements[i].innerHTML;
-            var parts = text.split(":");
-            var prefix = parts[0] + ":"+parts[1] + ":";
-            var suffix = ":" + parts[3];
-            // 生成新的 URL
-            var newIp = sessionStorage.getItem('iptext'); // 新的 IP 地址
-            // 设置新的 URL
-            elements[i].innerHTML = prefix + "//" + newIp + suffix;
+            for (var keyVal in pageTags) {
+                if (keyVal in text) {
+                    var parts = text.split(":");
+                    var prefix = parts[0] + ":" + parts[1] + ":";
+                    var suffix = ":" + parts[3];
+                    var parts2 = suffix.split("/")
+                    var suffix2 = parts2[0] + "/" + parts2[1]
+                    // 生成新的 URL
+                    var newIp = sessionStorage.getItem('iptext'); // 新的 IP 地址
+                    var tagnamefile = parts2[2]
+                    var parts3 = tagnamefile.split(".")
+                    var tagname = parts3[0]
+                    // 设置新的 URL
+                    var currName = sessionStorage.getItem(tagname);
+                    if (currName && currName !== "") {
+                        elements[i].innerHTML = prefix + "//" + newIp + suffix2 + "/" + currName + "." + parts3[1];
+                    }
+                    break
+                }
+            }
         }
     }
 
@@ -1670,6 +1880,22 @@
             });
     }
 
+    function getFileName(cacheKey, id, idVar) {
+        var filename = sessionStorage.getItem(id);
+        if (filename && filename !== '') {
+            idVar.value = filename;
+        } else {
+            PostDataByAskAndReturn('/api/getFileName', cacheKey, '订阅文件名字获取失败：')
+                .then(function (returnValue) {
+                    idVar.value = returnValue;
+                    sessionStorage.setItem(id, returnValue);
+                })
+                .catch(function (error) {
+                    console.log(error);
+                });
+        }
+    }
+
     function changePasswordByHand(cacheKey, id, idVar) {
         PostDataByAsk2AndReturn('/api/changeSubscribePasswordByHand', cacheKey,idVar.value)
             .then(function (returnValue) {
@@ -1680,9 +1906,20 @@
             });
     }
 
+
+    function changeFileName(cacheKey, id, idVar) {
+        PostDataByAsk2AndReturn('/api/changeFileName', cacheKey,idVar.value)
+            .then(function (returnValue) {
+                sessionStorage.setItem(id, idVar.value);
+            })
+            .catch(function (error) {
+                console.log(error);
+            });
+    }
+
     function getSyncData(cacheKey, type, id, idVar) {
         var cachevalue = sessionStorage.getItem(id);
-        if (cachevalue != null && cachevalue !== '') {
+        if (cachevalue && cachevalue !== '') {
             idVar.value = cachevalue;
         } else {
             PostDataByAsk2AndReturn('/api/getSyncAccountData', cacheKey, type)
@@ -1780,7 +2017,7 @@
     //主机IP加载
     function reloadIP() {
         reloadDnsSetting(iptextcache,iptext,'/api/getIP','iptext')
-        changeUrls()
+        changeUrls(["直播源"])
         addMonitoring()
     }
 
@@ -1812,7 +2049,7 @@
     //修改主机IP
     function changeIP() {
         saveDnsSetting('/api/changeIP','iptext',iptext)
-        changeUrls()
+        //changeUrls()
         stopMonitoring()
         addMonitoring()
     }
@@ -1883,7 +2120,7 @@
     }
 
     function reloadDnsSetting(targetcache, targetConst, requestpath, targetCacheName) {
-        if (targetcache) {
+        if (targetcache&&targetcache !== '') {
             targetConst.value = targetcache
         } else {
             // 发送 GET 请求
@@ -2606,6 +2843,13 @@
     function reloadPageDataById(selectedPage) {
         if (selectedPage === pages[0].id) {
             reload()
+            getFileName('allM3u', 'allM3u', allM3u)
+            getFileName('allM3uSecret', 'allM3uSecret', allM3uSecret)
+            getFileName('aliveM3u', 'aliveM3u', aliveM3u)
+            getFileName('healthM3u', 'healthM3u', healthM3u)
+            getFileName('tvDomainForAdguardhome', 'tvDomainForAdguardhome', tvDomainForAdguardhome)
+            getFileName('tvDomainForAdguardhomeSecret', 'tvDomainForAdguardhomeSecret', tvDomainForAdguardhomeSecret)
+            changeUrls(["直播源"])
         } else if (selectedPage === pages[1].id) {
             //将 handleScroll 函数绑定到 window 的 scroll 事件上，以便在用户滚动窗口时触发
             window.addEventListener('scroll', handleScroll);
@@ -2614,12 +2858,28 @@
             reloadPasswordList()
         } else if (selectedPage === pages[4].id) {
             reloadWhiteListLink()
+            getFileName('whiteListDnsmasq', 'whiteListDnsmasq', whiteListDnsmasq)
+            getFileName('whiteListDnsmasqSecret', 'whiteListDnsmasqSecret', whiteListDnsmasqSecret)
+            getFileName('whiteListDomian', 'whiteListDomian', whiteListDomian)
+            getFileName('whiteListDomianSecret', 'whiteListDomianSecret', whiteListDomianSecret)
+            changeUrls(["dnsmasq", "whitelist"])
         } else if (selectedPage === pages[5].id) {
             reloadBlackListLink()
+            getFileName('openclashFallbackFilterDomain', 'openclashFallbackFilterDomain', openclashFallbackFilterDomain)
+            getFileName('openclashFallbackFilterDomainSecret', 'openclashFallbackFilterDomainSecret', openclashFallbackFilterDomainSecret)
+            getFileName('blackListDomain', 'blackListDomain', blackListDomain)
+            getFileName('blackListDomainSecret', 'blackListDomainSecret', blackListDomainSecret)
+            changeUrls(["黑名单-"])
         } else if (selectedPage === pages[6].id) {
             reloadIpv4ListLink()
+            getFileName('ipv4', 'ipv4', ipv4)
+            getFileName('ipv4Secret', 'ipv4Secret', ipv4Secret)
+            changeUrls(["ipv4"])
         } else if (selectedPage === pages[7].id) {
             reloadIpv6ListLink()
+            getFileName('ipv6', 'ipv6', ipv6)
+            getFileName('ipv6Secret', 'ipv6Secret', ipv6Secret)
+            changeUrls(["ipv6"])
         } else if (selectedPage === pages[9].id) {
             // 这里面有查询有问题，暂时不管
             reloadProxiesListLink()
@@ -2629,6 +2889,9 @@
             reloadSelectedModel()
             // 节点订阅-加载选择的服务器配置
             reloadSelectedServer()
+            getFileName('proxyConfig', 'proxyConfig', proxyConfig)
+            getFileName('proxyConfigSecret', 'proxyConfigSecret', proxyConfigSecret)
+            changeUrls(["代理"])
         } else if (selectedPage === pages[10].id) {
             reloadProxyModelListLink()
         } else if (selectedPage === pages[11].id) {
@@ -2666,7 +2929,7 @@
             getSyncData('agreement', 'lls', 'webdavAgreement', webdavAgreement)
         } else if (selectedPage === pages[15].id) {
             reloadM3uWhiteList()
-        }else if (selectedPage === pages[17].id) {
+        } else if (selectedPage === pages[17].id) {
             //生成有效M3U
             reloadFunctionOpenButton('switch')
             //全部M3U加密
@@ -2731,14 +2994,34 @@
             reloadFunctionOpenButton('switch31')
             //上传选项3-Webdav
             reloadFunctionOpenButton('switch32')
-        }else if (selectedPage === pages[18].id) {
+        } else if (selectedPage === pages[18].id) {
             reloadDNSSIMPLEWhiteList()
-        }
-        else if (selectedPage === pages[19].id) {
+        } else if (selectedPage === pages[19].id) {
             reloadDNSSIMPLEBlackList()
-        }else if (selectedPage === pages[20].id) {
+        } else if (selectedPage === pages[20].id) {
             // 打赏图片
             reloadImage()
+        } else if (selectedPage === pages[21].id) {
+            getFileName('allM3u', 'allM3u', allM3u)
+            getFileName('allM3uSecret', 'allM3uSecret', allM3uSecret)
+            getFileName('aliveM3u', 'aliveM3u', aliveM3u)
+            getFileName('healthM3u', 'healthM3u', healthM3u)
+            getFileName('tvDomainForAdguardhome', 'tvDomainForAdguardhome', tvDomainForAdguardhome)
+            getFileName('tvDomainForAdguardhomeSecret', 'tvDomainForAdguardhomeSecret', tvDomainForAdguardhomeSecret)
+            getFileName('whiteListDnsmasq', 'whiteListDnsmasq', whiteListDnsmasq)
+            getFileName('whiteListDnsmasqSecret', 'whiteListDnsmasqSecret', whiteListDnsmasqSecret)
+            getFileName('whiteListDomian', 'whiteListDomian', whiteListDomian)
+            getFileName('whiteListDomianSecret', 'whiteListDomianSecret', whiteListDomianSecret)
+            getFileName('openclashFallbackFilterDomain', 'openclashFallbackFilterDomain', openclashFallbackFilterDomain)
+            getFileName('openclashFallbackFilterDomainSecret', 'openclashFallbackFilterDomainSecret', openclashFallbackFilterDomainSecret)
+            getFileName('blackListDomain', 'blackListDomain', blackListDomain)
+            getFileName('blackListDomainSecret', 'blackListDomainSecret', blackListDomainSecret)
+            getFileName('ipv4', 'ipv4', ipv4)
+            getFileName('ipv4Secret', 'ipv4Secret', ipv4Secret)
+            getFileName('ipv6', 'ipv6', ipv6)
+            getFileName('ipv6Secret', 'ipv6Secret', ipv6Secret)
+            getFileName('proxyConfig', 'proxyConfig', proxyConfig)
+            getFileName('proxyConfigSecret', 'proxyConfigSecret', proxyConfigSecret)
         }
         if (selectedPage !== pages[1].id) {
             window.removeEventListener('scroll', handleScroll);
