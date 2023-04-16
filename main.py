@@ -2561,7 +2561,7 @@ def chaorongheProxies(filename):
         #     f.write(response.content)
         thread = threading.Thread(target=download_secert_file,
                                   args=(
-                                      filename, f"{secret_path}{getFileNameByTagName('proxyConfigSecret')}.txt",
+                                      filename, f"{public_path}{getFileNameByTagName('proxyConfigSecret')}.txt",
                                       'proxy', isOpenFunction('switch22'),
                                       isOpenFunction('switch23'), isOpenFunction('switch30'),
                                       isOpenFunction('switch31'), isOpenFunction('switch32')))
