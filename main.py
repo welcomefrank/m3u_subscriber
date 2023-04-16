@@ -127,7 +127,8 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'blackListDomain': 'blackListDomain',
                   'blackListDomainSecret': 'blackListDomainSecret', 'ipv4': 'ipv4', 'ipv4Secret': 'ipv4Secret',
                   'ipv6': 'ipv6',
-                  'ipv6Secret': 'ipv6Secret', 'proxyConfig': 'proxyConfig', 'proxyConfigSecret': 'proxyConfigSecret'}
+                  'ipv6Secret': 'ipv6Secret', 'proxyConfig': 'proxyConfig', 'proxyConfigSecret': 'proxyConfigSecret',
+                  'whitelistDirectRule': 'whitelistDirectRule', 'blacklistProxyRule': 'blacklistProxyRule'}
 
 # 全部有redis备份字典key
 allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_LINK, REDIS_KEY_WHITELIST_IPV4_LINK,
@@ -167,8 +168,12 @@ URL = "http://192.168.5.1:25500/sub"
 white_list_adguardhome = {}
 # 白名单总缓存，数据大量，是全部规则缓存
 white_list_nameserver_policy = {}
+# DOMAIN-SUFFIX,域名,DIRECT--以该域名结尾的全部直连
+white_list_Direct_Rules = {}
 # 黑名单总缓存，数据大量，是全部规则缓存
 black_list_nameserver_policy = {}
+# DOMAIN-SUFFIX,域名,DIRECT--以该域名结尾的全部代理
+black_list_Proxy_Rules = {}
 
 # 下载的域名白名单存储到redis服务器里
 REDIS_KEY_WHITE_DOMAINS = "whitedomains"
@@ -639,7 +644,7 @@ def addlist(request, rediskey):
 # update 开启m3u域名白名单加密文件上传gitee
 # secretfile 开启m3u域名白名单生成加密文件
 def writeTvList(fileName, secretfilename):
-    distribute_data(white_list_adguardhome, fileName, 10)
+    distribute_data(white_list_adguardhome, fileName, 100)
     white_list_adguardhome.clear()
     download_secert_file(fileName, secretfilename, 'm3u',
                          isOpenFunction('switch8'), isOpenFunction('switch7'), isOpenFunction('switch30'),
@@ -661,8 +666,12 @@ def writeOpenclashNameServerPolicy():
         # 更新redis数据库白名单
         # redis_add_map(REDIS_KEY_WHITE_DOMAINS, white_list_nameserver_policy)
         path = f"{secret_path}{getFileNameByTagName('whiteListDomian')}.txt"
-        distribute_data(white_list_nameserver_policy, path, 10)
+        distribute_data(white_list_nameserver_policy, path, 100)
         white_list_nameserver_policy.clear()
+        path2 = f"{secret_path}{getFileNameByTagName('whitelistDirectRule')}.txt"
+        distribute_data(white_list_Direct_Rules, path2, 100)
+        white_list_Direct_Rules.clear()
+
         # 白名单加密
         download_secert_file(path, f"{public_path}{getFileNameByTagName('whiteListDomianSecret')}.txt", 'whitelist',
                              isOpenFunction('switch12'), isOpenFunction('switch11'),
@@ -684,8 +693,13 @@ def writeBlackList():
         # 通知dns服务器更新内存
         # redis_add(REDIS_KEY_UPDATE_BLACK_LIST_FLAG, 1)
         path = f"{secret_path}{getFileNameByTagName('blackListDomain')}.txt"
-        distribute_data(black_list_nameserver_policy, path, 10)
+        distribute_data(black_list_nameserver_policy, path, 100)
         black_list_nameserver_policy.clear()
+
+        path2 = f"{secret_path}{getFileNameByTagName('blacklistProxyRule')}.txt"
+        distribute_data(black_list_Proxy_Rules, path2, 100)
+        black_list_Proxy_Rules.clear()
+
         # 黑名单加密
         download_secert_file(path, f"{public_path}{getFileNameByTagName('blackListDomainSecret')}.txt", 'blacklist',
                              isOpenFunction('switch16'),
@@ -716,7 +730,7 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
     old_dict = redis_get_map(redisKeyData)
     my_dict.update(old_dict)
     # 同步方法写出全部配置
-    distribute_data(my_dict, fileName, 10)
+    distribute_data(my_dict, fileName, 100)
     redis_add_map(redisKeyData, my_dict)
     if ism3u:
         # M3U域名tvlist - 无加密
@@ -1486,8 +1500,13 @@ def formattxt_multithread(data, method_name):
     return my_dict
 
 
+PROXY_RULE_LEFT = 'DOMAIN-SUFFIX,'
+PROXY_RULE_RIGHT = ',PROXY'
+
+
 def updateBlackList(url):
     black_list_nameserver_policy[url] = ""
+    black_list_Proxy_Rules[PROXY_RULE_LEFT + url + PROXY_RULE_RIGHT] = ''
 
 
 def updateBlackListSpData(domain):
@@ -1499,18 +1518,24 @@ def updateBlackListSpData(domain):
 
 
 # 字符串内容处理-域名转openclash-fallbackfilter-domain
+# openclash-fallback-filter-domain 填写需要代理的域名
+# 可以使用通配符*,但是尽可能少用，可能出问题
 def process_data_domain_openclash_fallbackfilter(data, index, step, my_dict):
     end_index = min(index + step, len(data))
     for i in range(index, end_index):
         line = data[i].strip()
         if not line:
             continue
+        # dns分流需要的外国域名一级数据
         updateBlackListSpData(line)
         # 判断是不是+.域名
         lineEncoder = line.encode()
         if re.match(wildcard_regex2, line):
+            # 外国域名+第三方规则-外国域名关键字
             updateBlackList((lineEncoder.substring(2)).decode())
-            my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+            # my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+            my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "*." + (
+                lineEncoder.substring(2)).decode() + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
         # 判断是不是域名
         elif re.match(domain_regex, line):
             # 全部使用通配符+.可以匹配所有子域名包括自身，适合openclash-fallback-filter配置外国域名组
@@ -1519,21 +1544,26 @@ def process_data_domain_openclash_fallbackfilter(data, index, step, my_dict):
                 # 自用dns分流器外国域名，只取最高父域名
                 updateBlackList(line)
                 my_dict[
-                    OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "+." + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+                    OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+                # my_dict[
+                #     OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "+." + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
             else:
                 updateBlackList((lineEncoder.substring(4)).decode())
                 my_dict[
-                    OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "+." + (
+                    OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + (
                         lineEncoder.substring(4)).decode() + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+                # my_dict[
+                #     OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "+." + (
+                #         lineEncoder.substring(4)).decode() + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
         # 判断是不是*.域名
         elif re.match(wildcard_regex, line):
             updateBlackList((lineEncoder.substring(2)).decode())
-            # my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line[2:] + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
-            my_dict[
-                OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "+." + line[2:] + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+            my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+            # my_dict[
+            #     OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "+." + line[2:] + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
         elif lineEncoder.startswith(b"."):
             updateBlackList((lineEncoder.substring(1)).decode())
-            my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "+" + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+            my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "*" + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
 
 
 # 字符串内容处理-域名转adguardhome屏蔽
@@ -1615,41 +1645,52 @@ def updateWhiteListSpData(domain):
 
 
 # 字符串内容处理-域名转dnsmasq白名单
+# openclash dnsmasq不支持+，支持*.和.
+# 最简单的做法是*域名*
+# 第三方规则不支持+,支持*.和.
+# openclash域名白名单全部使用*.域名
 def process_data_domain_dnsmasq(data, index, step, my_dict):
     end_index = min(index + step, len(data))
     for i in range(index, end_index):
         line = data[i].strip()
         if not line:
             continue
+        # dns分流使用的域名白名单
         updateWhiteListSpData(line)
         # 普通域名
         if re.match(domain_regex, line):
             lineEncoder = line.encode()
             # www域名
             if lineEncoder.startswith(b"www."):
-                # 自用dns分流器使用的父类域名白名单
+                # 大陆域名白名单+第三方规则直连生成
                 updateOpenclashNameServerPolicy((lineEncoder.substring(4)).decode())
-                # openclash-dnsmasq域名全部使用通配符+.
-                my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + '+.' + (
+                # openclash-dnsmasq域名全部使用通配符*.，用于直接筛查大陆域名
+                my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + '*.' + (
                     lineEncoder.substring(4)).decode() + BLACKLIST_DNSMASQ_FORMATION_right] = ""
             else:
                 updateOpenclashNameServerPolicy(line)
-                my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + '+.' + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
+                my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + '*.' + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
         # *.域名
         elif re.match(wildcard_regex, line):
             lineEncoder = line.encode()
             updateOpenclashNameServerPolicy((lineEncoder.substring(2)).decode())
-            my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + '+' + (
-                lineEncoder.substring(1)).decode() + BLACKLIST_DNSMASQ_FORMATION_right] = ""
+            my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
+
         # +.域名
         elif re.match(wildcard_regex2, line):
             lineEncoder = line.encode()
             updateOpenclashNameServerPolicy((lineEncoder.substring(2)).decode())
-            my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
+            my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + '*' + (
+                lineEncoder.substring(1)).decode() + BLACKLIST_DNSMASQ_FORMATION_right] = ""
+
+
+DIRECT_RULE_LEFT = 'DOMAIN-SUFFIX,'
+DIRECT_RULE_RIGHT = ',DIRECT'
 
 
 def updateOpenclashNameServerPolicy(url):
     white_list_nameserver_policy[url] = ""
+    white_list_Direct_Rules[DIRECT_RULE_LEFT + url + DIRECT_RULE_RIGHT] = ''
 
 
 def updateAdguardhomeWithelistForM3u(url):
@@ -2477,7 +2518,7 @@ def download_files_for_encryp_proxy(urls, redis_dict):
                 tmp_file = f"{current_timestamp}{middleStr}.yaml"
                 with open(f"{secret_path}{tmp_file}", 'w'):
                     pass
-                write_content_to_file(result.encode("utf-8"), f"{secret_path}{tmp_file}", 10)
+                write_content_to_file(result.encode("utf-8"), f"{secret_path}{tmp_file}", 100)
                 proxy_dict[f"http://{ip}:22771/secret/" + tmp_file] = f"{secret_path}{tmp_file}"
                 i = i + 1
     return proxy_dict
@@ -2514,7 +2555,7 @@ def chaorongheProxies(filename):
             os.remove(filename)
         with open(filename, 'w'):
             pass
-        write_content_to_file(response.content, filename, 10)
+        write_content_to_file(response.content, filename, 100)
         # # 下载 Clash 配置文件
         # with open(filename, 'wb') as f:
         #     f.write(response.content)
@@ -3068,7 +3109,8 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'blackListDomainSecret': 'blackListDomainSecret', 'ipv4': 'ipv4', 'ipv4Secret': 'ipv4Secret',
                           'ipv6': 'ipv6',
                           'ipv6Secret': 'ipv6Secret', 'proxyConfig': 'proxyConfig',
-                          'proxyConfigSecret': 'proxyConfigSecret'}
+                          'proxyConfigSecret': 'proxyConfigSecret',
+                          'whitelistDirectRule': 'whitelistDirectRule', 'blacklistProxyRule': 'blacklistProxyRule'}
 
 
 def init_file_name():
@@ -4128,7 +4170,7 @@ def removem3ulinks():
 @app.route('/api/download_m3u_file', methods=['GET'])
 def download_m3u_file():
     my_dict = redis_get_map(REDIS_KEY_M3U_DATA)
-    distribute_data(my_dict, f"{secret_path}temp_m3u.m3u", 10)
+    distribute_data(my_dict, f"{secret_path}temp_m3u.m3u", 100)
     # 发送JSON文件到前端
     return send_file(f"{secret_path}temp_m3u.m3u", as_attachment=True)
 
@@ -4140,7 +4182,7 @@ def upload_m3u_file():
     # file_content = file.read().decode('utf-8')
     file_content = file.read()
     # file_content = read_file_with_encoding(file)
-    my_dict = formatdata_multithread(file_content.splitlines(), 10)
+    my_dict = formatdata_multithread(file_content.splitlines(), 100)
     # my_dict = formattxt_multithread(file_content.splitlines(), 100)
     redis_add_map(REDIS_KEY_M3U_DATA, my_dict)
     return '文件已上传'
@@ -4230,10 +4272,10 @@ def process_file():
     # file_content = file.read().decode('utf-8')
     file_content = file.read()
     # file_content = read_file_with_encoding(file)
-    my_dict = formatdata_multithread(file_content.splitlines(), 10)
+    my_dict = formatdata_multithread(file_content.splitlines(), 100)
     # my_dict = formattxt_multithread(file_content.splitlines(), 100)
     # my_dict = formatdata_multithread(file.readlines(), 100)
-    distribute_data(my_dict, f"{secret_path}tmp.m3u", 10)
+    distribute_data(my_dict, f"{secret_path}tmp.m3u", 100)
     return send_file(f"{secret_path}tmp.m3u", as_attachment=True)
 
 

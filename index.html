@@ -475,6 +475,7 @@
             <h3 class="urllink">dnsmasq-加密:http://192.168.5.1:22771/url/whiteListDnsmasqSecret.txt</h3>
             <h3 class="urllink">whitelist-无加密:http://192.168.5.1:22771/secret/whiteListDomian.txt</h3>
             <h3 class="urllink">whitelist-加密:http://192.168.5.1:22771/url/whiteListDomianSecret.txt</h3>
+            <h3 class="urllink">whitelist-openclash第三方直连规则-无加密:http://192.168.5.1:22771/secret/whitelistDirectRule.txt</h3>
             <h3 class="urllink">停止生成domain:http://192.168.5.1:22771/secret/WhiteDomain.txt</h3>
             <h3 >上传文件导入合并白名单订阅</h3>
         </div>
@@ -518,6 +519,7 @@
             <h3 class="urllink">黑名单-OP-加密:http://192.168.5.1:22771/url/openclashFallbackFilterDomainSecret.txt</h3>
             <h3 class="urllink">黑名单-无加密:http://192.168.5.1:22771/secret/blackListDomain.txt</h3>
             <h3 class="urllink">黑名单-加密:http://192.168.5.1:22771/url/blackListDomainSecret.txt</h3>
+            <h3 class="urllink">黑名单-openclash代理规则:http://192.168.5.1:22771/secret/blacklistProxyRule.txt</h3>
             <h3>上传文件导入合并黑名单订阅</h3>
         </div>
         <div style="width:100%">
@@ -1366,6 +1368,15 @@
             <button  onclick="changeFileName('whiteListDomianSecret', 'whiteListDomianSecret', whiteListDomianSecret)" class="stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
+            域名白名单-openclash直连规则:whitelistDirectRule
+        </div>
+        <div style="width:100%">
+            <input type="text" id="whitelistDirectRule" class="stubboninput" placeholder="whitelistDirectRule"/>
+            <button onclick="changeFileName('whitelistDirectRule', 'whitelistDirectRule', whitelistDirectRule)"
+                    class="stubbonsave">修改
+            </button>
+        </div>
+        <div style="display: flex;width: 100%;">
             域名黑名单-OP-无加密:openclashFallbackFilterDomain
         </div>
         <div style="width:100%">
@@ -1392,6 +1403,13 @@
         <div style="width:100%">
             <input type="text" id="blackListDomainSecret" class="stubboninput" placeholder="blackListDomainSecret"/>
             <button  onclick="changeFileName('blackListDomainSecret', 'blackListDomainSecret', blackListDomainSecret)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+        域名黑名单-openclash代理规则:blacklistProxyRule
+        </div>
+        <div style="width:100%">
+            <input type="text" id="blacklistProxyRule" class="stubboninput" placeholder="blacklistProxyRule"/>
+            <button  onclick="changeFileName('blacklistProxyRule', 'blacklistProxyRule', blacklistProxyRule)" class="stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             ipv4-无加密:ipv4
@@ -1605,10 +1623,12 @@
     const whiteListDnsmasqSecret = document.getElementById('whiteListDnsmasqSecret');
     const whiteListDomian = document.getElementById('whiteListDomian');
     const whiteListDomianSecret = document.getElementById('whiteListDomianSecret');
+    const whitelistDirectRule = document.getElementById('whitelistDirectRule');
     const openclashFallbackFilterDomain = document.getElementById('openclashFallbackFilterDomain');
     const openclashFallbackFilterDomainSecret = document.getElementById('openclashFallbackFilterDomainSecret');
     const blackListDomain = document.getElementById('blackListDomain');
     const blackListDomainSecret = document.getElementById('blackListDomainSecret');
+    const blacklistProxyRule = document.getElementById('blacklistProxyRule');
     const ipv4 = document.getElementById('ipv4');
     const ipv4Secret = document.getElementById('ipv4Secret');
     const ipv6 = document.getElementById('ipv6');
@@ -1838,34 +1858,30 @@
         window.open(url, "_blank");
     }
 
-    function changeUrls(pageTags) {
+    function changeUrls() {
         // 获取所有具有类名 "urllink" 的 h3 元素
         var elements = document.getElementsByClassName("urllink");
         // 遍历所有元素并更改它们的内容
         for (var i = 0; i < elements.length; i++) {
             // 分解文本为三个部分
             var text = elements[i].innerHTML;
-            for (var keyVal in pageTags) {
-                if (keyVal in text) {
-                    var parts = text.split(":");
-                    var prefix = parts[0] + ":" + parts[1] + ":";
-                    var suffix = ":" + parts[3];
-                    var parts2 = suffix.split("/")
-                    var suffix2 = parts2[0] + "/" + parts2[1]
-                    // 生成新的 URL
-                    var newIp = sessionStorage.getItem('iptext'); // 新的 IP 地址
-                    var tagnamefile = parts2[2]
-                    var parts3 = tagnamefile.split(".")
-                    var tagname = parts3[0]
-                    // 设置新的 URL
-                    var currName = sessionStorage.getItem(tagname);
-                    if (currName && currName !== "") {
-                        elements[i].innerHTML = prefix + "//" + newIp + suffix2 + "/" + currName + "." + parts3[1];
-                    }
-                    break
-                }
+            var parts = text.split(":");
+            var prefix = parts[0] + ":" + parts[1] + ":";
+            var suffix = ":" + parts[3];
+            var parts2 = suffix.split("/")
+            var suffix2 = parts2[0] + "/" + parts2[1]
+            // 生成新的 URL
+            var newIp = sessionStorage.getItem('iptext'); // 新的 IP 地址
+            var tagnamefile = parts2[2]
+            var parts3 = tagnamefile.split(".")
+            var tagname = parts3[0]
+            // 设置新的 URL
+            var currName = sessionStorage.getItem(tagname);
+            if (currName && currName !== "") {
+                elements[i].innerHTML = prefix + "//" + newIp + suffix2 + "/" + currName + "." + parts3[1];
             }
         }
+
     }
 
 
@@ -2017,7 +2033,29 @@
     //主机IP加载
     function reloadIP() {
         reloadDnsSetting(iptextcache,iptext,'/api/getIP','iptext')
-        changeUrls(["直播源"])
+        getFileName('allM3u', 'allM3u', allM3u)
+        getFileName('allM3uSecret', 'allM3uSecret', allM3uSecret)
+        getFileName('aliveM3u', 'aliveM3u', aliveM3u)
+        getFileName('healthM3u', 'healthM3u', healthM3u)
+        getFileName('tvDomainForAdguardhome', 'tvDomainForAdguardhome', tvDomainForAdguardhome)
+        getFileName('tvDomainForAdguardhomeSecret', 'tvDomainForAdguardhomeSecret', tvDomainForAdguardhomeSecret)
+        getFileName('whiteListDnsmasq', 'whiteListDnsmasq', whiteListDnsmasq)
+        getFileName('whiteListDnsmasqSecret', 'whiteListDnsmasqSecret', whiteListDnsmasqSecret)
+        getFileName('whiteListDomian', 'whiteListDomian', whiteListDomian)
+        getFileName('whiteListDomianSecret', 'whiteListDomianSecret', whiteListDomianSecret)
+        getFileName('whitelistDirectRule', 'whitelistDirectRule', whitelistDirectRule)
+        getFileName('openclashFallbackFilterDomain', 'openclashFallbackFilterDomain', openclashFallbackFilterDomain)
+        getFileName('openclashFallbackFilterDomainSecret', 'openclashFallbackFilterDomainSecret', openclashFallbackFilterDomainSecret)
+        getFileName('blackListDomain', 'blackListDomain', blackListDomain)
+        getFileName('blackListDomainSecret', 'blackListDomainSecret', blackListDomainSecret)
+        getFileName('blacklistProxyRule', 'blacklistProxyRule', blacklistProxyRule)
+        getFileName('ipv4', 'ipv4', ipv4)
+        getFileName('ipv4Secret', 'ipv4Secret', ipv4Secret)
+        getFileName('ipv6', 'ipv6', ipv6)
+        getFileName('ipv6Secret', 'ipv6Secret', ipv6Secret)
+        getFileName('proxyConfig', 'proxyConfig', proxyConfig)
+        getFileName('proxyConfigSecret', 'proxyConfigSecret', proxyConfigSecret)
+        changeUrls()
         addMonitoring()
     }
 
@@ -2843,13 +2881,6 @@
     function reloadPageDataById(selectedPage) {
         if (selectedPage === pages[0].id) {
             reload()
-            getFileName('allM3u', 'allM3u', allM3u)
-            getFileName('allM3uSecret', 'allM3uSecret', allM3uSecret)
-            getFileName('aliveM3u', 'aliveM3u', aliveM3u)
-            getFileName('healthM3u', 'healthM3u', healthM3u)
-            getFileName('tvDomainForAdguardhome', 'tvDomainForAdguardhome', tvDomainForAdguardhome)
-            getFileName('tvDomainForAdguardhomeSecret', 'tvDomainForAdguardhomeSecret', tvDomainForAdguardhomeSecret)
-            changeUrls(["直播源"])
         } else if (selectedPage === pages[1].id) {
             //将 handleScroll 函数绑定到 window 的 scroll 事件上，以便在用户滚动窗口时触发
             window.addEventListener('scroll', handleScroll);
@@ -2858,28 +2889,12 @@
             reloadPasswordList()
         } else if (selectedPage === pages[4].id) {
             reloadWhiteListLink()
-            getFileName('whiteListDnsmasq', 'whiteListDnsmasq', whiteListDnsmasq)
-            getFileName('whiteListDnsmasqSecret', 'whiteListDnsmasqSecret', whiteListDnsmasqSecret)
-            getFileName('whiteListDomian', 'whiteListDomian', whiteListDomian)
-            getFileName('whiteListDomianSecret', 'whiteListDomianSecret', whiteListDomianSecret)
-            changeUrls(["dnsmasq", "whitelist"])
         } else if (selectedPage === pages[5].id) {
             reloadBlackListLink()
-            getFileName('openclashFallbackFilterDomain', 'openclashFallbackFilterDomain', openclashFallbackFilterDomain)
-            getFileName('openclashFallbackFilterDomainSecret', 'openclashFallbackFilterDomainSecret', openclashFallbackFilterDomainSecret)
-            getFileName('blackListDomain', 'blackListDomain', blackListDomain)
-            getFileName('blackListDomainSecret', 'blackListDomainSecret', blackListDomainSecret)
-            changeUrls(["黑名单-"])
         } else if (selectedPage === pages[6].id) {
             reloadIpv4ListLink()
-            getFileName('ipv4', 'ipv4', ipv4)
-            getFileName('ipv4Secret', 'ipv4Secret', ipv4Secret)
-            changeUrls(["ipv4"])
         } else if (selectedPage === pages[7].id) {
             reloadIpv6ListLink()
-            getFileName('ipv6', 'ipv6', ipv6)
-            getFileName('ipv6Secret', 'ipv6Secret', ipv6Secret)
-            changeUrls(["ipv6"])
         } else if (selectedPage === pages[9].id) {
             // 这里面有查询有问题，暂时不管
             reloadProxiesListLink()
@@ -2889,9 +2904,6 @@
             reloadSelectedModel()
             // 节点订阅-加载选择的服务器配置
             reloadSelectedServer()
-            getFileName('proxyConfig', 'proxyConfig', proxyConfig)
-            getFileName('proxyConfigSecret', 'proxyConfigSecret', proxyConfigSecret)
-            changeUrls(["代理"])
         } else if (selectedPage === pages[10].id) {
             reloadProxyModelListLink()
         } else if (selectedPage === pages[11].id) {
@@ -3001,28 +3013,10 @@
         } else if (selectedPage === pages[20].id) {
             // 打赏图片
             reloadImage()
-        } else if (selectedPage === pages[21].id) {
-            getFileName('allM3u', 'allM3u', allM3u)
-            getFileName('allM3uSecret', 'allM3uSecret', allM3uSecret)
-            getFileName('aliveM3u', 'aliveM3u', aliveM3u)
-            getFileName('healthM3u', 'healthM3u', healthM3u)
-            getFileName('tvDomainForAdguardhome', 'tvDomainForAdguardhome', tvDomainForAdguardhome)
-            getFileName('tvDomainForAdguardhomeSecret', 'tvDomainForAdguardhomeSecret', tvDomainForAdguardhomeSecret)
-            getFileName('whiteListDnsmasq', 'whiteListDnsmasq', whiteListDnsmasq)
-            getFileName('whiteListDnsmasqSecret', 'whiteListDnsmasqSecret', whiteListDnsmasqSecret)
-            getFileName('whiteListDomian', 'whiteListDomian', whiteListDomian)
-            getFileName('whiteListDomianSecret', 'whiteListDomianSecret', whiteListDomianSecret)
-            getFileName('openclashFallbackFilterDomain', 'openclashFallbackFilterDomain', openclashFallbackFilterDomain)
-            getFileName('openclashFallbackFilterDomainSecret', 'openclashFallbackFilterDomainSecret', openclashFallbackFilterDomainSecret)
-            getFileName('blackListDomain', 'blackListDomain', blackListDomain)
-            getFileName('blackListDomainSecret', 'blackListDomainSecret', blackListDomainSecret)
-            getFileName('ipv4', 'ipv4', ipv4)
-            getFileName('ipv4Secret', 'ipv4Secret', ipv4Secret)
-            getFileName('ipv6', 'ipv6', ipv6)
-            getFileName('ipv6Secret', 'ipv6Secret', ipv6Secret)
-            getFileName('proxyConfig', 'proxyConfig', proxyConfig)
-            getFileName('proxyConfigSecret', 'proxyConfigSecret', proxyConfigSecret)
         }
+        //else if (selectedPage === pages[21].id) {
+
+        //}
         if (selectedPage !== pages[1].id) {
             window.removeEventListener('scroll', handleScroll);
         }
