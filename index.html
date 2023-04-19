@@ -324,6 +324,10 @@
         <input type="radio" name="page" id="page22">
         <span>订阅文件重命名</span>
     </label>
+    <label>
+        <input type="radio" name="page" id="page23">
+        <span>M3U垃圾过滤</span>
+    </label>
 </div>
 <div id="choice">
     <div id="page1" style="display: block;">
@@ -669,6 +673,7 @@
             <div style="float: left;width: 50%">
                 <h3>后台默认24小时自动执行生成操作</h3>
                 <h3>超融合节点订阅地址:参考m3u格式</h3>
+                <h3>当出现网络问题但是可以下载远程加密订阅文件,直接取第一个加密订阅文件作为代理文件</h3>
                 <h3 class="urllink">无加密代理:http://192.168.5.1:22771/secret/proxyConfig.yaml</h3>
                 <h3 class="urllink">加密代理:http://192.168.5.1:22771/url/proxyConfigSecret.txt</h3>
                 <h3>上传文件导入合并节点订阅</h3>
@@ -1054,7 +1059,7 @@
             <button id="removem3ulinks11" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks11')">删除全部关键字
             </button>
             <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">关键字:过滤生成有效大陆直播源的判断依据
+                <div class="notice" style="display: flex;width: 80%;">关键字:过滤生成有效大陆直播源的判断依据；备注:作为白名单分组组名
                 </div>
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
@@ -1454,6 +1459,42 @@
             <button  onclick="changeFileName('proxyConfigSecret', 'proxyConfigSecret', proxyConfigSecret)" class="stubbonsave">修改</button>
         </div>
     </div>
+
+    <div id="page23" style="display: none;">
+        <h1>M3U垃圾过滤</h1>
+        <div style="float: left;width: 70%">
+            <h3>上传文件导入合并M3U</h3>
+            <h3>输入关键词彻底屏蔽你不想看的直播数据入库</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn15" class="uploadjsonbtn" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row15" class="addNewSubscriber" style="width:100%">新增关键字</button>
+            </div>
+            <div>
+                <button id="download-json-btn15" class="button download-json-btn" style="width: 100%">
+                    导出关键字配置备份
+                </button>
+            </div>
+            <div style="width: 97%;">
+                <input type="text" id="searchInput14" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks15" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks15')">删除全部关键字
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">关键字:直接屏蔽关键字对应直播源
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table15" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -1641,6 +1682,11 @@
     const inputTable11 = document.getElementById('input-table11');
     const downloadBtn11 = document.getElementById('download-json-btn11');
 
+    const fileInput15 = document.getElementById('upload-json-btn15');
+    const addRowButton15 = document.getElementById('add-row15');
+    const inputTable15 = document.getElementById('input-table15');
+    const downloadBtn15 = document.getElementById('download-json-btn15');
+
     // 输入框显示主机ip
     const iptext = document.getElementById('iptext');
     // 主机ip缓存
@@ -1710,7 +1756,11 @@
     const searchInput12 = document.getElementById('searchInput12');
     // 获取页面元素-节点后端配置订阅
     const searchInput13 = document.getElementById('searchInput13');
+        // 获取页面元素-m3u黑名单
+    const searchInput14 = document.getElementById('searchInput14');
 
+        // 给m3u黑名单搜索框绑定'oninput'事件
+    searchAddListener(searchInput14,inputTable15)
     // 给节点后端配置订阅搜索框绑定'oninput'事件
     searchAddListener(searchInput13,inputTable10)
     // 给节点远程配置订阅搜索框绑定'oninput'事件
@@ -2335,6 +2385,10 @@
     function reloadM3uWhiteList() {
         reloadBase('/api/getall11',  inputTable11)
     }
+    //M3U黑名单-从数据库拉取关键字列表数据
+    function reloadM3uBlackList() {
+        reloadBase('/api/getall15',  inputTable15)
+    }
 
     //DNS简易白名单-从数据库拉取关键字列表数据
     function reloadDNSSIMPLEWhiteList() {
@@ -2472,6 +2526,11 @@
         saveInputValuebase(inputValue, name, '/api/addnewm3u11')
     }
 
+        //保留关键字-M3U黑名单配置
+    function saveInputValue15(inputValue, name) {
+        saveInputValuebase(inputValue, name, '/api/addnewm3u15')
+    }
+
     //简易DNS白名单配置
     function saveInputValue12(inputValue, name) {
         saveInputValuebase(inputValue, name, '/api/addnewm3u12')
@@ -2558,6 +2617,11 @@
         deleteInputRowBase(row, inputValue, '/api/deletewm3u11')
     }
 
+        //删除关键字-M3U黑名单
+    function deleteInputRow15(row, inputValue) {
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u15')
+    }
+
     //删除DNS简易白名单
     function deleteInputRow12(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u12')
@@ -2615,6 +2679,8 @@
         return window[methodName].apply(null, params)
     }
 
+        //m3u黑名单-关键字列表里按钮监听
+    inputableAddEventListener(inputTable15,  'saveInputValue15', 'deleteInputRow15')
     //加密订阅密码历史记录
     inputableAddEventListener(inputTable14,  'saveInputValue14', 'deleteInputRow14')
     //简易DNS黑名单
@@ -2666,6 +2732,8 @@
         });
     }
 
+    //m3u黑名单-关键字-导入json配置
+    fileInputAddEventListenerBase(fileInput15, '/api/upload_json_file15')
     //加密订阅密码历史记录-导入json配置
     fileInputAddEventListenerBase(fileInput14, '/api/upload_json_file14')
     //DNS简易黑名单-导入json配置
@@ -3013,10 +3081,9 @@
         } else if (selectedPage === pages[20].id) {
             // 打赏图片
             reloadImage()
+        } else if (selectedPage === pages[22].id) {
+            reloadM3uBlackList()
         }
-        //else if (selectedPage === pages[21].id) {
-
-        //}
         if (selectedPage !== pages[1].id) {
             window.removeEventListener('scroll', handleScroll);
         }
@@ -3057,6 +3124,8 @@
         });
     }
 
+        // M3U黑名单-导出订阅json配置
+    downloadBtnAddEventListenerBase(downloadBtn15, '/api/download_json_file15', 'temp_m3ublacklist.json')
     // 加密订阅密码历史记录-导出订阅json配置
     downloadBtnAddEventListenerBase(downloadBtn14, '/api/download_json_file14', 'temp_historysubscribepasslist.json')
     // DNS简易黑名单-导出订阅json配置
@@ -3107,6 +3176,8 @@
         });
     }
 
+    //M3U黑名单-关键字-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton15, inputTable15)
     //DNS简易黑名单-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton13, inputTable13)
     //DNS简易白名单-只添加一行列表，不存储数据

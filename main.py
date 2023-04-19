@@ -508,6 +508,10 @@ def check_file(m3u_dict):
         """
             检查直播源文件是否存在且没有被占用
             """
+        oldChinaChannelDict = redis_get_map(REDIS_KET_TMP_CHINA_CHANNEL)
+        if oldChinaChannelDict:
+            tmp_url_tvg_name_dict.update(oldChinaChannelDict)
+        redis_add_map(REDIS_KET_TMP_CHINA_CHANNEL, tmp_url_tvg_name_dict)
         if len(m3u_dict) == 0:
             return
         path = f"{secret_path}{getFileNameByTagName('aliveM3u')}.m3u"
@@ -715,28 +719,38 @@ def updateAdguardhomeWithelistForM3us(urls):
 def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
     results, redis_dict = redis_get_map_keys(redisKeyLink)
     ism3u = processDataMethodName == 'process_data_abstract'
+    global CHANNEL_LOGO
+    global CHANNEL_GROUP
     # 生成直播源域名-无加密
     if ism3u:
         thread = threading.Thread(target=updateAdguardhomeWithelistForM3us, args=(results,))
         thread.start()
         tmp_url_tvg_name_dict.clear()
     result = download_files(results, redis_dict)
+    if len(result) > 0:
+        if ism3u:
+            CHANNEL_LOGO.clear()
+            CHANNEL_GROUP.clear()
+            CHANNEL_LOGO = redis_get_map(REDIS_KEY_M3U_EPG_LOGO)
+            CHANNEL_GROUP = redis_get_map(REDIS_KEY_M3U_EPG_GROUP)
+    else:
+        return "empty"
     # 格式优化
     # my_dict = formattxt_multithread(result.split("\n"), 100)
     my_dict = formattxt_multithread(result.splitlines(), processDataMethodName)
     # my_dict = formattxt_multithread(result.splitlines(), 100)
     if len(my_dict) == 0:
         return "empty"
-    old_dict = redis_get_map(redisKeyData)
-    my_dict.update(old_dict)
+    if ism3u:
+        old_dict = redis_get_map(redisKeyData)
+        my_dict.update(old_dict)
     # 同步方法写出全部配置
     distribute_data(my_dict, fileName, 100)
-    redis_add_map(redisKeyData, my_dict)
     if ism3u:
+        redis_add_map(redisKeyData, my_dict)
         # M3U域名tvlist - 无加密
         if isOpenFunction('switch6'):
             # 生成直播源域名-无加密
-            path2 = f"{secret_path}{getFileNameByTagName('healthM3u')}.m3u"
             thread = threading.Thread(target=writeTvList,
                                       args=(f"{secret_path}{getFileNameByTagName('tvDomainForAdguardhome')}.txt",
                                             f"{public_path}{getFileNameByTagName('tvDomainForAdguardhomeSecret')}.txt"))
@@ -748,6 +762,8 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         # logo,group更新
         redis_add_map(REDIS_KEY_M3U_EPG_LOGO, CHANNEL_LOGO)
         redis_add_map(REDIS_KEY_M3U_EPG_GROUP, CHANNEL_GROUP)
+        CHANNEL_LOGO.clear()
+        CHANNEL_GROUP.clear()
         # 开启直播源加密:
         # 加密全部直播源
         thread3 = threading.Thread(target=download_secert_file,
@@ -1139,6 +1155,7 @@ def init_db():
     init_extra_dns_server()
     init_extra_dns_port()
     init_m3u_whitelist()
+    init_m3u_blacklist()
     init_IP()
     init_function_dict()
     init_file_name()
@@ -1536,33 +1553,39 @@ def process_data_domain_openclash_fallbackfilter(data, index, step, my_dict):
             # my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
             my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "*." + (
                 lineEncoder.substring(2)).decode() + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+            my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + (
+                lineEncoder.substring(2)).decode() + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
         # 判断是不是域名
         elif re.match(domain_regex, line):
             # 全部使用通配符+.可以匹配所有子域名包括自身，适合openclash-fallback-filter配置外国域名组
-            # my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+            my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
             if not lineEncoder.startswith(b"www"):
                 # 自用dns分流器外国域名，只取最高父域名
                 updateBlackList(line)
-                my_dict[
-                    OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
                 # my_dict[
-                #     OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "+." + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+                #     OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+                my_dict[
+                    OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "*." + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
             else:
                 updateBlackList((lineEncoder.substring(4)).decode())
                 my_dict[
                     OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + (
                         lineEncoder.substring(4)).decode() + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
-                # my_dict[
-                #     OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "+." + (
-                #         lineEncoder.substring(4)).decode() + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+                my_dict[
+                    OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "*." + (
+                        lineEncoder.substring(4)).decode() + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
         # 判断是不是*.域名
         elif re.match(wildcard_regex, line):
             updateBlackList((lineEncoder.substring(2)).decode())
             my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
-            # my_dict[
-            #     OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "+." + line[2:] + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+            my_dict[
+                OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + (
+                    lineEncoder.substring(2)).decode() + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
         elif lineEncoder.startswith(b"."):
             updateBlackList((lineEncoder.substring(1)).decode())
+            my_dict[
+                OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + (
+                    lineEncoder.substring(1)).decode() + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
             my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "*" + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
 
 
@@ -1665,23 +1688,31 @@ def process_data_domain_dnsmasq(data, index, step, my_dict):
                 # 大陆域名白名单+第三方规则直连生成
                 updateOpenclashNameServerPolicy((lineEncoder.substring(4)).decode())
                 # openclash-dnsmasq域名全部使用通配符*.，用于直接筛查大陆域名
+                my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
                 my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + '*.' + (
+                    lineEncoder.substring(4)).decode() + BLACKLIST_DNSMASQ_FORMATION_right] = ""
+                my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + (
                     lineEncoder.substring(4)).decode() + BLACKLIST_DNSMASQ_FORMATION_right] = ""
             else:
                 updateOpenclashNameServerPolicy(line)
+                my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
                 my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + '*.' + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
         # *.域名
         elif re.match(wildcard_regex, line):
             lineEncoder = line.encode()
             updateOpenclashNameServerPolicy((lineEncoder.substring(2)).decode())
+            my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + (
+                lineEncoder.substring(2)).decode() + BLACKLIST_DNSMASQ_FORMATION_right] = ""
             my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + line + BLACKLIST_DNSMASQ_FORMATION_right] = ""
 
         # +.域名
         elif re.match(wildcard_regex2, line):
             lineEncoder = line.encode()
             updateOpenclashNameServerPolicy((lineEncoder.substring(2)).decode())
+            my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + (
+                lineEncoder.substring(2)).decode() + BLACKLIST_DNSMASQ_FORMATION_right] = ""
             my_dict[BLACKLIST_DNSMASQ_FORMATION_LEFT + '*' + (
-                lineEncoder.substring(1)).decode() + BLACKLIST_DNSMASQ_FORMATION_right] = ""
+                lineEncoder.substring(2)).decode() + BLACKLIST_DNSMASQ_FORMATION_right] = ""
 
 
 DIRECT_RULE_LEFT = 'DOMAIN-SUFFIX,'
@@ -1771,11 +1802,12 @@ def format_data(data, index, step, my_dict):
     for i in range(index, end_index):
         # print(type(data[i]))
         line = decode_bytes(data[i]).strip()
-        # line = data[i].decode("utf-8").strip()
         if not line:
             continue
         # 假定直播名字和直播源不在同一行
         if line.startswith("#EXTINF"):
+            continue
+        if jumpBlackM3uList(line):
             continue
         # 不是http开头，可能是直播源
         if not line.startswith(("http", "rtsp", "rtmp")):
@@ -1786,7 +1818,9 @@ def format_data(data, index, step, my_dict):
                 if searchurl in my_dict.keys():
                     continue
                 if name:
-                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}",{name}\n'
+                    fullName = update_epg_by_name(name)
+                    my_dict[searchurl] = fullName
+                    addChinaChannel(name, searchurl, fullName)
                 else:
                     my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}",{defalutname}\n'
             elif re.match(r"^[^#].*，(http|rtsp|rtmp)", line):
@@ -1795,7 +1829,9 @@ def format_data(data, index, step, my_dict):
                 if searchurl in my_dict.keys():
                     continue
                 if name:
-                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}",{name}\n'
+                    fullName = update_epg_by_name(name)
+                    my_dict[searchurl] = fullName
+                    addChinaChannel(name, searchurl, fullName)
                 else:
                     my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}",{defalutname}\n'
         # http开始
@@ -1821,9 +1857,12 @@ def format_data(data, index, step, my_dict):
                     if last_comma_index == -1:
                         raise ValueError("字符串中不存在逗号")
                     tvg_name = preline[last_comma_index + 1:].strip()
+                    fullName = update_epg_by_name(tvg_name)
+                    my_dict[searchurl] = fullName
+                    addChinaChannel(tvg_name, searchurl, fullName)
                 except Exception as e:
                     tvg_name = defalutname
-                my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{tvg_name}",{tvg_name}\n'
+                    my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{tvg_name}",{tvg_name}\n'
                 continue
             # 有名字
             else:
@@ -1833,6 +1872,7 @@ def format_data(data, index, step, my_dict):
 
 # url,tvg-name
 tmp_url_tvg_name_dict = {}
+REDIS_KET_TMP_CHINA_CHANNEL = 'tmpChinaChannel'
 
 
 def addChinaChannel(tvg_name, url, fullName):
@@ -1848,6 +1888,13 @@ def addChinaChannel(tvg_name, url, fullName):
             return
 
 
+def jumpBlackM3uList(tvg_name):
+    for name in m3u_blacklist.keys():
+        if name in tvg_name:
+            return True
+    return False
+
+
 # 超融合-直播源字符串内容处理-m3u
 def process_data(data, index, step, my_dict):
     end_index = min(index + step, len(data))
@@ -1858,8 +1905,11 @@ def process_data(data, index, step, my_dict):
         if not line:
             continue
         lineEncoder = line.encode()
+        line = decode_bytes(lineEncoder).strip()
         # 假定直播名字和直播源不在同一行，跳过频道名字
         if lineEncoder.startswith(b"#EXTINF"):
+            continue
+        if jumpBlackM3uList(line):
             continue
         # 不是http开头，也可能是直播源
         if not lineEncoder.startswith((b"http", b"rtsp", b"rtmp")):
@@ -1874,11 +1924,9 @@ def process_data(data, index, step, my_dict):
                     my_dict[searchurl] = fullName
                     addChinaChannel(name, searchurl, fullName)
                     updateAdguardhomeWithelistForM3u(searchurl)
-                    # my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
                 else:
                     fullName = f'#EXTINF:-1  tvg-name="{defalutname}",{defalutname}\n'
                     my_dict[searchurl] = fullName
-                    addChinaChannel(defalutname, searchurl, fullName)
                     updateAdguardhomeWithelistForM3u(searchurl)
             # 匹配格式：频道，url
             elif re.match(r"^[^#].*，(http|rtsp|rtmp)", line):
@@ -1891,11 +1939,9 @@ def process_data(data, index, step, my_dict):
                     my_dict[searchurl] = fullName
                     addChinaChannel(name, searchurl, fullName)
                     updateAdguardhomeWithelistForM3u(searchurl)
-                    # my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{name}"\n'
                 else:
                     fullName = f'#EXTINF:-1  tvg-name="{defalutname}",{defalutname}\n'
                     my_dict[searchurl] = fullName
-                    addChinaChannel(defalutname, searchurl, fullName)
                     updateAdguardhomeWithelistForM3u(searchurl)
         # http|rtsp|rtmp开始，跳过P2p
         elif not lineEncoder.startswith(b"P2p"):
@@ -1906,16 +1952,15 @@ def process_data(data, index, step, my_dict):
             if i == 0 and index == 0:
                 fullName = f'#EXTINF:-1  tvg-name="{defalutname}",{defalutname}\n'
                 my_dict[searchurl] = fullName
-                addChinaChannel(defalutname, searchurl, fullName)
                 updateAdguardhomeWithelistForM3u(searchurl)
                 continue
             preline = data[i - 1].strip()
             prelineEncoder = preline.encode()
+            preline = decode_bytes(prelineEncoder).strip()
             # 没有名字
             if not preline:
                 fullName = f'#EXTINF:-1  tvg-name="{defalutname}",{defalutname}\n'
                 my_dict[searchurl] = fullName
-                addChinaChannel(defalutname, searchurl, fullName)
                 updateAdguardhomeWithelistForM3u(searchurl)
                 continue
             # 不是名字
@@ -1925,11 +1970,12 @@ def process_data(data, index, step, my_dict):
                     if last_comma_index == -1:
                         raise ValueError("字符串中不存在逗号")
                     tvg_name = preline[last_comma_index + 1:].strip()
+                    fullName = update_epg_by_name(tvg_name)
+                    addChinaChannel(tvg_name, searchurl, fullName)
                 except Exception as e:
                     tvg_name = defalutname
-                fullName = f'#EXTINF:-1  tvg-name="{tvg_name}",{tvg_name}\n'
+                    fullName = f'#EXTINF:-1  tvg-name="{tvg_name}",{tvg_name}\n'
                 my_dict[searchurl] = fullName
-                addChinaChannel(tvg_name, searchurl, fullName)
                 updateAdguardhomeWithelistForM3u(searchurl)
                 continue
             # 有裸名字或者#EXTINF开始但是没有tvg-name\tvg-id\group-title
@@ -1941,14 +1987,26 @@ def process_data(data, index, step, my_dict):
                 continue
 
 
+# 获取白名单分组
+def getMyGroup(str):
+    for key, group in m3u_whitlist.items():
+        if key in str and group != '':
+            return group
+    return ''
+
+
 def update_epg_by_name(tvg_name):
     newStr = "#EXTINF:-1 "
+    group_title = getMyGroup(tvg_name)
+    if group_title == '':
+        group_title = CHANNEL_GROUP.get(tvg_name)
+    if group_title is not None and group_title != "":
+        newStr += f'group-title="{group_title}"  '
+        if tvg_name not in CHANNEL_GROUP:
+            CHANNEL_GROUP[tvg_name] = group_title
     tvg_logo = CHANNEL_LOGO.get(tvg_name)
     if tvg_logo is not None and tvg_logo != "":
         newStr += f'tvg-logo="{tvg_logo}" '
-    group_title = CHANNEL_GROUP.get(tvg_name)
-    if group_title is not None and group_title != "":
-        newStr += f'group-title="{group_title}"  '
     newStr += f'tvg-name="{tvg_name}",{tvg_name}\n'
     return newStr
 
@@ -1982,8 +2040,10 @@ def update_epg_nope(s):
             newStr += f'tvg-logo="{tvg_logo}" '
             if tvg_name not in CHANNEL_LOGO:
                 CHANNEL_LOGO[tvg_name] = tvg_logo
-        group_title = re.search(r'group-title="([^"]+)"', s)
-        group_title = group_title.group(1) if group_title else ''
+        group_title = getMyGroup(s)
+        if group_title == '':
+            group_title = re.search(r'group-title="([^"]+)"', s)
+            group_title = group_title.group(1) if group_title else ''
         if group_title == "":
             group_title = CHANNEL_GROUP.get(tvg_name)
         if group_title is not None and group_title != "":
@@ -2025,8 +2085,10 @@ def update_epg(s, searchurl):
             newStr += f'tvg-logo="{tvg_logo}" '
             if tvg_name not in CHANNEL_LOGO:
                 CHANNEL_LOGO[tvg_name] = tvg_logo
-        group_title = re.search(r'group-title="([^"]+)"', s)
-        group_title = group_title.group(1) if group_title else ''
+        group_title = getMyGroup(s)
+        if group_title == '':
+            group_title = re.search(r'group-title="([^"]+)"', s)
+            group_title = group_title.group(1) if group_title else ''
         if group_title == "":
             group_title = CHANNEL_GROUP.get(tvg_name)
         if group_title is not None and group_title != "":
@@ -2546,41 +2608,70 @@ def chaorongheProxies(filename):
     params = generateProxyConfig(urlStr)
     # 本地配置   urllib.parse.quote("/path/to/clash/config_template.yaml"
     # 网络配置   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online.ini"
-    response = requests.get(getProxyServerChosen(), params=params, timeout=360)
-    if response.status_code == 200:
-        # 合并加密下载的和普通的
-        # 订阅成功处理逻辑
-        # print(response.text)
-        if os.path.exists(filename):
-            os.remove(filename)
-        with open(filename, 'w'):
+    try:
+        response = requests.get(getProxyServerChosen(), params=params, timeout=360)
+        if response.status_code == 200 and response.content != '':
+            # 合并加密下载的和普通的
+            # 订阅成功处理逻辑
+            # print(response.text)
+            if os.path.exists(filename):
+                os.remove(filename)
+            with open(filename, 'w'):
+                pass
+            write_content_to_file(response.content, filename, 100)
+            # # 下载 Clash 配置文件
+            # with open(filename, 'wb') as f:
+            #     f.write(response.content)
+            thread = threading.Thread(target=download_secert_file,
+                                      args=(
+                                          filename, f"{public_path}{getFileNameByTagName('proxyConfigSecret')}.txt",
+                                          'proxy', isOpenFunction('switch22'),
+                                          isOpenFunction('switch23'), isOpenFunction('switch30'),
+                                          isOpenFunction('switch31'), isOpenFunction('switch32')))
+            thread.start()
+            thread_remove(remoteToLocalUrl)
+            return "result"
+        else:
+            try:
+                # 使用转换器失败不能合并就直接把下载的一个订阅拿来用
+                for key, filePath in remoteToLocalUrl.items():
+                    os.rename(filePath, filename)
+                    return "result"
+                # 订阅失败处理逻辑
+                print("Error:", response.status_code, response.reason)
+                return "empty"
+            except Exception as e:
+                print("Error: fail to chaorongheProxy,instead,we download a remote yaml as the final proxy\n")
+                pass
+            finally:
+                thread_remove(remoteToLocalUrl)
+    except Exception as e:
+        # 转换服务器找不到
+        try:
+            # 使用转换器失败不能合并就直接把下载的一个订阅拿来用
+            for key, filePath in remoteToLocalUrl.items():
+                if os.path.exists(filename):
+                    os.remove(filename)
+                os.rename(filePath, filename)
+                return "result"
+            # 订阅失败处理逻辑
+            print("Error: fail to connect to proxy server")
+            return "empty"
+        except Exception as e:
+            print("Error: fail to chaorongheProxy,instead,we download a remote yaml as the final proxy\n")
             pass
-        write_content_to_file(response.content, filename, 100)
-        # # 下载 Clash 配置文件
-        # with open(filename, 'wb') as f:
-        #     f.write(response.content)
-        thread = threading.Thread(target=download_secert_file,
-                                  args=(
-                                      filename, f"{public_path}{getFileNameByTagName('proxyConfigSecret')}.txt",
-                                      'proxy', isOpenFunction('switch22'),
-                                      isOpenFunction('switch23'), isOpenFunction('switch30'),
-                                      isOpenFunction('switch31'), isOpenFunction('switch32')))
-        thread.start()
-        thread_remove(remoteToLocalUrl)
-        return "result"
-    else:
-
-        # 订阅失败处理逻辑
-        print("Error:", response.status_code, response.reason)
-        thread_remove(remoteToLocalUrl)
-        return "empty"
+        finally:
+            thread_remove(remoteToLocalUrl)
 
 
 def thread_remove(remoteToLocalUrl):
     # url = ""
     for key in remoteToLocalUrl.values():
-        if os.path.exists(key):
-            os.remove(key)
+        try:
+            if os.path.exists(key):
+                os.remove(key)
+        except Exception as e:
+            pass
 
 
 # 线程池切分下载的内容写入本地
@@ -2974,6 +3065,20 @@ def decrypt(password, ciphertext):
 
 
 m3u_whitlist = {}
+m3u_blacklist = {}
+
+
+# 初始化m3u黑名单
+def init_m3u_blacklist():
+    global m3u_blacklist
+    dict = redis_get_map(REDIS_KEY_M3U_BLACKLIST)
+    if not dict or len(dict) == 0:
+        dict = {'动画杂烩': '', '巨兵长城': '', '车载': '', "DJ音乐": '', '舞曲': '', '炫动卡通': '',
+                '金鹰卡通': '', '卡酷少儿': '', '优漫卡通': '', '浙江少儿': '', '河北少儿': '', '潍坊': ''
+            , '黑莓动画': ''}
+        redis_add_map(REDIS_KEY_M3U_BLACKLIST, dict)
+        m3u_blacklist = dict.copy()
+    m3u_blacklist = dict.copy()
 
 
 # 初始化m3u白名单
@@ -2981,47 +3086,153 @@ def init_m3u_whitelist():
     global m3u_whitlist
     dict = redis_get_map(REDIS_KEY_M3U_WHITELIST)
     if not dict or len(dict) == 0:
-        dict = {'央视': '', '卫视': '', '中国': '', '新闻': '', '体育': '', '中央': '', '动漫': '', '电影': '',
-                '游戏': '', '卡通': '', '影院': '', '亚洲': '', '足球': '', '剧场': '', '东方': '', '纪实': '',
-                '黑莓': '', '综艺': '', '电竞': '', '教育': '', '都市': '', '看天下': '', '咪咕': '', '动画': '',
-                '华语': '', '影视': '', '自然': '', '科教': '', '动物': '', '凤凰': '', '生活': '', '中文': '',
-                '娱乐': '', '经济': '', '美食': '', '资讯': '', '财经': '', '电视': '', '健康': '', '养生': '',
-                '课堂': '', '全球大片': '',
-                '谍战': '', '三立': '', '台湾': '', '时尚': '', '旅游': '', '政务': '', '综合频道': '', '综合': '',
-                '民生': '', '农村': '', '人文': '', '外语': '', '法制': '', '幸福彩': '', '上视': '', '数码': '',
-                '家庭': '', '新视觉': '',
-                '汽车': '', '台视': '', '东森': '', '军旅': '', '纪录': '', '古装': '', '喜剧': '', '长城': '',
-                '香港': '', '金色频道': '', '环球电视': '',
-                '气象': '', '炫舞': '', '新华英文': '', '华数': '', '戏曲': '', '陶瓷': '', '少儿': '', '垂钓': '',
-                '时代': '', '休闲': '', '电视台': '',
-                '新闻频道': '', '文旅': '', '朝鲜': '', '三台电视': '', '汉语': '', '留学': '', '兵团': '', '科技': '',
-                '兵器': '', '音乐': '', '靓装': '',
-                '人間': '', '大愛電視': '', '緯來': '', '八大': '', '龍華戲劇台': '', '民视新闻': '', '东风37': '',
-                '中天': '', '鳯凰': '', '衛視': '', '天映': '', '亞旅': '', '星空': '', '翡翠臺': '', '华丽台': '',
-                '明珠台': '',
-                '八度空间': '', '华视': '', '民视': '', '中视': '', '纬来': '', 'ELTA体育': '', '體育': '', '運動': '',
-                '连续剧': '', '惊悚': '', '悬疑': '',
-                '科幻': '', '探索': '', '解密': '', '发现': '', '摄影': '', '车迷': '', '纯享': '', '七龍珠': '',
-                '海绵宝宝': '', '猫和老鼠': '',
-                '网球王子': '', '蜡笔小新': '', '海贼王': '', '中华小当家': '', '四驱兄弟': '', '成龍': '', '成龙': '',
-                '李连杰': '', '周星驰': '', '哆啦A梦': '',
-                '樱桃小丸子': '', '柯南': '', '犬夜叉': '', '乱马': '', '童年': '', '高达': '', '三国演义': '',
-                '守护甜心': '', '开心超人': '', '开心宝贝': '', '百变小樱': '',
-                '咱们裸熊': '', '林正英': '', '游戏王': '', '吴孟达': '', '刘德华': '', '周润发': '', '洪金宝': '',
-                '黄渤': '', '咏春': '', '黑帮': '', '古墓': '', '臺灣': '',
-                '警匪': '', '功夫': '', '爱达': '', '波斯魅力台': '', '寰宇': '', '東森': '', '澳门莲花': '',
-                '天才衝衝衝': '', '有线新闻台': '', '臺視': '', '博斯': '', '龙华': '', '龍華': '', '愛爾達': '',
-                '民視': '', '鳳凰': '',
-                '有線': '', '無綫': '', '靖天': '', '靖洋': '', '爱尔达': '', '全民最大党': '', 'cctv': '', 'NewTv': '',
-                'CCTV': '', 'SiTV': '', 'CGTN': '', 'CHC': '', 'TVBS': '', 'Love Nature': '', 'BesTV': '',
-                'NewTV': '', 'BRTV': '', 'ELEVEN': '', 'TVB': '', 'Lifetime': '',
-                'GINX': '', 'Rollor': '',
-                'GlobalTrekker': '', 'LUXE TV': '', 'Fashion4K': '', 'Sport': '', 'Insight': '', 'Evenement': '',
-                'NASA': '', 'Clarity': '', 'discovery': '', 'hbo': '', 'eleven': '',
-                'NATURE': '', 'eva': ''
-            , 'TRAVELXP': '', 'ODISEA': '', 'MUZZIK': '', 'SKY HIGH': '',
-                'Liberty': ''
-                }
+        dict = {
+            '人间卫视': '港澳台', '东森': '港澳台', '超视美洲': '港澳台', 'ETtoday': '港澳台', '高点综合': '港澳台',
+            '高点育乐': '港澳台',
+            '年代新闻': '港澳台', '壹电视': '港澳台', '中天': '港澳台',
+            '非凡新闻': '港澳台', '凤凰卫视': '港澳台', '凤凰新闻': '港澳台', '鳳凰衛視': '港澳台',
+            '鳳凰新聞': '港澳台',
+            '凤凰香港': '港澳台', '香港卫视': '港澳台',
+            '香港衛視': '港澳台', '凤凰资讯': '港澳台', '鳳凰資訊': '港澳台', '凤凰中文': '港澳台',
+            '鳳凰中文': '港澳台', '香港开电视': '港澳台', '香港開電視': '港澳台', '香港有線': '港澳台',
+            '香港有线': '港澳台', '卫视合家欢': '港澳台', '衛視合家歡': '港澳台', 'HBO': '港澳台',
+            'MYTV电影': '港澳台', 'MYTV電影': '港澳台', 'FRESH电影': '港澳台', 'FRESH電影': '港澳台',
+            '非凡商业': '港澳台', '好莱坞电影': '港澳台', '亚洲旅游': '港澳台', '亚洲综合': '港澳台',
+            '梅迪奇艺术': '港澳台', '博斯魅力': '港澳台', 'CINEMA影院': '港澳台',
+            '博斯网球': '港澳台', '博斯无限': '港澳台', '香港國際': '港澳台', '香港国际': '港澳台',
+            '星空卫视': '港澳台', '星空衛視': '港澳台', '翡翠台': '港澳台', '天映经典': '港澳台',
+            '天映經典': '港澳台', '澳视': '港澳台', '澳視': '港澳台', '唯心台': '港澳台', 'TVB星河': '港澳台',
+            'RTHK32': '港澳台', 'RTHK31': '港澳台', 'ViuTV': '港澳台', 'Viutv': '港澳台', '功夫台': '港澳台',
+            'ELEVEN體育': '港澳台',
+            '博斯运动': '港澳台', '龙祥': '港澳台', '龍祥': '港澳台', '明珠台': '港澳台', '凤凰频道': '港澳台',
+            '鳳凰頻道': '港澳台', '港澳': '港澳台', '无线财经': '港澳台', '無線財經': '港澳台',
+            '博斯高球': '港澳台', 'SMART知识': '港澳台', 'NHKWorld': '港澳台', 'FOX': '港澳台',
+            'FoodNetwork': '港澳台', '纬来': '港澳台',
+            '龙华动画': '港澳台', '龙华戏剧': '港澳台', '龙华偶像': '港澳台', '龙华电影': '港澳台',
+            '龙华影剧': '港澳台', '国兴卫视': '港澳台', '國興衛視': '港澳台', '愛爾達': '港澳台',
+            '爱尔达': '港澳台',
+            '龙华洋片': '港澳台',
+            '龙华经典': '港澳台', 'ELEVEN体育': '港澳台', '亚洲旅游台': '港澳台', '亞洲旅遊台': '港澳台',
+            '壹新聞': '港澳台', 'J2': '港澳台', '华丽台': '港澳台',
+            '靖洋': '港澳台', '靖天': '港澳台', '乐活频道': '港澳台', '视纳华仁': '港澳台', '采昌影剧': '港澳台',
+            '华艺影剧': '港澳台', '华艺': '港澳台', '智林体育': '港澳台', 'Z频道': '港澳台',
+            '新唐人': '港澳台', '大爱': '港澳台', '镜电视': '港澳台', '十方法界': '港澳台', '华藏卫星': '港澳台',
+            '世界电视': '港澳台', '生命电视': '港澳台', '希望综合': '港澳台', '新天地民俗': '港澳台',
+            '天美丽电视': '港澳台', '环宇新闻': '港澳台', '環宇新聞': '港澳台', '非凡新聞': '港澳台',
+            'JET综合': '港澳台', 'JET綜合': '港澳台', '东风卫视': '港澳台',
+            '東風衛視': '港澳台',
+            '正德电视': '港澳台', '双子卫视': '港澳台', '信大电视': '港澳台', '番薯卫星': '港澳台',
+            '信吉艺文': '港澳台', '信吉卫星': '港澳台', '天良卫星': '港澳台', '大立电视': '港澳台',
+            '诚心电视': '港澳台', '富立电视': '港澳台',
+            '全大电视': '港澳台', '威达超舜': '港澳台', '海豚综合': '港澳台', '唯心电视': '港澳台',
+            '冠军电视': '港澳台', '冠军梦想台': '港澳台', 'A-One体育': '港澳台', 'HOT频道': '港澳台',
+            '彩虹E台': '港澳台', '澳亚卫视': '港澳台', '澳亞衛視': '港澳台',
+            '彩虹电影': '港澳台', '松视': '港澳台', '惊艳成人电影台': '港澳台', '香蕉台': '港澳台',
+            '美亚电影台': '港澳台',
+            '好消息卫星': '港澳台', '好消息二台': '港澳台', '八大': '港澳台', '三立': '港澳台', 'TVBS': '港澳台',
+            '台視': '港澳台', '中視': '港澳台', '華視': '港澳台', '國會頻道': '港澳台', '民視': '港澳台',
+            '公視': '港澳台',
+            'Taiwan': '港澳台',
+            '人間衛視': '港澳台', '東森': '港澳台', '超視美洲': '港澳台', '高點綜合': '港澳台',
+            '高點育樂': '港澳台', '年代新聞': '港澳台', '壹電視': '港澳台',
+            '非凡商業': '港澳台', '好萊塢電影': '港澳台', '亞洲旅遊': '港澳台', '亞洲綜合': '港澳台',
+            'Medici-arts': '港澳台', '梅迪奇藝術': '港澳台', '博斯網球': '港澳台', '博斯無限': '港澳台',
+            '博斯運動': '港澳台', 'SMART知識': '港澳台', '龍華動畫': '港澳台',
+            '龍華戲劇': '港澳台', '龍華偶像': '港澳台', '龍華電影': '港澳台', '龍華影劇': '港澳台',
+            '龍華洋片': '港澳台', '龍華經典': '港澳台',
+            '樂活頻道': '港澳台', '視納華仁': '港澳台', '采昌影劇': '港澳台',
+            '華藝影劇': '港澳台', '華藝': '港澳台', '智林體育': '港澳台', 'Z頻道': '港澳台',
+            '大愛': '港澳台', '鏡電視': '港澳台', '華藏衛星': '港澳台',
+            '世界電視': '港澳台', '生命電視': '港澳台', '希望綜合': '港澳台', '天美麗電視': '港澳台',
+            '正德電視': '港澳台', '雙子衛視': '港澳台', '信大電視': '港澳台', '番薯衛星': '港澳台',
+            '信吉藝文': '港澳台', '信吉衛星': '港澳台', '天良衛星': '港澳台', '大立電視': '港澳台',
+            '誠心電視': '港澳台', '富立電視': '港澳台',
+            '全大電視': '港澳台', '威達超舜': '港澳台', '海豚綜合': '港澳台', '唯心電視': '港澳台',
+            '冠軍電視': '港澳台', '冠軍夢想台': '港澳台', 'A-One體育': '港澳台', 'HOT頻道': '港澳台',
+            'Hi-PLAY': '港澳台', '彩虹電影': '港澳台', '松視': '港澳台', '驚豔成人電影台': '港澳台',
+            'Love Nature 4K': '港澳台', '美亞電影台': '港澳台',
+            'LS TIME': '港澳台', '好消息衛星': '港澳台', 'MOMO': '港澳台',
+            'iNEWS': '港澳台', 'MTV': '港澳台',
+            '澳门': '港澳台', '澳門': '港澳台', '台灣': '港澳台', '国会频道': '港澳台', '公视': '港澳台',
+            '凤凰': '港澳台',
+            '上视': '港澳台', '台湾': '港澳台', '台视': '港澳台', '香港': '港澳台', '三台电视': '港澳台',
+            '人間': '港澳台', '大愛電視': '港澳台', '緯來': '港澳台', '龍華戲劇台': '港澳台',
+            '民视新闻': '港澳台', '东风37': '港澳台',
+            '鳯凰': '港澳台', '天映': '港澳台', '亞旅': '港澳台', '翡翠臺': '港澳台',
+            '八度空间': '港澳台', '华视': '港澳台', '民视': '港澳台', '中视': '港澳台', 'ELTA体育': '港澳台',
+            '爱达': '港澳台', '波斯魅力台': '港澳台', '寰宇': '港澳台',
+            '澳门莲花': '港澳台', '臺灣': '港澳台',
+            '天才衝衝衝': '港澳台', '有线新闻台': '港澳台', '臺視': '港澳台', '博斯': '港澳台', '龙华': '港澳台',
+            '龍華': '港澳台', '鳳凰': '港澳台', 'ELEVEN': '港澳台', 'eleven': '港澳台',
+            '有線': '港澳台', '無綫': '港澳台', '全民最大党': '港澳台', 'Love Nature': '港澳台',
+
+            '央視': '央视', '中央': '央视', '央视': '央视', 'CCTV': '央视', 'cctv': '央视',
+            '卫视': '卫视', '衛視': '卫视', 'CGTN': '央视', '环球电视': '央视',
+
+            '华数': '华数', 'wasu.tv': '华数', '華數': '华数', 'CIBN': 'CIBN', '/cibn': 'CIBN', 'NewTv': 'NewTv',
+            'NEWTV': 'NewTV', '/newtv': 'NewTV', '百視通': '百视通', '百事通': '百视通', 'BesTV': '百视通',
+            'NewTV': 'NewTV',
+            'BESTV': '百视通', 'BestTv': '百视通', '/bestv': '百视通', '.bestv': '百视通', '百视通': '百视通',
+
+            '新闻': '新闻', '体育': '体育', '动漫': '动漫', 'NASA': '科技',
+            '电影': '电影', '动画': '动画', 'Sport': '体育', '體育': '体育', '運動': '体育',
+            '游戏': '游戏', '卡通': '卡通', '影院': '电影', '足球': '体育', '剧场': '剧场', '东方': '',
+            '纪实': '纪录片', '电竞': '游戏', '教育': '教育', '自然': '自然', '动物': '自然', 'NATURE': '自然',
+
+            '成龍': '明星', '成龙': '明星', '李连杰': '明星', '周星驰': '明星', '吴孟达': '明星', '刘德华': '明星',
+            '周润发': '明星', '洪金宝': '明星', '黄渤': '明星', '林正英': '明星',
+
+            '七龍珠': '动漫', '海绵宝宝': '动漫', '猫和老鼠': '动漫',
+            '网球王子': '动漫', '蜡笔小新': '动漫', '海贼王': '动漫', '中华小当家': '动漫', '四驱兄弟': '动漫',
+            '哆啦A梦': '动漫', '樱桃小丸子': '动漫', '柯南': '动漫', '犬夜叉': '动漫', '乱马': '动漫', '童年': '',
+            '高达': '动漫',
+            '守护甜心': '动漫', '开心超人': '动漫', '开心宝贝': '动漫', '百变小樱': '动漫',
+            '咱们裸熊': '动漫', '游戏王': '动漫', 'eva': '动漫',
+
+            '三国演义': '电视剧', '发现': '探索发现', '探索': '探索发现',
+            '连续剧': '电视剧', '音乐': '音乐',
+
+            '财经': '新闻', '经济': '新闻', '美食': '美食', '资讯': '新闻', '时尚': '时尚', '旅游': '旅游',
+
+            '健康': '健康养生', 'Fashion4K': '时尚',
+            '养生': '健康养生',
+
+            '黑莓': '', '综艺': '综艺', '都市': '都市', '看天下': '', '咪咕': '', '谍战': '电视剧',
+
+            '华语': '', '影视': '影视', '科教': '科技', '生活': '生活', 'discovery': '探索发现',
+            '娱乐': '', '电视': '电视台', '纪录': '纪录片', '外语': '外语', '车迷': '汽车',
+            '留学': '留学', '新闻频道': '新闻', '靓装': '时尚', '戏曲': '戏曲', '电视台': '电视台',
+            '综合频道': '电视台', '解密': '探索发现',
+            '综合': '电视台', '法制': '法制', '数码': '数码', '汽车': '汽车', '军旅': '影视', '古装': '影视',
+            '喜剧': '影视', '科技': '科技', '惊悚': '影视', '悬疑': '影视',
+            '科幻': '影视', '全球大片': '影视',
+            '咏春': '影视', '黑帮': '影视', '古墓': '影视',
+            '警匪': '影视', '少儿': '少儿',
+
+            '课堂': '教育',
+            '政务': '政务',
+
+            '民生': '', '农村': '', '人文': '', '幸福彩': '',
+            '家庭': '', '新视觉': '科技',
+
+            '长城': '',
+            '金色频道': '',
+            '气象': '', '炫舞': '', '新华英文': '', '陶瓷': '',
+            '垂钓': '钓鱼',
+            '时代': '', '休闲': '',
+            '文旅': '', '朝鲜': '', '汉语': '',
+            '兵团': '',
+            '兵器': '兵器',
+
+            '纯享': '',
+            'SiTV': '', 'CHC': '',
+            'BRTV': '', 'Lifetime': '',
+            'GINX': '', 'Rollor': '',
+            'GlobalTrekker': '', 'LUXE TV': '', 'Insight': '', 'Evenement': '',
+            'Clarity': '', 'hbo': '',
+            'TRAVELXP': '', 'ODISEA': '', 'MUZZIK': '', 'SKY HIGH': '',
+            'Liberty': ''
+        }
         redis_add_map(REDIS_KEY_M3U_WHITELIST, dict)
         m3u_whitlist = dict.copy()
     m3u_whitlist = dict.copy()
@@ -3217,6 +3428,92 @@ def upload_json_file14():
     return upload_json(request, REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS, f"{secret_path}tmp_data14.json")
 
 
+# 上传简易DNS黑名单json文件
+@app.route('/api/upload_json_file13', methods=['POST'])
+def upload_json_file13():
+    redis_add(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG, 1)
+    return upload_json(request, REDIS_KEY_DNS_SIMPLE_BLACKLIST, f"{secret_path}tmp_data13.json")
+
+
+# 上传直播源订阅配置集合文件
+@app.route('/api/upload_json_file', methods=['POST'])
+def upload_json_file():
+    return upload_json(request, REDIS_KEY_M3U_LINK, f"{secret_path}tmp_data.json")
+
+
+# 上传白名单订阅配置集合文件
+@app.route('/api/upload_json_file2', methods=['POST'])
+def upload_json_file2():
+    return upload_json(request, REDIS_KEY_WHITELIST_LINK, f"{secret_path}tmp_data2.json")
+
+
+# 上传黑名单订阅配置集合文件
+@app.route('/api/upload_json_file3', methods=['POST'])
+def upload_json_file3():
+    return upload_json(request, REDIS_KEY_BLACKLIST_LINK, f"{secret_path}tmp_data3.json")
+
+
+# 上传中国ipv4订阅配置集合文件
+@app.route('/api/upload_json_file4', methods=['POST'])
+def upload_json_file4():
+    return upload_json(request, REDIS_KEY_WHITELIST_IPV4_LINK, f"{secret_path}tmp_data4.json")
+
+
+# 上传中国ipv6订阅配置集合文件
+@app.route('/api/upload_json_file5', methods=['POST'])
+def upload_json_file5():
+    return upload_json(request, REDIS_KEY_WHITELIST_IPV6_LINK, f"{secret_path}tmp_data5.json")
+
+
+# 上传密码本配置集合文件
+@app.route('/api/upload_json_file6', methods=['POST'])
+def upload_json_file6():
+    return upload_json(request, REDIS_KEY_PASSWORD_LINK, f"{secret_path}tmp_data6.json")
+
+
+# 上传简易DNS白名单json文件
+@app.route('/api/upload_json_file12', methods=['POST'])
+def upload_json_file12():
+    redis_add(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG, 1)
+    return upload_json(request, REDIS_KEY_DNS_SIMPLE_WHITELIST, f"{secret_path}tmp_data12.json")
+
+
+# 上传m3u白名单json文件
+@app.route('/api/upload_json_file11', methods=['POST'])
+def upload_json_file11():
+    return upload_json(request, REDIS_KEY_M3U_WHITELIST, f"{secret_path}tmp_data11.json")
+
+
+# 上传m3u黑名单json文件
+@app.route('/api/upload_json_file15', methods=['POST'])
+def upload_json_file15():
+    return upload_json(request, REDIS_KEY_M3U_BLACKLIST, f"{secret_path}tmp_data15.json")
+
+
+# 上传节点后端服务器json文件
+@app.route('/api/upload_json_file10', methods=['POST'])
+def upload_json_file10():
+    return upload_json(request, REDIS_KEY_PROXIES_SERVER, f"{secret_path}tmp_data10.json")
+
+
+# 上传节点远程配置json文件
+@app.route('/api/upload_json_file9', methods=['POST'])
+def upload_json_file9():
+    return upload_json(request, REDIS_KEY_PROXIES_MODEL, f"{secret_path}tmp_data9.json")
+
+
+# 上传节点配置json文件
+@app.route('/api/upload_json_file8', methods=['POST'])
+def upload_json_file8():
+    return upload_json(request, REDIS_KEY_PROXIES_LINK, f"{secret_path}tmp_data8.json")
+
+
+# 一键上传全部配置集合文件
+@app.route('/api/upload_json_file7', methods=['POST'])
+def upload_json_file7():
+    return upload_oneKey_json(request, f"{secret_path}tmp_data7.json")
+
+
 # 赞助-比特币
 @app.route('/api/get_image')
 def get_image():
@@ -3392,13 +3689,6 @@ def getall13():
     return jsonify(redis_get_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST))
 
 
-# 上传简易DNS黑名单json文件
-@app.route('/api/upload_json_file13', methods=['POST'])
-def upload_json_file13():
-    redis_add(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG, 1)
-    return upload_json(request, REDIS_KEY_DNS_SIMPLE_BLACKLIST, f"{secret_path}tmp_data13.json")
-
-
 # 导出简易DNS白名单配置
 @app.route('/api/download_json_file12', methods=['GET'])
 def download_json_file12():
@@ -3431,13 +3721,6 @@ def getall12():
     return jsonify(redis_get_map(REDIS_KEY_DNS_SIMPLE_WHITELIST))
 
 
-# 上传简易DNS白名单json文件
-@app.route('/api/upload_json_file12', methods=['POST'])
-def upload_json_file12():
-    redis_add(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG, 1)
-    return upload_json(request, REDIS_KEY_DNS_SIMPLE_WHITELIST, f"{secret_path}tmp_data12.json")
-
-
 # 获取主机IP
 @app.route('/api/getIP', methods=['GET'])
 def getIP():
@@ -3462,12 +3745,26 @@ def download_json_file11():
     return download_json_file_base(REDIS_KEY_M3U_WHITELIST, f"{secret_path}temp_m3uwhitelist.json")
 
 
+# 导出m3u黑名单配置
+@app.route('/api/download_json_file15', methods=['GET'])
+def download_json_file15():
+    return download_json_file_base(REDIS_KEY_M3U_BLACKLIST, f"{secret_path}temp_m3ublacklist.json")
+
+
 # 删除M3U白名单
 @app.route('/api/deletewm3u11', methods=['POST'])
 def deletewm3u11():
     deleteurl = request.json.get('deleteurl')
     del m3u_whitlist[deleteurl]
     return dellist(request, REDIS_KEY_M3U_WHITELIST)
+
+
+# 删除M3U黑名单
+@app.route('/api/deletewm3u15', methods=['POST'])
+def deletewm3u15():
+    deleteurl = request.json.get('deleteurl')
+    del m3u_blacklist[deleteurl]
+    return dellist(request, REDIS_KEY_M3U_BLACKLIST)
 
 
 # 添加M3U白名单
@@ -3477,6 +3774,15 @@ def addnewm3u11():
     name = request.json.get('name')
     m3u_whitlist[addurl] = name
     return addlist(request, REDIS_KEY_M3U_WHITELIST)
+
+
+# 添加M3U黑名单
+@app.route('/api/addnewm3u15', methods=['POST'])
+def addnewm3u15():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    m3u_blacklist[addurl] = name
+    return addlist(request, REDIS_KEY_M3U_BLACKLIST)
 
 
 # 拉取全部m3u白名单配置
@@ -3489,10 +3795,14 @@ def getall11():
         return jsonify(m3u_whitlist)
 
 
-# 上传m3u白名单json文件
-@app.route('/api/upload_json_file11', methods=['POST'])
-def upload_json_file11():
-    return upload_json(request, REDIS_KEY_M3U_WHITELIST, f"{secret_path}tmp_data11.json")
+# 拉取全部m3u黑名单配置
+@app.route('/api/getall15', methods=['GET'])
+def getall15():
+    if m3u_blacklist and len(m3u_blacklist.items()) > 0:
+        return jsonify(m3u_blacklist)
+    else:
+        init_m3u_blacklist()
+        return jsonify(m3u_blacklist)
 
 
 # 通用获取同步账户数据-cachekey,flag(bbs-gitee,pps-github,lls-webdav)
@@ -3723,12 +4033,6 @@ def reloadProxyModels():
     return jsonify(redis_get_map(REDIS_KEY_PROXIES_SERVER))
 
 
-# 上传节点后端服务器json文件
-@app.route('/api/upload_json_file10', methods=['POST'])
-def upload_json_file10():
-    return upload_json(request, REDIS_KEY_PROXIES_SERVER, f"{secret_path}tmp_data10.json")
-
-
 # 导出节点远程订阅配置
 @app.route('/api/download_json_file10', methods=['GET'])
 def download_json_file10():
@@ -3781,12 +4085,6 @@ def getall9():
     return jsonify(redis_get_map(REDIS_KEY_PROXIES_MODEL))
 
 
-# 上传节点远程配置json文件
-@app.route('/api/upload_json_file9', methods=['POST'])
-def upload_json_file9():
-    return upload_json(request, REDIS_KEY_PROXIES_MODEL, f"{secret_path}tmp_data9.json")
-
-
 # 服务器启动时加载选择的节点类型id
 @app.route('/api/getSelectedButtonId', methods=['GET'])
 def getSelectedButtonId():
@@ -3837,18 +4135,6 @@ def chaoronghe6():
         return "empty"
 
 
-# 上传节点配置json文件
-@app.route('/api/upload_json_file8', methods=['POST'])
-def upload_json_file8():
-    return upload_json(request, REDIS_KEY_PROXIES_LINK, f"{secret_path}tmp_data8.json")
-
-
-# 一键上传全部配置集合文件
-@app.route('/api/upload_json_file7', methods=['POST'])
-def upload_json_file7():
-    return upload_oneKey_json(request, f"{secret_path}tmp_data7.json")
-
-
 # 一键导出全部配置
 @app.route('/api/download_json_file7', methods=['GET'])
 def download_json_file7():
@@ -3887,12 +4173,6 @@ def getall6():
     return jsonify(redis_get_map(REDIS_KEY_PASSWORD_LINK))
 
 
-# 上传密码本配置集合文件
-@app.route('/api/upload_json_file6', methods=['POST'])
-def upload_json_file6():
-    return upload_json(request, REDIS_KEY_PASSWORD_LINK, f"{secret_path}tmp_data6.json")
-
-
 # 全部ipv6订阅链接超融合
 @app.route('/api/chaoronghe5', methods=['GET'])
 def chaoronghe5():
@@ -3927,12 +4207,6 @@ def addnewm3u5():
     return addlist(request, REDIS_KEY_WHITELIST_IPV6_LINK)
 
 
-# 上传中国ipv6订阅配置集合文件
-@app.route('/api/upload_json_file5', methods=['POST'])
-def upload_json_file5():
-    return upload_json(request, REDIS_KEY_WHITELIST_IPV6_LINK, f"{secret_path}tmp_data5.json")
-
-
 # 删除ipv4订阅
 @app.route('/api/deletewm3u4', methods=['POST'])
 def deletewm3u4():
@@ -3965,12 +4239,6 @@ def download_json_file4():
 @app.route('/api/getall4', methods=['GET'])
 def getall4():
     return jsonify(redis_get_map(REDIS_KEY_WHITELIST_IPV4_LINK))
-
-
-# 上传中国ipv4订阅配置集合文件
-@app.route('/api/upload_json_file4', methods=['POST'])
-def upload_json_file4():
-    return upload_json(request, REDIS_KEY_WHITELIST_IPV4_LINK, f"{secret_path}tmp_data4.json")
 
 
 # 全部域名黑名单订阅链接超融合
@@ -4008,12 +4276,6 @@ def addnewm3u3():
 @app.route('/api/getall3', methods=['GET'])
 def getall3():
     return jsonify(redis_get_map(REDIS_KEY_BLACKLIST_LINK))
-
-
-# 上传黑名单订阅配置集合文件
-@app.route('/api/upload_json_file3', methods=['POST'])
-def upload_json_file3():
-    return upload_json(request, REDIS_KEY_BLACKLIST_LINK, f"{secret_path}tmp_data3.json")
 
 
 # 导出域名白名单订阅配置
@@ -4055,12 +4317,6 @@ def deletewm3u2():
     return dellist(request, REDIS_KEY_WHITELIST_LINK)
 
 
-# 上传白名单订阅配置集合文件
-@app.route('/api/upload_json_file2', methods=['POST'])
-def upload_json_file2():
-    return upload_json(request, REDIS_KEY_WHITELIST_LINK, f"{secret_path}tmp_data2.json")
-
-
 # 删除全部本地直播源
 @app.route('/api/removeallm3u', methods=['GET'])
 def removeallm3u():
@@ -4096,6 +4352,14 @@ def removem3ulinks12():
 def removem3ulinks11():
     m3u_whitlist.clear()
     redis_del_map(REDIS_KEY_M3U_WHITELIST)
+    return "success"
+
+
+# 删除全部M3U黑名单
+@app.route('/api/removem3ulinks15', methods=['GET'])
+def removem3ulinks15():
+    m3u_blacklist.clear()
+    redis_del_map(REDIS_KEY_M3U_BLACKLIST)
     return "success"
 
 
@@ -4185,6 +4449,8 @@ def upload_m3u_file():
     my_dict = formatdata_multithread(file_content.splitlines(), 100)
     # my_dict = formattxt_multithread(file_content.splitlines(), 100)
     redis_add_map(REDIS_KEY_M3U_DATA, my_dict)
+    redis_add_map(REDIS_KET_TMP_CHINA_CHANNEL, tmp_url_tvg_name_dict)
+    tmp_url_tvg_name_dict.clear()
     return '文件已上传'
 
 
@@ -4257,12 +4523,6 @@ def chaoronghe():
 @app.route('/api/download_json_file', methods=['GET'])
 def download_json_file():
     return download_json_file_base(REDIS_KEY_M3U_LINK, f"{secret_path}temp_m3ulink.json")
-
-
-# 上传直播源订阅配置集合文件
-@app.route('/api/upload_json_file', methods=['POST'])
-def upload_json_file():
-    return upload_json(request, REDIS_KEY_M3U_LINK, f"{secret_path}tmp_data.json")
 
 
 # 手动上传m3u文件格式化统一转换

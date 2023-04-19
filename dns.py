@@ -58,7 +58,7 @@ black_list_simple_policy = {}
 ipCheckDomian = ["ip.skk.moe", "ip.swcdn.skk.moe", "api.ipify.org",
                  "api-ipv4.ip.sb", "d.skk.moe", "qqwry.api.skk.moe",
                  "ipinfo.io", "cdn.ipinfo.io", "ip.sb", "api.ttt.sh",
-                 "ip-api.com"]
+                 "ip-api.com", 'ip.chinaz.com', 'ip.tool.chinaz.com']
 
 # 更新队列，避免阻塞
 black_list_simple_policy_queue = queue.Queue(maxsize=100)
@@ -548,11 +548,11 @@ def isChinaDomain(data):
     domain_name_str = domain_name_str[:-1]
     domain_name_str = stupidThink(domain_name_str)
     ###########################################无脑放行IP检测，排除中国的#######################################
-    if domain_name_str in ipCheckDomian:
-        return False
+    # if domain_name_str in ipCheckDomian:
+    #     return False
     ##########################################中国特色顶级域名，申请必须要经过大陆审批通过，默认全部当成大陆域名#############
-    if domain_name_str.endswith(".cn") or domain_name_str.endswith(".中国"):
-        return True
+    # if domain_name_str.endswith(".cn") or domain_name_str.endswith(".中国"):
+    #     return True
     ###########################################个人日常冲浪的域名分流策略，自己维护##############################
     # 在已经命中的简易外国域名查找，直接丢给5335
     if inSimpleBlackListCache(domain_name_str):

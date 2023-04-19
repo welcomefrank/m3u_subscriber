@@ -1,14 +1,11 @@
-    # 在今日已经命中的规则里查找
-    now = int(time.time())
-    for vistedDomain, value in black_list_simple_tmp_policy.items():
-        # 缓存域名在新域名里有匹配
-        if domain_name_str.endswith(vistedDomain):
-            # if domain_name_str in vistedDomain:
-            data = ('add', domain_name_str)
-            put_element(black_list_simple_tmp_cache_queue, data)
-            # black_list_simple_tmp_cache[domain_name_str] = ""
-            return True
-        else:
-            if value <= now:
-                data = ('del', vistedDomain)
-                put_element(black_list_simple_tmp_cache_queue, data)
+
+
+cctv_group = []
+province_group = []
+gangaotai_group = [
+
+                   ]
+new_tv_group = []
+bestv_group = []
+cibn_group = []
+huashu_group = []
