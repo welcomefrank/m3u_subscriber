@@ -128,7 +128,9 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'blackListDomainSecret': 'blackListDomainSecret', 'ipv4': 'ipv4', 'ipv4Secret': 'ipv4Secret',
                   'ipv6': 'ipv6',
                   'ipv6Secret': 'ipv6Secret', 'proxyConfig': 'proxyConfig', 'proxyConfigSecret': 'proxyConfigSecret',
-                  'whitelistDirectRule': 'whitelistDirectRule', 'blacklistProxyRule': 'blacklistProxyRule'}
+                  'whitelistDirectRule': 'whitelistDirectRule', 'blacklistProxyRule': 'blacklistProxyRule',
+                  'simpleOpenclashFallBackFilterDomain': 'simpleOpenclashFallBackFilterDomain',
+                  'simpleblacklistProxyRule': 'simpleblacklistProxyRule'}
 
 # 全部有redis备份字典key
 allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_LINK, REDIS_KEY_WHITELIST_IPV4_LINK,
@@ -714,6 +716,21 @@ def writeBlackList():
 def updateAdguardhomeWithelistForM3us(urls):
     for url in urls:
         updateAdguardhomeWithelistForM3u(url.decode("utf-8"))
+
+
+def chaoronghebase2(redisKeyData, fileName, left1, right1, fileName2, left2, right2):
+    old_dict = redis_get_map(redisKeyData)
+    if not old_dict or len(old_dict) == 0:
+        return "empty"
+    newDict = {}
+    newDict2 = {}
+    for key, value in old_dict.items():
+        newDict[left1 + key + right1] = ""
+        newDict2[left2 + key + right2] = ''
+    # 同步方法写出全部配置
+    distribute_data(newDict, fileName, 10)
+    distribute_data(newDict2, fileName2, 10)
+    return "result"
 
 
 def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
@@ -1551,8 +1568,8 @@ def process_data_domain_openclash_fallbackfilter(data, index, step, my_dict):
             # 外国域名+第三方规则-外国域名关键字
             updateBlackList((lineEncoder.substring(2)).decode())
             # my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
-            my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "*." + (
-                lineEncoder.substring(2)).decode() + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+            # my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "*." + (
+            #     lineEncoder.substring(2)).decode() + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
             my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + (
                 lineEncoder.substring(2)).decode() + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
         # 判断是不是域名
@@ -1564,20 +1581,20 @@ def process_data_domain_openclash_fallbackfilter(data, index, step, my_dict):
                 updateBlackList(line)
                 # my_dict[
                 #     OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
-                my_dict[
-                    OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "*." + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+                # my_dict[
+                #     OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "*." + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
             else:
                 updateBlackList((lineEncoder.substring(4)).decode())
                 my_dict[
                     OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + (
                         lineEncoder.substring(4)).decode() + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
-                my_dict[
-                    OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "*." + (
-                        lineEncoder.substring(4)).decode() + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+                # my_dict[
+                #     OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "*." + (
+                #         lineEncoder.substring(4)).decode() + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
         # 判断是不是*.域名
         elif re.match(wildcard_regex, line):
             updateBlackList((lineEncoder.substring(2)).decode())
-            my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+            # my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
             my_dict[
                 OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + (
                     lineEncoder.substring(2)).decode() + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
@@ -1586,7 +1603,7 @@ def process_data_domain_openclash_fallbackfilter(data, index, step, my_dict):
             my_dict[
                 OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + (
                     lineEncoder.substring(1)).decode() + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
-            my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "*" + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
+            # my_dict[OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT + "*" + line + OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT] = ""
 
 
 # 字符串内容处理-域名转adguardhome屏蔽
@@ -3294,8 +3311,12 @@ def importToReloadCache(cachekey, dict):
 
 # 提取一级域名
 def stupidThink(domain_name):
-    sub_domains = ['.'.join(domain_name.split('.')[i:]) for i in range(len(domain_name.split('.')) - 1)]
-    return sub_domains[-1]
+    try:
+        sub_domains = ['.'.join(domain_name.split('.')[i:]) for i in range(len(domain_name.split('.')) - 1)]
+        return sub_domains[-2]
+    except Exception as e:
+        sub_domains = ['.'.join(domain_name.split('.')[i:]) for i in range(len(domain_name.split('.')) - 1)]
+        return sub_domains[-1]
     # sub_domains = []
     # for i in range(len(domain_name.split('.')) - 1):
     #     sub_domains.append('.'.join(domain_name.split('.')[i:]))
@@ -4135,6 +4156,34 @@ def chaoronghe6():
         return "empty"
 
 
+# 简易DNS黑名单超融合：op黑名单代理域名+代理规则
+@app.route('/api/chaoronghe7', methods=['GET'])
+def chaoronghe7():
+    try:
+        return chaoronghebase2(REDIS_KEY_DNS_SIMPLE_BLACKLIST,
+                               f"{secret_path}{getFileNameByTagName('simpleOpenclashFallBackFilterDomain')}.txt",
+                               OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT,
+                               OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT,
+                               f"{secret_path}{getFileNameByTagName('simpleblacklistProxyRule')}.txt",
+                               PROXY_RULE_LEFT, PROXY_RULE_RIGHT)
+    except:
+        return "empty"
+
+
+# 简易DNS白名单超融合:白名单dnsmasq配置+白名单代理规则
+@app.route('/api/chaoronghe8', methods=['GET'])
+def chaoronghe8():
+    try:
+        return chaoronghebase2(REDIS_KEY_DNS_SIMPLE_WHITELIST,
+                               f"{secret_path}{getFileNameByTagName('simpleDnsmasq')}.conf",
+                               BLACKLIST_DNSMASQ_FORMATION_LEFT,
+                               BLACKLIST_DNSMASQ_FORMATION_right,
+                               f"{secret_path}{getFileNameByTagName('simplewhitelistProxyRule')}.txt",
+                               DIRECT_RULE_LEFT, DIRECT_RULE_RIGHT)
+    except:
+        return "empty"
+
+
 # 一键导出全部配置
 @app.route('/api/download_json_file7', methods=['GET'])
 def download_json_file7():
@@ -4539,6 +4588,16 @@ def process_file():
     return send_file(f"{secret_path}tmp.m3u", as_attachment=True)
 
 
+def thread_recall_chaoronghe7(second):
+    while True:
+        chaoronghe7()
+        time.sleep(second)
+
+def thread_recall_chaoronghe8(second):
+    while True:
+        chaoronghe8()
+        time.sleep(second)
+
 def main():
     init_db()
     timer_thread1 = threading.Thread(target=executeM3u, args=(86400,), daemon=True)
@@ -4553,6 +4612,10 @@ def main():
     timer_thread5.start()
     timer_thread6 = threading.Thread(target=executeProxylist, args=(10800,), daemon=True)
     timer_thread6.start()
+    timer_thread7 = threading.Thread(target=thread_recall_chaoronghe7, args=(600,), daemon=True)
+    timer_thread7.start()
+    timer_thread8 = threading.Thread(target=thread_recall_chaoronghe8, args=(600,), daemon=True)
+    timer_thread8.start()
     # 启动工作线程消费上传数据至gitee
     t = threading.Thread(target=worker_gitee, daemon=True)
     t.start()

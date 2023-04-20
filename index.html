@@ -1227,6 +1227,8 @@
             <h3>这里的数据不建议特别多,根据个人网络冲浪习惯设置</h3>
             <h3>该规则优先于DNS白名单订阅的全部域名规则</h3>
             <h3>默认自动开启自主生成白名单数据,如果不可靠可以在功能开关关闭该功能</h3>
+            <h3 class="urllink">个人白名单浏览记录-dnsmasq: http://192.168.5.1:22771/secret/simpleDnsmasq.conf</h3>
+            <h3 class="urllink">个人白名单分流规则-openclash: http://192.168.5.1:22771/secret/simplewhitelistProxyRule.txt</h3>
             <h3>上传文件导入合并简易DNS分流白名单</h3>
         </div>
         <div style="width:100%">
@@ -1235,6 +1237,11 @@
             </div>
             <div>
                 <button id="add-row12" class="addNewSubscriber" style="width:100%">新增关键字</button>
+            </div>
+            <div>
+                <button class="button stepflag" onclick="execute8()" style="width: 100%">
+                    刷新本栏的两个链接数据
+                </button>
             </div>
             <div>
                 <button id="download-json-btn12" class="button download-json-btn" style="width: 100%">导出配置备份</button>
@@ -1258,10 +1265,12 @@
     <div id="page20" style="display: none;">
         <h1>简易DNS分流黑名单</h1>
         <div style="float: left;width: 70%">
-            <h3>填写个人日常使用的黑名单域名一级域名，比如:youtube.com，twitter.com</h3>
+            <h3>填写个人日常使用的黑名单域名一\二级域名，比如:youtube.com，twitter.com,m.youtube.com</h3>
             <h3>这里的数据不建议特别多,根据个人网络冲浪习惯设置</h3>
             <h3>该规则优先于DNS黑名单订阅的全部域名规则</h3>
             <h3>默认自动开启自主生成黑名单数据,如果不可靠可以在功能开关关闭该功能</h3>
+            <h3 class="urllink">个人黑名单浏览记录-openclash: http://192.168.5.1:22771/secret/simpleOpenclashFallBackFilterDomain.txt</h3>
+            <h3 class="urllink">个人黑名单分流规则-openclash: http://192.168.5.1:22771/secret/simpleblacklistProxyRule.txt</h3>
             <h3>上传文件导入合并简易DNS分流黑名单</h3>
         </div>
         <div style="width:100%">
@@ -1270,6 +1279,11 @@
             </div>
             <div>
                 <button id="add-row13" class="addNewSubscriber" style="width:100%">新增关键字</button>
+            </div>
+            <div>
+                <button class="button stepflag" onclick="execute7()" style="width: 100%">
+                    刷新本栏的两个链接数据
+                </button>
             </div>
             <div>
                 <button id="download-json-btn13" class="button download-json-btn" style="width: 100%">导出配置备份</button>
@@ -1291,7 +1305,8 @@
         </div>
     </div>
     <div id="page21" style="display: none;">
-        <h1>打赏频道</h1>
+        <h1>打赏专栏</h1>
+        <a href="https://t.me/+4swJ9h40iLQ3ZTVl">https://t.me/+4swJ9h40iLQ3ZTVl</a>
         <h3>各位路人朋友可以请我喝一杯咖啡吗^_^,您的支持将给予我更多动力迭代这个项目</h3>
         <h4>比特币(bitcoin)</h4>
          <li id="bitcoin" ><img id="bitcoin-image" src="#" alt="Bitcoin"></li>
@@ -3265,6 +3280,17 @@
     function execute6() {
         executeBase('/api/chaoronghe6')
     }
+
+    //超融合-简易DNS黑名单
+    function execute7() {
+        executeBase('/api/chaoronghe7')
+    }
+
+    //超融合-简易DNS黑名单
+    function execute8() {
+        executeBase('/api/chaoronghe8')
+    }
+
 
     function executeBase(requestPath) {
         // 获取按钮
