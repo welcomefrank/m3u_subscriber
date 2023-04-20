@@ -130,7 +130,8 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'ipv6Secret': 'ipv6Secret', 'proxyConfig': 'proxyConfig', 'proxyConfigSecret': 'proxyConfigSecret',
                   'whitelistDirectRule': 'whitelistDirectRule', 'blacklistProxyRule': 'blacklistProxyRule',
                   'simpleOpenclashFallBackFilterDomain': 'simpleOpenclashFallBackFilterDomain',
-                  'simpleblacklistProxyRule': 'simpleblacklistProxyRule'}
+                  'simpleblacklistProxyRule': 'simpleblacklistProxyRule', 'simpleDnsmasq': 'simpleDnsmasq',
+                  'simplewhitelistProxyRule': 'simplewhitelistProxyRule'}
 
 # 全部有redis备份字典key
 allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_LINK, REDIS_KEY_WHITELIST_IPV4_LINK,
@@ -1551,6 +1552,13 @@ def updateBlackListSpData(domain):
         blacklistSpData[domain_name_str] = ''
 
 
+def updateBlackListSpDataExtra(domain):
+    domain_name_str = stupidThinkForChina(domain)
+    if domain_name_str != '':
+        global blacklistSpData
+        blacklistSpData[domain_name_str] = ''
+
+
 # 字符串内容处理-域名转openclash-fallbackfilter-domain
 # openclash-fallback-filter-domain 填写需要代理的域名
 # 可以使用通配符*,但是尽可能少用，可能出问题
@@ -1562,6 +1570,7 @@ def process_data_domain_openclash_fallbackfilter(data, index, step, my_dict):
             continue
         # dns分流需要的外国域名一级数据
         updateBlackListSpData(line)
+        updateBlackListSpDataExtra(line)
         # 判断是不是+.域名
         lineEncoder = line.encode()
         if re.match(wildcard_regex2, line):
@@ -1676,9 +1685,18 @@ def process_data_domain_collect(data, index, step, my_dict):
             my_dict[line] = ""
 
 
+# 黑白名单最大取到二级域名，防止数据太多
 def updateWhiteListSpData(domain):
-    # 一级域名，类似:一级域名名字.顶级域名名字
+    # 二级域名, 一级域名，类似:一级域名名字.顶级域名名字
     domain_name_str = stupidThink(domain)
+    if domain_name_str != '':
+        global whitelistSpData
+        whitelistSpData[domain_name_str] = ''
+
+
+# 大陆白名单可以放宽条件把一级域名的情况也放行，但是要剔除一级域名使用顶级域名的情况
+def updateWhiteListSpDataForChina(domain):
+    domain_name_str = stupidThinkForChina(domain)
     if domain_name_str != '':
         global whitelistSpData
         whitelistSpData[domain_name_str] = ''
@@ -1697,6 +1715,7 @@ def process_data_domain_dnsmasq(data, index, step, my_dict):
             continue
         # dns分流使用的域名白名单
         updateWhiteListSpData(line)
+        updateWhiteListSpDataForChina(line)
         # 普通域名
         if re.match(domain_regex, line):
             lineEncoder = line.encode()
@@ -3309,14 +3328,36 @@ def importToReloadCache(cachekey, dict):
         function_dict = dict.copy()
 
 
-# 提取一级域名
+ignore_domain = ['com.', 'cn.', 'org.', 'net.', 'edu.', 'gov.', 'mil.', 'int.', 'biz.', 'info.', 'name.', 'pro.',
+                 'asia.', 'us.', 'uk.', 'jp.']
+
+
+# 大陆域名白名单放宽至一级域名
+def stupidThinkForChina(domain_name):
+    try:
+        sub_domains = ['.'.join(domain_name.split('.')[i:]) for i in range(len(domain_name.split('.')) - 1)]
+        domain = sub_domains[-1]
+        for key in ignore_domain:
+            if domain.startswith(key):
+                return ''
+        return domain
+    except Exception as e:
+        return ''
+
+
+# 提取二级、一级级域名
 def stupidThink(domain_name):
     try:
         sub_domains = ['.'.join(domain_name.split('.')[i:]) for i in range(len(domain_name.split('.')) - 1)]
+    except Exception as e:
+        return ''
+    try:
         return sub_domains[-2]
     except Exception as e:
-        sub_domains = ['.'.join(domain_name.split('.')[i:]) for i in range(len(domain_name.split('.')) - 1)]
-        return sub_domains[-1]
+        try:
+            return sub_domains[-1]
+        except Exception as e:
+            return ''
     # sub_domains = []
     # for i in range(len(domain_name.split('.')) - 1):
     #     sub_domains.append('.'.join(domain_name.split('.')[i:]))
@@ -3328,21 +3369,22 @@ def addHistorySubscribePass(password, name):
     redis_add_map(REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS, my_dict)
 
 
-file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u': 'aliveM3u',
-                          'healthM3u': 'healthM3u',
-                          'tvDomainForAdguardhome': 'tvDomainForAdguardhome',
-                          'tvDomainForAdguardhomeSecret': 'tvDomainForAdguardhomeSecret',
-                          'whiteListDnsmasq': 'whiteListDnsmasq', 'whiteListDnsmasqSecret': 'whiteListDnsmasqSecret',
-                          'whiteListDomian': 'whiteListDomian',
-                          'whiteListDomianSecret': 'whiteListDomianSecret',
-                          'openclashFallbackFilterDomain': 'openclashFallbackFilterDomain',
-                          'openclashFallbackFilterDomainSecret': 'openclashFallbackFilterDomainSecret',
-                          'blackListDomain': 'blackListDomain',
-                          'blackListDomainSecret': 'blackListDomainSecret', 'ipv4': 'ipv4', 'ipv4Secret': 'ipv4Secret',
-                          'ipv6': 'ipv6',
-                          'ipv6Secret': 'ipv6Secret', 'proxyConfig': 'proxyConfig',
-                          'proxyConfigSecret': 'proxyConfigSecret',
-                          'whitelistDirectRule': 'whitelistDirectRule', 'blacklistProxyRule': 'blacklistProxyRule'}
+file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u': 'aliveM3u', 'healthM3u': 'healthM3u',
+                  'tvDomainForAdguardhome': 'tvDomainForAdguardhome',
+                  'tvDomainForAdguardhomeSecret': 'tvDomainForAdguardhomeSecret',
+                  'whiteListDnsmasq': 'whiteListDnsmasq', 'whiteListDnsmasqSecret': 'whiteListDnsmasqSecret',
+                  'whiteListDomian': 'whiteListDomian',
+                  'whiteListDomianSecret': 'whiteListDomianSecret',
+                  'openclashFallbackFilterDomain': 'openclashFallbackFilterDomain',
+                  'openclashFallbackFilterDomainSecret': 'openclashFallbackFilterDomainSecret',
+                  'blackListDomain': 'blackListDomain',
+                  'blackListDomainSecret': 'blackListDomainSecret', 'ipv4': 'ipv4', 'ipv4Secret': 'ipv4Secret',
+                  'ipv6': 'ipv6',
+                  'ipv6Secret': 'ipv6Secret', 'proxyConfig': 'proxyConfig', 'proxyConfigSecret': 'proxyConfigSecret',
+                  'whitelistDirectRule': 'whitelistDirectRule', 'blacklistProxyRule': 'blacklistProxyRule',
+                  'simpleOpenclashFallBackFilterDomain': 'simpleOpenclashFallBackFilterDomain',
+                  'simpleblacklistProxyRule': 'simpleblacklistProxyRule', 'simpleDnsmasq': 'simpleDnsmasq',
+                  'simplewhitelistProxyRule': 'simplewhitelistProxyRule'}
 
 
 def init_file_name():
@@ -4159,28 +4201,32 @@ def chaoronghe6():
 # 简易DNS黑名单超融合：op黑名单代理域名+代理规则
 @app.route('/api/chaoronghe7', methods=['GET'])
 def chaoronghe7():
+    path1 = f"{secret_path}{getFileNameByTagName('simpleOpenclashFallBackFilterDomain')}.txt"
+    path2 = f"{secret_path}{getFileNameByTagName('simpleblacklistProxyRule')}.txt"
     try:
         return chaoronghebase2(REDIS_KEY_DNS_SIMPLE_BLACKLIST,
-                               f"{secret_path}{getFileNameByTagName('simpleOpenclashFallBackFilterDomain')}.txt",
+                               path1,
                                OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT,
                                OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT,
-                               f"{secret_path}{getFileNameByTagName('simpleblacklistProxyRule')}.txt",
+                               path2,
                                PROXY_RULE_LEFT, PROXY_RULE_RIGHT)
-    except:
+    except Exception as e:
         return "empty"
 
 
 # 简易DNS白名单超融合:白名单dnsmasq配置+白名单代理规则
 @app.route('/api/chaoronghe8', methods=['GET'])
 def chaoronghe8():
+    path1 = f"{secret_path}{getFileNameByTagName('simpleDnsmasq')}.conf"
+    path2 = f"{secret_path}{getFileNameByTagName('simplewhitelistProxyRule')}.txt"
     try:
-        return chaoronghebase2(REDIS_KEY_DNS_SIMPLE_WHITELIST,
-                               f"{secret_path}{getFileNameByTagName('simpleDnsmasq')}.conf",
+        return chaoronghebase2(REDIS_KEY_DNS_SIMPLE_WHITELIST, path1
+                               ,
                                BLACKLIST_DNSMASQ_FORMATION_LEFT,
                                BLACKLIST_DNSMASQ_FORMATION_right,
-                               f"{secret_path}{getFileNameByTagName('simplewhitelistProxyRule')}.txt",
+                               path2,
                                DIRECT_RULE_LEFT, DIRECT_RULE_RIGHT)
-    except:
+    except Exception as e:
         return "empty"
 
 
@@ -4593,10 +4639,12 @@ def thread_recall_chaoronghe7(second):
         chaoronghe7()
         time.sleep(second)
 
+
 def thread_recall_chaoronghe8(second):
     while True:
         chaoronghe8()
         time.sleep(second)
+
 
 def main():
     init_db()

@@ -1,4 +1,5 @@
 import concurrent.futures
+import queue
 import socket
 import threading
 import time
@@ -43,7 +44,6 @@ white_list_simple_tmp_policy = {}
 white_list_simple_tmp_cache = {}
 # 简易白名单全部数据库数据
 white_list_simple_nameserver_policy = {}
-white_list_simple_nameserver_policy_local = {}
 
 # 简易DNS域名黑名单
 REDIS_KEY_DNS_SIMPLE_BLACKLIST = "dnssimpleblacklist"
@@ -53,13 +53,89 @@ black_list_simple_tmp_policy = {}
 black_list_simple_tmp_cache = {}
 # 简易黑名单全部数据库数据
 black_list_simple_policy = {}
-black_list_simple_policy_local = {}
 
 # china   api.ttt.sh
 ipCheckDomian = ["ip.skk.moe", "ip.swcdn.skk.moe", "api.ipify.org",
                  "api-ipv4.ip.sb", "d.skk.moe", "qqwry.api.skk.moe",
                  "ipinfo.io", "cdn.ipinfo.io", "ip.sb", "api.ttt.sh",
                  "ip-api.com", 'ip.chinaz.com', 'ip.tool.chinaz.com']
+
+# 更新队列，避免阻塞
+black_list_simple_policy_queue = queue.Queue(maxsize=100)
+white_list_simple_nameserver_policy_queue = queue.Queue(maxsize=100)
+
+
+# 添加元素到队列中
+def put_element(q, element):
+    if not q.full():
+        q.put(element)
+        # print(f"元素 {element} 已经添加到队列中")
+    # else:
+    #     print("队列已满，不能添加更多元素")
+
+
+# 自动更新黑白名单数据至redis,多线程插入会丢失数据，只能把插数据的操作集中到单个线程
+def deal_black_list_simple_policy_queue(second):
+    global black_list_simple_policy_queue
+    global white_list_simple_nameserver_policy_queue
+    global white_list_simple_nameserver_policy
+    global black_list_simple_policy
+    while True:
+        add_dict = {}
+        add_dict2 = {}
+        for i in range(10):
+            if not black_list_simple_policy_queue.empty():
+                domain = black_list_simple_policy_queue.get()
+                add_dict[domain] = ''
+            if not white_list_simple_nameserver_policy_queue.empty():
+                domain2 = white_list_simple_nameserver_policy_queue.get()
+                add_dict2[domain2] = ''
+        if len(add_dict) > 0:
+            redis_add_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST, add_dict)
+            for key in add_dict.keys():
+                updateSpData(key, black_list_simple_policy)
+        if len(add_dict2) > 0:
+            redis_add_map(REDIS_KEY_DNS_SIMPLE_WHITELIST, add_dict2)
+            for key in add_dict2.keys():
+                updateSpData(key, white_list_simple_nameserver_policy)
+        time.sleep(second)
+
+
+# 单位:秒-1天
+TTL = 86400
+LAST_CLEAR_TIME = 0
+
+
+def addTTl():
+    current_timestamp = int(time.time())
+    return current_timestamp + TTL
+
+
+def schedule_deal_dict_add_remove(myQueue, myDict):
+    # 从队列中取出元素
+    add_dict = {}
+    while not myQueue.empty():
+        item = myQueue.get()
+        type = item[0]
+        url = item[1]
+        if type == 'add':
+            add_dict[url] = ''
+    now = int(time.time())
+    global LAST_CLEAR_TIME
+    if LAST_CLEAR_TIME <= now:
+        myDict.clear()
+        LAST_CLEAR_TIME = addTTl()
+    if len(add_dict) > 0:
+        myDict.update(add_dict)
+
+
+# def deal_white_list_simple_nameserver_policy_queue(second):
+#     global white_list_simple_nameserver_policy_queue
+#     global white_list_simple_nameserver_policy
+#     while True:
+#         schedule_deal_dict_add_remove(white_list_simple_nameserver_policy_queue, white_list_simple_nameserver_policy)
+#         time.sleep(second)
+#
 
 # 规则：先查unkown_list_tmp_cache，有的话转发5335,
 # 没有再查black_list_tmp_cache，有记录直接转发5335,
@@ -183,7 +259,6 @@ def inSimpleBlackListPolicyCache(domain_name_str):
     for vistedDomain in black_list_simple_tmp_policy.keys():
         # 缓存域名在新域名里有匹配
         if domain_name_str.endswith(vistedDomain):
-            # if domain_name_str in vistedDomain:
             # put_element(black_list_simple_tmp_cache_queue, domain_name_str)
             black_list_simple_tmp_cache[domain_name_str] = ""
             return True
@@ -195,7 +270,6 @@ def inSimpleBlackListCache(domain_name_str):
     for recordThiteDomain in black_list_simple_tmp_cache.keys():
         # # 缓存域名在新域名里有匹配
         if domain_name_str.endswith(recordThiteDomain):
-            # if domain_name_str in recordThiteDomain:
             return True
     return False
 
@@ -214,8 +288,6 @@ def getWeakThread(length):
 
 # 检测域名是否在全部简易黑名单域名策略  是-true  不是-false
 def inSimpleBlackListPolicy(domain_name_str):
-    if not initSimpleBlackListLock.acquire(blocking=False):
-        return False
     sourceDict = findBottomDict(domain_name_str, black_list_simple_policy)
     if sourceDict:
         if len(sourceDict) == 0:
@@ -239,9 +311,9 @@ def inSimpleBlackListPolicy(domain_name_str):
                     future = executor.submit(check_domain_inSimpleBlackListPolicy, domain_name_str, black_list_chunk)
                     if future.result():
                         return True
-                return False
         finally:
             executor.shutdown(wait=False)
+        return False
     else:
         return False
 
@@ -251,7 +323,6 @@ def check_domain_inSimpleBlackListPolicy(domain_name_str, black_list_chunk):
         for key in black_list_chunk:
             # 缓存域名在新域名里有匹配
             if domain_name_str.endswith(key):
-                # if domain_name_str in key:
                 # put_element(black_list_simple_tmp_cache_queue, domain_name_str)
                 # put_element(black_list_simple_tmp_policy_queue, key)
                 black_list_simple_tmp_cache[domain_name_str] = ""
@@ -267,7 +338,6 @@ def inBlackListPolicyCache(domain_name_str):
     for vistedDomain in black_list_tmp_policy.keys():
         # 缓存域名在新域名里有匹配
         if domain_name_str.endswith(vistedDomain):
-            # if domain_name_str in vistedDomain:
             # put_element(black_list_tmp_cache_queue, domain_name_str)
             black_list_tmp_cache[domain_name_str] = ""
             return True
@@ -279,17 +349,15 @@ def inBlackListCache(domain_name_str):
     for recordThiteDomain in black_list_tmp_cache.keys():
         # # 缓存域名在新域名里有匹配
         if domain_name_str.endswith(recordThiteDomain):
-            # if domain_name_str in recordThiteDomain:
             return True
     return False
 
 
 # 检测域名是否在记录的简易白名单域名缓存  是-true  不是-false
 def inSimpleWhiteListCache(domain_name_str):
-    for recordThiteDomain, value in white_list_simple_tmp_cache.keys():
+    for recordThiteDomain in white_list_simple_tmp_cache.keys():
         # # 缓存域名在新域名里有匹配
         if domain_name_str.endswith(recordThiteDomain):
-            # if domain_name_str in recordThiteDomain:
             return True
     return False
 
@@ -300,7 +368,6 @@ def inSimpleWhiteListPolicyCache(domain_name_str):
     for vistedDomain in white_list_simple_tmp_policy.keys():
         # 缓存域名在新域名里有匹配
         if domain_name_str.endswith(vistedDomain):
-            # if domain_name_str in vistedDomain:
             # put_element(white_list_simple_tmp_cache_queue, domain_name_str)
             white_list_simple_tmp_cache[domain_name_str] = ""
             return True
@@ -309,8 +376,6 @@ def inSimpleWhiteListPolicyCache(domain_name_str):
 
 # 检测域名是否在全部简易白名单域名策略  是-true  不是-false
 def inSimpleWhiteListPolicy(domain_name_str):
-    if not initSimpleWhiteListLock.acquire(blocking=False):
-        return False
     sourceDict = findBottomDict(domain_name_str, white_list_simple_nameserver_policy)
     if sourceDict:
         if len(sourceDict) == 0:
@@ -337,7 +402,6 @@ def inSimpleWhiteListPolicy(domain_name_str):
         finally:
             executor.shutdown(wait=False)
         return False
-
     else:
         return False
 
@@ -347,7 +411,6 @@ def check_domain_inSimpleWhiteListPolicy(domain_name_str, white_list_chunk):
         for key in white_list_chunk:
             # 新域名在全部规则里有类似域名，更新whiteDomainPolicy
             if domain_name_str.endswith(key):
-                # if domain_name_str in key:
                 # put_element(white_list_simple_tmp_cache_queue, domain_name_str)
                 white_list_simple_tmp_cache[domain_name_str] = ""
                 # put_element(white_list_simple_tmp_policy_queue, key)
@@ -362,7 +425,6 @@ def inWhiteListCache(domain_name_str):
     for recordThiteDomain in white_list_tmp_cache.keys():
         # # 缓存域名在新域名里有匹配
         if domain_name_str.endswith(recordThiteDomain):
-            # if domain_name_str in recordThiteDomain:
             return True
     return False
 
@@ -373,7 +435,6 @@ def inWhiteListPolicyCache(domain_name_str):
     for vistedDomain in white_list_tmp_policy.keys():
         # 缓存域名在新域名里有匹配
         if domain_name_str.endswith(vistedDomain):
-            # if domain_name_str in vistedDomain:
             # put_element(white_list_tmp_cache_queue, domain_name_str)
             white_list_tmp_cache[domain_name_str] = ""
             return True
@@ -382,8 +443,6 @@ def inWhiteListPolicyCache(domain_name_str):
 
 # 检测域名是否在全部黑名单域名策略  是-true  不是-false
 def inBlackListPolicy(domain_name_str):
-    if not initBlackListSPLock.acquire(blocking=False):
-        return False
     sourceDict = findBottomDict(domain_name_str, blacklistSpData)
     if sourceDict:
         if len(sourceDict) == 0:
@@ -420,7 +479,6 @@ def check_domain_inBlackListPolicy(domain_name_str, black_list_chunk):
         for key in black_list_chunk:
             # 缓存域名在新域名里有匹配
             if domain_name_str.endswith(key):
-                # if domain_name_str in key:
                 # put_element(black_list_tmp_cache_queue, domain_name_str)
                 # put_element(black_list_tmp_policy_queue, key)
                 black_list_tmp_cache[domain_name_str] = ""
@@ -432,8 +490,6 @@ def check_domain_inBlackListPolicy(domain_name_str, black_list_chunk):
 
 # 检测域名是否在全部白名单域名策略  是-true  不是-false
 def inWhiteListPolicy(domain_name_str):
-    if not initWhiteListSPBusyLock.acquire(blocking=False):
-        return False
     sourceDict = findBottomDict(domain_name_str, whitelistSpData)
     if sourceDict:
         if len(sourceDict) == 0:
@@ -470,7 +526,6 @@ def check_domain_inWhiteListPolicy(domain_name_str, white_list_chunk):
         for key in white_list_chunk:
             # 新域名在全部规则里有类似域名，更新whiteDomainPolicy
             if domain_name_str.endswith(key):
-                # if domain_name_str in key:
                 # put_element(white_list_tmp_cache_queue, domain_name_str)
                 # put_element(white_list_tmp_policy_queue, key)
                 white_list_tmp_cache[domain_name_str] = ""
@@ -481,12 +536,14 @@ def check_domain_inWhiteListPolicy(domain_name_str, white_list_chunk):
 
 
 def stupidThink(domain_name):
-    sub_domains = ['.'.join(domain_name.split('.')[i:]) for i in range(len(domain_name.split('.')) - 1)]
-    return sub_domains[-1]
-    # sub_domains = []
-    # for i in range(len(domain_name.split('.')) - 1):
-    #     sub_domains.append('.'.join(domain_name.split('.')[i:]))
-    # return sub_domains[len(sub_domains) - 1]
+    try:
+        sub_domains = ['.'.join(domain_name.split('.')[i:]) for i in range(len(domain_name.split('.')) - 1)]
+    except Exception as e:
+        return ''
+    try:
+        return sub_domains[-2]
+    except Exception as e:
+        return sub_domains[-1]
 
 
 # 白名单三段字典:顶级域名,一级域名长度,一级域名首位,一级域名数据
@@ -499,29 +556,71 @@ REDIS_KEY_BLACKLIST_DATA_SP = "blacklistdatasp"
 blacklistSpData = {}
 
 
+# 顶级域名,一级域名开头字母,一级域名长度,一级域名,二级域名,''
 # 根据一级域名获取最小字典数据
 def findBottomDict(domain_name_str, whitelistSpData):
-    # 一级域名名字，顶级域名名字
-    start, end = domain_name_str.split('.')
-    # 一级域名字符串数组
-    arr = [char for char in start]
-    # 一级域名字符串数组长度
-    length = str(len(arr))
-    # 一级域名数组首位字符串
-    startStr = arr[0]
-    if end not in whitelistSpData:
-        return {}
-    endDict = whitelistSpData[end]
-    if length not in endDict:
-        return {}
-    lengthDict = endDict[length]
-    if startStr not in lengthDict:
-        return {}
-    startStrDict = lengthDict[startStr]
-    if startStrDict:
-        return startStrDict
-    else:
-        return {}
+    try:
+        # 有二级域名
+        # 二级域名名字,一级域名,顶级域名名字
+        start, middle, end = domain_name_str.split('.')
+        # 1级域名字符串数组
+        arr2 = [char for char in middle]
+        # 1级域名字符串数组长度
+        length2 = str(len(arr2))
+        # 1级域名数组首位字符串
+        startStr2 = arr2[0]
+        if end not in whitelistSpData.keys():
+            return {}
+        # 顶级域名字典
+        endDict = whitelistSpData[end]
+        if startStr2 not in endDict.keys():
+            return {}
+        # 一级域名开头字母
+        weightDict = endDict[startStr2]
+        if length2 not in weightDict.keys():
+            return {}
+        # 一级域名长度
+        length1Dict = weightDict[length2]
+        if middle not in length1Dict.keys():
+            return {}
+        # 一级域名
+        startStr1Dict = length1Dict[middle]
+        if startStr1Dict:
+            return startStr1Dict
+        else:
+            return {}
+    except Exception as e:
+        # 只有一级域名
+        # print(e)
+        try:
+            # 一级域名名字，顶级域名名字
+            start, end = domain_name_str.split('.')
+            # 一级域名字符串数组
+            arr = [char for char in start]
+            # 一级域名字符串数组长度
+            length = str(len(arr))
+            # 一级域名数组首位字符串
+            startStr = arr[0]
+            if end not in whitelistSpData.keys():
+                return {}
+            endDict = whitelistSpData[end]
+            if startStr not in endDict.keys():
+                return {}
+            weightDict = endDict[startStr]
+            if length not in weightDict.keys():
+                return {}
+            lengthDict = weightDict[length]
+            if start not in lengthDict.keys():
+                return {}
+            startStrDict = lengthDict[start]
+            if startStrDict:
+                return startStrDict
+            else:
+                return {}
+        except Exception as e:
+            # 只有顶级域名
+            # print(e)
+            pass
 
 
 # 添加元素到队列中
@@ -543,7 +642,7 @@ def isChinaDomain(data):
     domain_name = dns_msg.q.qname
     domain_name_str = str(domain_name)
     domain_name_str = domain_name_str[:-1]
-    # domain_name_str = stupidThink(domain_name_str)
+    domain_name_str = stupidThink(domain_name_str)
     ###########################################无脑放行IP检测，排除中国的#######################################
     # if domain_name_str in ipCheckDomian:
     #     return False
@@ -617,152 +716,106 @@ def redis_get_map(key):
 
 
 def initSimpleBlackList():
+    global black_list_simple_policy
     simpleblacklist = redis_get_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST)
     if simpleblacklist and len(simpleblacklist) > 0:
-        initSimpleBlackListLock.acquire()
         black_list_simple_policy.clear()
         for domain in simpleblacklist:
-            updateSimpleBlackListSpData(domain)
-        initSimpleBlackListLock.release()
-
-
-def updateSimpleBlackListSpData(domain_name_str):
-    # 一级域名，类似:一级域名名字.顶级域名名字
-    # 一级域名名字，顶级域名名字
-    start, end = domain_name_str.split('.')
-    if start != '':
-        # 一级域名字符串数组
-        arr = [char for char in start]
-        # 一级域名字符串数组长度
-        length = str(len(arr))
-        # 一级域名数组首位字符串
-        startStr = arr[0]
-        # 字典主键依据顺序为:顶级域名,一级域名长度,一级域名首位;最底层值是字典:一级域名数据,空字符串
-        if end not in black_list_simple_policy:
-            black_list_simple_policy[end] = {}
-        endDict = black_list_simple_policy[end]
-        if length not in endDict:
-            endDict[length] = {}
-        lengthDict = endDict[length]
-        if startStr not in lengthDict:
-            lengthDict[startStr] = {}
-        startStrDict = lengthDict[startStr]
-        startStrDict[domain_name_str] = ''
+            updateSpData(domain, black_list_simple_policy)
 
 
 def initSimpleWhiteList():
+    global white_list_simple_nameserver_policy
     simplewhitelist = redis_get_map(REDIS_KEY_DNS_SIMPLE_WHITELIST)
     if simplewhitelist and len(simplewhitelist) > 0:
-        initSimpleWhiteListLock.acquire()
         white_list_simple_nameserver_policy.clear()
         for domain in simplewhitelist:
-            updateSimpleWhiteListSpData(domain)
-        initSimpleWhiteListLock.release()
+            #updateSimpleWhiteListSpData(domain)
+            updateSpData(domain, white_list_simple_nameserver_policy)
 
 
-def updateSimpleWhiteListSpData(domain_name_str):
-    # 一级域名，类似:一级域名名字.顶级域名名字
-    # 一级域名名字，顶级域名名字
-    start, end = domain_name_str.split('.')
-    if start != '':
-        # 一级域名字符串数组
-        arr = [char for char in start]
-        # 一级域名字符串数组长度
-        length = str(len(arr))
-        # 一级域名数组首位字符串
-        startStr = arr[0]
-        # 字典主键依据顺序为:顶级域名,一级域名长度,一级域名首位;最底层值是字典:一级域名数据,空字符串
-        if end not in white_list_simple_nameserver_policy:
-            white_list_simple_nameserver_policy[end] = {}
-        endDict = white_list_simple_nameserver_policy[end]
-        if length not in endDict:
-            endDict[length] = {}
-        lengthDict = endDict[length]
-        if startStr not in lengthDict:
-            lengthDict[startStr] = {}
-        startStrDict = lengthDict[startStr]
-        startStrDict[domain_name_str] = ''
-
-
-# def initWhiteList():
-#     whitelist = redis_get_map(REDIS_KEY_WHITE_DOMAINS)
-#     if whitelist and len(whitelist) > 0:
-#         white_list_nameserver_policy.update(whitelist)
-
-
-def updateWhiteListSpData(domain_name_str):
+# 顶级域名,一级域名开头字母,一级域名长度,一级域名,二级域名,''
+# 顶级域名,一级域名开头字母,一级域名长度,一级域名,'',''
+def updateSpData(domain_name_str, dict):
     try:
-        # 一级域名，类似:一级域名名字.顶级域名名字
-        # 一级域名名字，顶级域名名字
-        start, end = domain_name_str.split('.')
+        # 二级域名名字,一级域名名字，顶级域名名字
+        start, middle, end = domain_name_str.split('.')
         # 一级域名字符串数组
-        arr = [char for char in start]
+        arr2 = [char for char in middle]
         # 一级域名字符串数组长度
-        length = str(len(arr))
+        length2 = str(len(arr2))
         # 一级域名数组首位字符串
-        startStr = arr[0]
-        # 字典主键依据顺序为:顶级域名,一级域名长度,一级域名首位;最底层值是字典:一级域名数据,空字符串
-        if end not in whitelistSpData:
-            whitelistSpData[end] = {}
-        endDict = whitelistSpData[end]
-        if length not in endDict:
-            endDict[length] = {}
-        lengthDict = endDict[length]
-        if startStr not in lengthDict:
-            lengthDict[startStr] = {}
-        startStrDict = lengthDict[startStr]
-        startStrDict[domain_name_str] = ''
+        startStr2 = arr2[0]
+        # 顶级域名字典
+        if end not in dict.keys():
+            dict[end] = {}
+        # 一级域名开头字母
+        endDict1 = dict[end]
+        if startStr2 not in endDict1.keys():
+            endDict1[startStr2] = {}
+        # 一级域名长度
+        weightDict = endDict1[startStr2]
+        if length2 not in weightDict.keys():
+            weightDict[length2] = {}
+        # 一级域名
+        length1Dict = weightDict[length2]
+        if middle not in length1Dict.keys():
+            length1Dict[middle] = {}
+        # 二级域名字典
+        startStr1Dict = length1Dict[middle]
+        startStr1Dict[domain_name_str] = ''
     except Exception as e:
-        # 只有顶级域名，不处理
-        # print(domain_name_str)
-        # print(e)
-        pass
+        try:
+            # 顶级域名,一级域名开头字母,一级域名长度,一级域名,''
+            # print(e)
+            # 一级域名名字，顶级域名名字
+            start, end = domain_name_str.split('.')
+            # 一级域名字符串数组
+            arr = [char for char in start]
+            # 一级域名字符串数组长度
+            length = str(len(arr))
+            # 一级域名数组首位字符串
+            startStr = arr[0]
+            # 顶级域名字典集合
+            if end not in dict:
+                dict[end] = {}
+            # 目标顶级域名字典
+            endDict = dict[end]
+            if startStr not in endDict.keys():
+                endDict[startStr] = {}
+            # 一级域名开头字母集合
+            weightDict = endDict[startStr]
+            if length not in weightDict.keys():
+                weightDict[length] = {}
+            # 一级域名长度集合
+            lengthDict = weightDict[length]
+            if start not in lengthDict:
+                lengthDict[start] = {}
+            # 一级域名集合
+            startStrDict = lengthDict[start]
+            startStrDict[domain_name_str] = ''
+        except Exception as e:
+            # 只有顶级域名
+            # print(e)
+            pass
 
 
 def initWhiteListSP():
+    global whitelistSpData
     whitelistSP = redis_get_map(REDIS_KEY_WHITELIST_DATA_SP)
     if whitelistSP and len(whitelistSP) > 0:
-        initWhiteListSPBusyLock.acquire()
         whitelistSpData.clear()
         for domain in whitelistSP:
-            updateWhiteListSpData(domain)
-        initWhiteListSPBusyLock.release()
-
-
-def updateBlackListSpData(domain_name_str):
-    try:
-        # 一级域名，类似:一级域名名字.顶级域名名字
-        # 一级域名名字，顶级域名名字
-        start, end = domain_name_str.split('.')
-        # 一级域名字符串数组
-        arr = [char for char in start]
-        # 一级域名字符串数组长度
-        length = str(len(arr))
-        # 一级域名数组首位字符串
-        startStr = arr[0]
-        # 字典主键依据顺序为:顶级域名,一级域名长度,一级域名首位;最底层值是字典:一级域名数据,空字符串
-        if end not in blacklistSpData:
-            blacklistSpData[end] = {}
-        endDict = blacklistSpData[end]
-        if length not in endDict:
-            endDict[length] = {}
-        lengthDict = endDict[length]
-        if startStr not in lengthDict:
-            lengthDict[startStr] = {}
-        startStrDict = lengthDict[startStr]
-        startStrDict[domain_name_str] = ''
-    except Exception as e:
-        pass
+            updateSpData(domain, whitelistSpData)
 
 
 def initBlackListSP():
+    global blacklistSpData
     blacklistSP = redis_get_map(REDIS_KEY_BLACKLIST_DATA_SP)
     if blacklistSP and len(blacklistSP) > 0:
-        initBlackListSPLock.acquire()
         blacklistSpData.clear()
         for domain in blacklistSP:
-            updateBlackListSpData(domain)
-        initBlackListSPLock.release()
+            updateSpData(domain, blacklistSpData)
 
 
 # 将CIDR表示的IP地址段转换为IP网段数组
@@ -915,12 +968,6 @@ def needUpdate(redis_key):
     return False
 
 
-initWhiteListSPBusyLock = threading.Lock()
-initBlackListSPLock = threading.Lock()
-initSimpleWhiteListLock = threading.Lock()
-initSimpleBlackListLock = threading.Lock()
-
-
 def init(sleepSecond):
     while True:
         # if needUpdate(REDIS_KEY_UPDATE_WHITE_LIST_FLAG):
@@ -948,7 +995,6 @@ def init(sleepSecond):
         # if needUpdate(REDIS_KEY_UPDATE_IPV4_LIST_FLAG):
         #     initIPV4List()
         openAutoUpdateSimpleWhiteAndBlackList()
-        updateSimpleBlackAndWhiteList()
         time.sleep(sleepSecond)
 
 
@@ -970,31 +1016,19 @@ def openAutoUpdateSimpleWhiteAndBlackList():
         return
 
 
-# 更新维护简易黑白名单
-def updateSimpleBlackAndWhiteList():
-    if AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST == '1':
-        try:
-            redis_add_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST, black_list_simple_policy_local)
-            black_list_simple_policy_local.clear()
-            redis_add_map(REDIS_KEY_DNS_SIMPLE_WHITELIST, white_list_simple_nameserver_policy_local)
-            white_list_simple_nameserver_policy_local.clear()
-        except Exception:
-            pass
-
-
 def checkAndUpdateSimpleList(isBlack, domain):
     if AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST == '0':
         return
     if isBlack:
-        if not initSimpleBlackListLock.acquire(blocking=False):
-            return
-        black_list_simple_policy_local.update({domain: ''})
-        updateSimpleBlackListSpData(domain)
+        if not black_list_simple_policy_queue.full():
+            black_list_simple_policy_queue.put(domain)
+        # redis_add_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST, {domain: ''})
+        # updateSimpleBlackListSpData(domain)
     else:
-        if not initSimpleWhiteListLock.acquire(blocking=False):
-            return
-        white_list_simple_nameserver_policy_local.update({domain: ''})
-        updateSimpleWhiteListSpData(domain)
+        if not white_list_simple_nameserver_policy_queue.full():
+            white_list_simple_nameserver_policy_queue.put(domain)
+        # redis_add_map(REDIS_KEY_DNS_SIMPLE_WHITELIST, {domain: ''})
+        # updateSimpleWhiteListSpData(domain)
 
 
 # 线程数获取
@@ -1163,6 +1197,9 @@ def main():
     initSimpleBlackList()
     timer_thread1 = threading.Thread(target=init, args=(60,), daemon=True)
     timer_thread1.start()
+    timer_thread2 = threading.Thread(target=deal_black_list_simple_policy_queue,
+                                     args=(10,), daemon=True)
+    timer_thread2.start()
     # 中国dns端口
     china_port = chinadnsport[REDIS_KEY_CHINA_DNS_PORT]
     # 中国dns服务器
