@@ -1,11 +1,8 @@
-
-
-cctv_group = []
-province_group = []
-gangaotai_group = [
-
-                   ]
-new_tv_group = []
-bestv_group = []
-cibn_group = []
-huashu_group = []
+black_list_simple_tmp_cache.clear()
+black_list_simple_tmp_policy.clear()
+white_list_simple_tmp_cache.clear()
+white_list_simple_tmp_policy.clear()
+black_list_tmp_cache.clear()
+black_list_tmp_policy.clear()
+white_list_tmp_cache.clear()
+white_list_tmp_policy.clear()

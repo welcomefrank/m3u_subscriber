@@ -139,7 +139,7 @@ allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_
               REDIS_KEY_PROXIES_MODEL, REDIS_KEY_PROXIES_MODEL_CHOSEN, REDIS_KEY_PROXIES_SERVER,
               REDIS_KEY_PROXIES_SERVER_CHOSEN, REDIS_KEY_GITEE, REDIS_KEY_GITHUB,
               REDIS_KEY_M3U_WHITELIST, REDIS_KEY_SECRET_PASS_NOW, REDIS_KEY_WEBDAV, REDIS_KEY_FILE_NAME,
-              REDIS_KEY_M3U_BLACKLIST, REDIS_KEY_DNS_SIMPLE_WHITELIST, REDIS_KEY_DNS_SIMPLE_BLACKLIST,
+              REDIS_KEY_M3U_BLACKLIST, 
               REDIS_KEY_FUNCTION_DICT, REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS]
 
 # Adguardhome屏蔽前缀
@@ -719,7 +719,7 @@ def updateAdguardhomeWithelistForM3us(urls):
         updateAdguardhomeWithelistForM3u(url.decode("utf-8"))
 
 
-def chaoronghebase2(redisKeyData, fileName, left1, right1, fileName2, left2, right2):
+def chaoronghebase2(redisKeyData, fileName, left1, right1, fileName2, left2):
     old_dict = redis_get_map(redisKeyData)
     if not old_dict or len(old_dict) == 0:
         return "empty"
@@ -727,7 +727,7 @@ def chaoronghebase2(redisKeyData, fileName, left1, right1, fileName2, left2, rig
     newDict2 = {}
     for key, value in old_dict.items():
         newDict[left1 + key + right1] = ""
-        newDict2[left2 + key + right2] = ''
+        newDict2[left2 + key] = ''
     # 同步方法写出全部配置
     distribute_data(newDict, fileName, 10)
     distribute_data(newDict2, fileName2, 10)
@@ -2025,8 +2025,61 @@ def process_data(data, index, step, my_dict):
 
 # 获取白名单分组
 def getMyGroup(str):
+    # 先优选港澳台
     for key, group in m3u_whitlist.items():
-        if key in str and group != '':
+        if group == '':
+            continue
+        if '港澳台' not in group:
+            continue
+        if key in str:
+            return group
+    # CCTV其次
+    for key, group in m3u_whitlist.items():
+        if group == '':
+            continue
+        if '央视' not in group:
+            continue
+        if key in str:
+            return group
+    # 卫视
+    for key, group in m3u_whitlist.items():
+        if group == '':
+            continue
+        if '卫视' not in group:
+            continue
+        if key in str:
+            return group
+    # 日本台
+    for key, group in m3u_whitlist.items():
+        if group == '':
+            continue
+        if '日本台' not in group:
+            continue
+        if key in str:
+            return group
+    # usa
+    for key, group in m3u_whitlist.items():
+        if group == '':
+            continue
+        if '美利坚合众国' not in group:
+            continue
+        if key in str:
+            return group
+    # 其他
+    for key, group in m3u_whitlist.items():
+        if group == '':
+            continue
+        if '港澳台' in group:
+            continue
+        if '央视' in group:
+            continue
+        if '卫视' in group:
+            continue
+        if '日本台' in group:
+            continue
+        if '美利坚合众国' in group:
+            continue
+        if key in str:
             return group
     return ''
 
@@ -3122,153 +3175,219 @@ def init_m3u_whitelist():
     global m3u_whitlist
     dict = redis_get_map(REDIS_KEY_M3U_WHITELIST)
     if not dict or len(dict) == 0:
-        dict = {
-            '人间卫视': '港澳台', '东森': '港澳台', '超视美洲': '港澳台', 'ETtoday': '港澳台', '高点综合': '港澳台',
-            '高点育乐': '港澳台',
-            '年代新闻': '港澳台', '壹电视': '港澳台', '中天': '港澳台',
-            '非凡新闻': '港澳台', '凤凰卫视': '港澳台', '凤凰新闻': '港澳台', '鳳凰衛視': '港澳台',
-            '鳳凰新聞': '港澳台',
-            '凤凰香港': '港澳台', '香港卫视': '港澳台',
-            '香港衛視': '港澳台', '凤凰资讯': '港澳台', '鳳凰資訊': '港澳台', '凤凰中文': '港澳台',
-            '鳳凰中文': '港澳台', '香港开电视': '港澳台', '香港開電視': '港澳台', '香港有線': '港澳台',
-            '香港有线': '港澳台', '卫视合家欢': '港澳台', '衛視合家歡': '港澳台', 'HBO': '港澳台',
-            'MYTV电影': '港澳台', 'MYTV電影': '港澳台', 'FRESH电影': '港澳台', 'FRESH電影': '港澳台',
-            '非凡商业': '港澳台', '好莱坞电影': '港澳台', '亚洲旅游': '港澳台', '亚洲综合': '港澳台',
-            '梅迪奇艺术': '港澳台', '博斯魅力': '港澳台', 'CINEMA影院': '港澳台',
-            '博斯网球': '港澳台', '博斯无限': '港澳台', '香港國際': '港澳台', '香港国际': '港澳台',
-            '星空卫视': '港澳台', '星空衛視': '港澳台', '翡翠台': '港澳台', '天映经典': '港澳台',
-            '天映經典': '港澳台', '澳视': '港澳台', '澳視': '港澳台', '唯心台': '港澳台', 'TVB星河': '港澳台',
-            'RTHK32': '港澳台', 'RTHK31': '港澳台', 'ViuTV': '港澳台', 'Viutv': '港澳台', '功夫台': '港澳台',
-            'ELEVEN體育': '港澳台',
-            '博斯运动': '港澳台', '龙祥': '港澳台', '龍祥': '港澳台', '明珠台': '港澳台', '凤凰频道': '港澳台',
-            '鳳凰頻道': '港澳台', '港澳': '港澳台', '无线财经': '港澳台', '無線財經': '港澳台',
-            '博斯高球': '港澳台', 'SMART知识': '港澳台', 'NHKWorld': '港澳台', 'FOX': '港澳台',
-            'FoodNetwork': '港澳台', '纬来': '港澳台',
-            '龙华动画': '港澳台', '龙华戏剧': '港澳台', '龙华偶像': '港澳台', '龙华电影': '港澳台',
-            '龙华影剧': '港澳台', '国兴卫视': '港澳台', '國興衛視': '港澳台', '愛爾達': '港澳台',
-            '爱尔达': '港澳台',
-            '龙华洋片': '港澳台',
-            '龙华经典': '港澳台', 'ELEVEN体育': '港澳台', '亚洲旅游台': '港澳台', '亞洲旅遊台': '港澳台',
-            '壹新聞': '港澳台', 'J2': '港澳台', '华丽台': '港澳台',
-            '靖洋': '港澳台', '靖天': '港澳台', '乐活频道': '港澳台', '视纳华仁': '港澳台', '采昌影剧': '港澳台',
-            '华艺影剧': '港澳台', '华艺': '港澳台', '智林体育': '港澳台', 'Z频道': '港澳台',
-            '新唐人': '港澳台', '大爱': '港澳台', '镜电视': '港澳台', '十方法界': '港澳台', '华藏卫星': '港澳台',
-            '世界电视': '港澳台', '生命电视': '港澳台', '希望综合': '港澳台', '新天地民俗': '港澳台',
-            '天美丽电视': '港澳台', '环宇新闻': '港澳台', '環宇新聞': '港澳台', '非凡新聞': '港澳台',
-            'JET综合': '港澳台', 'JET綜合': '港澳台', '东风卫视': '港澳台',
-            '東風衛視': '港澳台',
-            '正德电视': '港澳台', '双子卫视': '港澳台', '信大电视': '港澳台', '番薯卫星': '港澳台',
-            '信吉艺文': '港澳台', '信吉卫星': '港澳台', '天良卫星': '港澳台', '大立电视': '港澳台',
-            '诚心电视': '港澳台', '富立电视': '港澳台',
-            '全大电视': '港澳台', '威达超舜': '港澳台', '海豚综合': '港澳台', '唯心电视': '港澳台',
-            '冠军电视': '港澳台', '冠军梦想台': '港澳台', 'A-One体育': '港澳台', 'HOT频道': '港澳台',
-            '彩虹E台': '港澳台', '澳亚卫视': '港澳台', '澳亞衛視': '港澳台',
-            '彩虹电影': '港澳台', '松视': '港澳台', '惊艳成人电影台': '港澳台', '香蕉台': '港澳台',
-            '美亚电影台': '港澳台',
-            '好消息卫星': '港澳台', '好消息二台': '港澳台', '八大': '港澳台', '三立': '港澳台', 'TVBS': '港澳台',
-            '台視': '港澳台', '中視': '港澳台', '華視': '港澳台', '國會頻道': '港澳台', '民視': '港澳台',
-            '公視': '港澳台',
-            'Taiwan': '港澳台',
-            '人間衛視': '港澳台', '東森': '港澳台', '超視美洲': '港澳台', '高點綜合': '港澳台',
-            '高點育樂': '港澳台', '年代新聞': '港澳台', '壹電視': '港澳台',
-            '非凡商業': '港澳台', '好萊塢電影': '港澳台', '亞洲旅遊': '港澳台', '亞洲綜合': '港澳台',
-            'Medici-arts': '港澳台', '梅迪奇藝術': '港澳台', '博斯網球': '港澳台', '博斯無限': '港澳台',
-            '博斯運動': '港澳台', 'SMART知識': '港澳台', '龍華動畫': '港澳台',
-            '龍華戲劇': '港澳台', '龍華偶像': '港澳台', '龍華電影': '港澳台', '龍華影劇': '港澳台',
-            '龍華洋片': '港澳台', '龍華經典': '港澳台',
-            '樂活頻道': '港澳台', '視納華仁': '港澳台', '采昌影劇': '港澳台',
-            '華藝影劇': '港澳台', '華藝': '港澳台', '智林體育': '港澳台', 'Z頻道': '港澳台',
-            '大愛': '港澳台', '鏡電視': '港澳台', '華藏衛星': '港澳台',
-            '世界電視': '港澳台', '生命電視': '港澳台', '希望綜合': '港澳台', '天美麗電視': '港澳台',
-            '正德電視': '港澳台', '雙子衛視': '港澳台', '信大電視': '港澳台', '番薯衛星': '港澳台',
-            '信吉藝文': '港澳台', '信吉衛星': '港澳台', '天良衛星': '港澳台', '大立電視': '港澳台',
-            '誠心電視': '港澳台', '富立電視': '港澳台',
-            '全大電視': '港澳台', '威達超舜': '港澳台', '海豚綜合': '港澳台', '唯心電視': '港澳台',
-            '冠軍電視': '港澳台', '冠軍夢想台': '港澳台', 'A-One體育': '港澳台', 'HOT頻道': '港澳台',
-            'Hi-PLAY': '港澳台', '彩虹電影': '港澳台', '松視': '港澳台', '驚豔成人電影台': '港澳台',
-            'Love Nature 4K': '港澳台', '美亞電影台': '港澳台',
-            'LS TIME': '港澳台', '好消息衛星': '港澳台', 'MOMO': '港澳台',
-            'iNEWS': '港澳台', 'MTV': '港澳台',
-            '澳门': '港澳台', '澳門': '港澳台', '台灣': '港澳台', '国会频道': '港澳台', '公视': '港澳台',
-            '凤凰': '港澳台',
-            '上视': '港澳台', '台湾': '港澳台', '台视': '港澳台', '香港': '港澳台', '三台电视': '港澳台',
-            '人間': '港澳台', '大愛電視': '港澳台', '緯來': '港澳台', '龍華戲劇台': '港澳台',
-            '民视新闻': '港澳台', '东风37': '港澳台',
-            '鳯凰': '港澳台', '天映': '港澳台', '亞旅': '港澳台', '翡翠臺': '港澳台',
-            '八度空间': '港澳台', '华视': '港澳台', '民视': '港澳台', '中视': '港澳台', 'ELTA体育': '港澳台',
-            '爱达': '港澳台', '波斯魅力台': '港澳台', '寰宇': '港澳台',
-            '澳门莲花': '港澳台', '臺灣': '港澳台',
-            '天才衝衝衝': '港澳台', '有线新闻台': '港澳台', '臺視': '港澳台', '博斯': '港澳台', '龙华': '港澳台',
-            '龍華': '港澳台', '鳳凰': '港澳台', 'ELEVEN': '港澳台', 'eleven': '港澳台',
-            '有線': '港澳台', '無綫': '港澳台', '全民最大党': '港澳台', 'Love Nature': '港澳台',
+        dict = {'美国宇航局': '美利坚合众国', '美国购物': '美利坚合众国', 'FOX 体育新闻': '美利坚合众国',
+                '美国历史': '美利坚合众国', '美国红牛运动': '美利坚合众国', '美国1': '美利坚合众国',
+                '美国之音': '美利坚合众国',
+                'FOXNews': '美利坚合众国', 'Ion Plus': '美利坚合众国', 'ION Plus': '美利坚合众国',
+                '美国中文': '美利坚合众国', '美国狗狗宠物': '美利坚合众国', 'BlazeTV': '美利坚合众国',
+                'Seattle Channel': '美利坚合众国', '美国新闻': '美利坚合众国', 'CBS News': '美利坚合众国',
+                'TBS': '美利坚合众国', 'NBC': '美利坚合众国', 'Hallmark Movies': '美利坚合众国',
+                'Telemundo': '美利坚合众国', 'Disney XD': '美利坚合众国', 'AMC US': '美利坚合众国',
+                'HGTV': '美利坚合众国', 'tru TV': '美利坚合众国', 'Fox 5 WNYW': '美利坚合众国',
+                'ABC HD': '美利坚合众国', 'My9NJ': '美利坚合众国', 'Live Well Network': '美利坚合众国',
+                'Gulli': '美利坚合众国', 'Tiji TV': '美利坚合众国', 'WPIX-TV': '美利坚合众国',
+                'MOTORTREND': '美利坚合众国', 'BBC America': '美利坚合众国', 'THIRTEEN': '美利坚合众国',
+                'WLIW21': '美利坚合众国', 'NJTV': '美利坚合众国', 'MeTV': '美利坚合众国', 'SBN': '美利坚合众国',
+                'WMBC Digital Television': '美利坚合众国', 'Univision': '美利坚合众国', 'nba': '美利坚合众国',
+                'NBA': '美利坚合众国', 'fox news': '美利坚合众国', 'FOX News': '美利坚合众国',
+                '.sci-fi': '美利坚合众国', 'UniMÁS': '美利坚合众国', 'Cartoons_90': '美利坚合众国',
+                'Cartoons Short': '美利坚合众国', 'Cartoons Big': '美利坚合众国', 'CineMan': '美利坚合众国',
+                'USA': '美利坚合众国', 'BCU Кинозал Premiere': '美利坚合众国', 'TNT': '美利坚合众国',
+                'beIN SPORTS': '美利坚合众国', 'Sky Sports': '美利坚合众国', 'NBC NEWS': '美利坚合众国',
+                'NFL NETWORK': '美利坚合众国', 'WWE NETWORK': '美利坚合众国', 'A&E': '美利坚合众国',
+                'AMC': '美利坚合众国', 'BBC AMERICA': '美利坚合众国', 'BET': '美利坚合众国',
+                'BRAVO': '美利坚合众国', 'USA NETWORK': '美利坚合众国', 'CNBC': '美利坚合众国',
+                'NHL Network': '美利坚合众国', '5USA': '美利坚合众国', 'CBS SPORTS': '美利坚合众国',
+                'FOX SPORTS': '美利坚合众国', 'MSG US': '美利坚合众国', 'MSG 2 US': '美利坚合众国',
+                'Ion Television': '美利坚合众国', 'NYCTV Life': '美利坚合众国', 'TENNIS HD': '美利坚合众国',
+                'CINEMAXX MORE MAXX': '美利坚合众国', 'CINEMAX THRILLERMAX': '美利坚合众国',
+                'CINEMAX OUTER MAX': '美利坚合众国', 'CINEMAX MOVIEMAX': '美利坚合众国',
+                'CINEMAX ACTION MAX': '美利坚合众国', 'MTV Classic': '美利坚合众国',
+                'Espn News': '美利坚合众国', 'ESPN 2': '美利坚合众国', 'ESPN USA': '美利坚合众国',
+                'Discovery Channel': '美利坚合众国', 'MAVTV': '美利坚合众国', '布兰奇电视': '美利坚合众国',
+                '美国l': '美利坚合众国', '美国中央台': '美利坚合众国', 'IN: Harvest TV USA': '美利坚合众国',
+                'LeSEA Broadcasting Network': '美利坚合众国', 'US: USA Network': '美利坚合众国',
+                'CBS New York': '美利坚合众国', 'ABC News': '美利坚合众国', 'AFG: ATN USA': '美利坚合众国',
+                'usa fight network': '美利坚合众国', 'E! Entertaiment USA': '美利坚合众国',
+                'USA Today': '美利坚合众国', 'usa espn': '美利坚合众国', 'UK: 5 USA': '美利坚合众国',
+                'CMC-USA': '美利坚合众国', 'usa disney': '美利坚合众国', 'usa network': '美利坚合众国',
+                'usa ufc': '美利坚合众国', 'usa wwe': '美利坚合众国', 'usa mtv': '美利坚合众国',
+                'usa crime': '美利坚合众国', 'usa cnbc': '美利坚合众国', 'GoUSA TV': '美利坚合众国',
+                'Harvest TV USA': '美利坚合众国', 'jltv usa': '美利坚合众国', 'Best Movies HD (USA)': '美利坚合众国',
+                'usa news': '美利坚合众国', 'Go USA': '美利坚合众国', 'usa american heroes': '美利坚合众国',
+                'usa tcm': '美利坚合众国', 'lesea broadcasting network (usa)': '美利坚合众国',
+                'usa c-span': '美利坚合众国', 'usa hbo': '美利坚合众国', 'cnn usa': '美利坚合众国',
+                'CNN': '美利坚合众国', 'usa': '美利坚合众国', 'american': '美利坚合众国',
+                'American': '美利坚合众国', 'cnn': '美利坚合众国',
+                'TOKYO MX': '日本台', 'Tokyo MX': '日本台', 'tokyo mx': '日本台', 'Weather News': '日本台',
+                'weathernews': '日本台',
+                'WeatherNews': '日本台', 'hoy tv': '港澳台', 'NHK': '日本台', 'TV Tokyo': '日本台', 'Star 1': '日本台',
+                'Star 2': '日本台', 'Nippon TV': '日本台', 'MBS': '日本台', 'Animax': '日本台', 'QVC Japan': '日本台'
+            , 'ANIMAX': '日本台', 'animax': '日本台', 'nhk': '日本台', 'qvc - japan': '日本台',
+                'qvc japan': '日本台', '朝日': '日本台', 'aniplus': '日本台', 'Gunma TV': '日本台',
+                'tv tokyo': '日本台',
+                'Fuji TV': '日本台', 'TV Asahi': '日本台', 'テレビ東京': '日本台', 'BS Fuji': '日本台',
+                'BS TBS': '日本台', 'BS Asahi': '日本台', 'BS Tokyo': '日本台', 'WOWOW Prime': '日本台',
+                'WOWOWO 电影': '日本台', '云游日本': '日本台', '日本女子摔角': '日本台', 'TBS NEWS': '日本台',
+                '日本テレビ': '日本台', 'WOWOWライブ': '日本台', 'WOWOWプライム': '日本台', 'J Sports': '日本台',
+                '人间卫视': '港澳台', 'Animal': '自然', '日本购物': '日本台', 'Disney Channel Japan': '日本台',
+                'JAPAN3': '日本台', 'JAPAN5': '日本台', 'JAPAN6': '日本台', 'JAPAN7': '日本台', 'JAPAN8': '日本台',
+                'JAPAN9': '日本台', '日本News24': '日本台', '日本映画': '日本台', 'GSTV': '日本台',
+                'WOWOWシネマ': '日本台',
+                'スターチャンネル': '日本台', 'BSアニマックス': '日本台', '日-J Sports': '日本台', '釣りビジョン': '日本台',
+                'フジテレビ': '日本台', '東映チャンネル': '日本台', 'チャンネルNECO': '日本台', 'ムービープラス': '日本台',
+                'スカイA': '日本台', 'GAORA': '日本台', '日テレジータス': '日本台', 'ゴルフネットワーク': '日本台',
+                '時代劇専門チャンネル': '日本台', 'ファミリー劇場': '日本台', 'ホームドラマチャンネル': '日本台',
+                'チャンネル銀河': '日本台', 'スーパー!ドラマTV': '日本台', 'LaLaTV': '日本台', 'Music ON TV': '日本台',
+                '歌謡ポップスチャンネル': '日本台', 'キッズステーション': '日本台', '日テレNEWS24': '日本台',
+                '囲碁・将棋チャンネル': '日本台', 'Shop Channel': '日本台', 'MX Live': '日本台',
+                'ウェザーニュース': '日本台', '群馬テレビ': '日本台', '漫步日本': '日本台',
+                '东森': '港澳台', '超视美洲': '港澳台', 'ETtoday': '港澳台', '高点综合': '港澳台',
+                '高点育乐': '港澳台',
+                '年代新闻': '港澳台', '壹电视': '港澳台', '中天': '港澳台',
+                '非凡新闻': '港澳台', '凤凰卫视': '港澳台', '凤凰新闻': '港澳台', '鳳凰衛視': '港澳台',
+                '鳳凰新聞': '港澳台',
+                '凤凰香港': '港澳台', '香港卫视': '港澳台',
+                '香港衛視': '港澳台', '凤凰资讯': '港澳台', '鳳凰資訊': '港澳台', '凤凰中文': '港澳台',
+                '鳳凰中文': '港澳台', '香港开电视': '港澳台', '香港開電視': '港澳台', '香港有線': '港澳台',
+                '香港有线': '港澳台', '卫视合家欢': '港澳台', '衛視合家歡': '港澳台', 'HBO': '港澳台',
+                'MYTV电影': '港澳台', 'MYTV電影': '港澳台', 'FRESH电影': '港澳台', 'FRESH電影': '港澳台',
+                '非凡商业': '港澳台', '好莱坞电影': '港澳台', '亚洲旅游': '港澳台', '亚洲综合': '港澳台',
+                '梅迪奇艺术': '港澳台', '博斯魅力': '港澳台', 'CINEMA影院': '港澳台',
+                '博斯网球': '港澳台', '博斯无限': '港澳台', '香港國際': '港澳台', '香港国际': '港澳台',
+                '星空卫视': '港澳台', '星空衛視': '港澳台', '翡翠台': '港澳台', '天映经典': '港澳台',
+                '天映經典': '港澳台', '澳视': '港澳台', '澳視': '港澳台', '唯心台': '港澳台', 'TVB星河': '港澳台',
+                'RTHK32': '港澳台', 'RTHK31': '港澳台', 'ViuTV': '港澳台', 'Viutv': '港澳台', '功夫台': '港澳台',
+                'ELEVEN體育': '港澳台', '星河台': '港澳台', '星河频道': '港澳台',
+                '博斯运动': '港澳台', '龙祥': '港澳台', '龍祥': '港澳台', '明珠台': '港澳台', '凤凰频道': '港澳台',
+                '鳳凰頻道': '港澳台', '港澳': '港澳台', '无线财经': '港澳台', '無線財經': '港澳台',
+                '博斯高球': '港澳台', 'SMART知识': '港澳台', 'NHKWorld': '港澳台', 'FOX': '港澳台',
+                'FoodNetwork': '港澳台', '纬来': '港澳台',
+                '龙华动画': '港澳台', '龙华戏剧': '港澳台', '龙华偶像': '港澳台', '龙华电影': '港澳台',
+                '龙华影剧': '港澳台', '国兴卫视': '港澳台', '國興衛視': '港澳台', '愛爾達': '港澳台',
+                '爱尔达': '港澳台',
+                '龙华洋片': '港澳台',
+                '龙华经典': '港澳台', 'ELEVEN体育': '港澳台', '亚洲旅游台': '港澳台', '亞洲旅遊台': '港澳台',
+                '壹新聞': '港澳台', 'J2': '港澳台', '华丽台': '港澳台',
+                '靖洋': '港澳台', '靖天': '港澳台', '乐活频道': '港澳台', '视纳华仁': '港澳台', '采昌影剧': '港澳台',
+                '华艺影剧': '港澳台', '华艺': '港澳台', '智林体育': '港澳台', 'Z频道': '港澳台',
+                '新唐人': '港澳台', '大爱': '港澳台', '镜电视': '港澳台', '十方法界': '港澳台', '华藏卫星': '港澳台',
+                '世界电视': '港澳台', '生命电视': '港澳台', '希望综合': '港澳台', '新天地民俗': '港澳台',
+                '天美丽电视': '港澳台', '环宇新闻': '港澳台', '環宇新聞': '港澳台', '非凡新聞': '港澳台',
+                'JET综合': '港澳台', 'JET綜合': '港澳台', '东风卫视': '港澳台',
+                '東風衛視': '港澳台',
+                '正德电视': '港澳台', '双子卫视': '港澳台', '信大电视': '港澳台', '番薯卫星': '港澳台',
+                '信吉艺文': '港澳台', '信吉卫星': '港澳台', '天良卫星': '港澳台', '大立电视': '港澳台',
+                '诚心电视': '港澳台', '富立电视': '港澳台',
+                '全大电视': '港澳台', '威达超舜': '港澳台', '海豚综合': '港澳台', '唯心电视': '港澳台',
+                '冠军电视': '港澳台', '冠军梦想台': '港澳台', 'A-One体育': '港澳台', 'HOT频道': '港澳台',
+                '彩虹E台': '港澳台', '澳亚卫视': '港澳台', '澳亞衛視': '港澳台',
+                '彩虹电影': '港澳台', '松视': '港澳台', '惊艳成人电影台': '港澳台', '香蕉台': '港澳台',
+                '美亚电影台': '港澳台',
+                '好消息卫星': '港澳台', '好消息二台': '港澳台', '八大': '港澳台', '三立': '港澳台', 'TVBS': '港澳台',
+                '台視': '港澳台', '中視': '港澳台', '華視': '港澳台', '國會頻道': '港澳台', '民視': '港澳台',
+                '公視': '港澳台',
+                'Taiwan': '港澳台',
+                '人間衛視': '港澳台', '東森': '港澳台', '超視美洲': '港澳台', '高點綜合': '港澳台',
+                '高點育樂': '港澳台', '年代新聞': '港澳台', '壹電視': '港澳台',
+                '非凡商業': '港澳台', '好萊塢電影': '港澳台', '亞洲旅遊': '港澳台', '亞洲綜合': '港澳台',
+                'Medici-arts': '港澳台', '梅迪奇藝術': '港澳台', '博斯網球': '港澳台', '博斯無限': '港澳台',
+                '博斯運動': '港澳台', 'SMART知識': '港澳台', '龍華動畫': '港澳台',
+                '龍華戲劇': '港澳台', '龍華偶像': '港澳台', '龍華電影': '港澳台', '龍華影劇': '港澳台',
+                '龍華洋片': '港澳台', '龍華經典': '港澳台',
+                '樂活頻道': '港澳台', '視納華仁': '港澳台', '采昌影劇': '港澳台',
+                '華藝影劇': '港澳台', '華藝': '港澳台', '智林體育': '港澳台', 'Z頻道': '港澳台',
+                '大愛': '港澳台', '鏡電視': '港澳台', '華藏衛星': '港澳台',
+                '世界電視': '港澳台', '生命電視': '港澳台', '希望綜合': '港澳台', '天美麗電視': '港澳台',
+                '正德電視': '港澳台', '雙子衛視': '港澳台', '信大電視': '港澳台', '番薯衛星': '港澳台',
+                '信吉藝文': '港澳台', '信吉衛星': '港澳台', '天良衛星': '港澳台', '大立電視': '港澳台',
+                '誠心電視': '港澳台', '富立電視': '港澳台',
+                '全大電視': '港澳台', '威達超舜': '港澳台', '海豚綜合': '港澳台', '唯心電視': '港澳台',
+                '冠軍電視': '港澳台', '冠軍夢想台': '港澳台', 'A-One體育': '港澳台', 'HOT頻道': '港澳台',
+                'Hi-PLAY': '港澳台', '彩虹電影': '港澳台', '松視': '港澳台', '驚豔成人電影台': '港澳台',
+                'Love Nature 4K': '港澳台', '美亞電影台': '港澳台',
+                'LS TIME': '港澳台', '好消息衛星': '港澳台', 'MOMO': '港澳台',
+                'iNEWS': '港澳台', 'MTV': '港澳台',
+                '澳门': '港澳台', '澳門': '港澳台', '台灣': '港澳台', '国会频道': '港澳台', '公视': '港澳台',
+                '凤凰': '港澳台',
+                '上视': '港澳台', '台湾': '港澳台', '台视': '港澳台', '香港': '港澳台', '三台电视': '港澳台',
+                '人間': '港澳台', '大愛電視': '港澳台', '緯來': '港澳台', '龍華戲劇台': '港澳台',
+                '民视新闻': '港澳台', '东风37': '港澳台',
+                '鳯凰': '港澳台', '天映': '港澳台', '亞旅': '港澳台', '翡翠臺': '港澳台',
+                '八度空间': '港澳台', '华视': '港澳台', '民视': '港澳台', '中视': '港澳台', 'ELTA体育': '港澳台',
+                '爱达': '港澳台', '波斯魅力台': '港澳台', '寰宇': '港澳台',
+                '澳门莲花': '港澳台', '臺灣': '港澳台',
+                '天才衝衝衝': '港澳台', '有线新闻台': '港澳台', '臺視': '港澳台', '博斯': '港澳台', '龙华': '港澳台',
+                '龍華': '港澳台', '鳳凰': '港澳台', 'ELEVEN': '港澳台', 'eleven': '港澳台',
+                '有線': '港澳台', '無綫': '港澳台', '全民最大党': '港澳台', 'Love Nature': '港澳台',
 
-            '央視': '央视', '中央': '央视', '央视': '央视', 'CCTV': '央视', 'cctv': '央视',
-            '卫视': '卫视', '衛視': '卫视', 'CGTN': '央视', '环球电视': '央视',
+                '央視': '央视', '中央': '央视', '央视': '央视', 'CCTV': '央视', 'cctv': '央视',
+                '卫视': '卫视', '衛視': '卫视', 'CGTN': '央视', '环球电视': '央视',
 
-            '华数': '华数', 'wasu.tv': '华数', '華數': '华数', 'CIBN': 'CIBN', '/cibn': 'CIBN', 'NewTv': 'NewTv',
-            'NEWTV': 'NewTV', '/newtv': 'NewTV', '百視通': '百视通', '百事通': '百视通', 'BesTV': '百视通',
-            'NewTV': 'NewTV',
-            'BESTV': '百视通', 'BestTv': '百视通', '/bestv': '百视通', '.bestv': '百视通', '百视通': '百视通',
+                '华数': '华数', 'wasu.tv': '华数', '華數': '华数', 'CIBN': 'CIBN', '/cibn': 'CIBN', 'NewTv': 'NewTv',
+                'NEWTV': 'NewTV', '/newtv': 'NewTV', '百視通': '百视通', '百事通': '百视通', 'BesTV': '百视通',
+                'NewTV': 'NewTV',
+                'BESTV': '百视通', 'BestTv': '百视通', '/bestv': '百视通', '.bestv': '百视通', '百视通': '百视通',
 
-            '新闻': '新闻', '体育': '体育', '动漫': '动漫', 'NASA': '科技',
-            '电影': '电影', '动画': '动画', 'Sport': '体育', '體育': '体育', '運動': '体育',
-            '游戏': '游戏', '卡通': '卡通', '影院': '电影', '足球': '体育', '剧场': '剧场', '东方': '',
-            '纪实': '纪录片', '电竞': '游戏', '教育': '教育', '自然': '自然', '动物': '自然', 'NATURE': '自然',
+                '新闻': '新闻', '体育': '体育', '动漫': '动漫', 'NASA': '科技', '豆瓣': '影视',
+                '电影': '影视', '动画': '动画', 'Sport': '体育', '體育': '体育', '運動': '体育',
+                '游戏': '游戏', '卡通': '卡通', '影院': '影视', '足球': '体育', '剧场': '剧场', '东方': '',
+                '纪实': '纪录片', '电竞': '游戏', '教育': '教育', '自然': '自然', '动物': '自然', 'NATURE': '自然',
 
-            '成龍': '明星', '成龙': '明星', '李连杰': '明星', '周星驰': '明星', '吴孟达': '明星', '刘德华': '明星',
-            '周润发': '明星', '洪金宝': '明星', '黄渤': '明星', '林正英': '明星',
+                '成龍': '明星', '成龙': '明星', '李连杰': '明星', '周星驰': '明星', '吴孟达': '明星', '刘德华': '明星',
+                '周润发': '明星', '洪金宝': '明星', '黄渤': '明星', '林正英': '明星',
 
-            '七龍珠': '动漫', '海绵宝宝': '动漫', '猫和老鼠': '动漫',
-            '网球王子': '动漫', '蜡笔小新': '动漫', '海贼王': '动漫', '中华小当家': '动漫', '四驱兄弟': '动漫',
-            '哆啦A梦': '动漫', '樱桃小丸子': '动漫', '柯南': '动漫', '犬夜叉': '动漫', '乱马': '动漫', '童年': '',
-            '高达': '动漫',
-            '守护甜心': '动漫', '开心超人': '动漫', '开心宝贝': '动漫', '百变小樱': '动漫',
-            '咱们裸熊': '动漫', '游戏王': '动漫', 'eva': '动漫',
+                '七龍珠': '动漫', '海绵宝宝': '动漫', '猫和老鼠': '动漫',
+                '网球王子': '动漫', '蜡笔小新': '动漫', '海贼王': '动漫', '中华小当家': '动漫', '四驱兄弟': '动漫',
+                '哆啦A梦': '动漫', '樱桃小丸子': '动漫', '柯南': '动漫', '犬夜叉': '动漫', '乱马': '动漫', '童年': '',
+                '高达': '动漫',
+                '守护甜心': '动漫', '开心超人': '动漫', '开心宝贝': '动漫', '百变小樱': '动漫',
+                '咱们裸熊': '动漫', '游戏王': '动漫', 'eva': '动漫',
 
-            '三国演义': '电视剧', '发现': '探索发现', '探索': '探索发现',
-            '连续剧': '电视剧', '音乐': '音乐',
+                '三国演义': '电视剧', '发现': '探索发现', '探索': '探索发现',
+                '连续剧': '电视剧', '音乐': '音乐',
 
-            '财经': '新闻', '经济': '新闻', '美食': '美食', '资讯': '新闻', '时尚': '时尚', '旅游': '旅游',
+                '财经': '新闻', '经济': '新闻', '美食': '美食', '资讯': '新闻', '时尚': '时尚', '旅游': '旅游',
 
-            '健康': '健康养生', 'Fashion4K': '时尚',
-            '养生': '健康养生',
+                '健康': '健康养生', 'Fashion4K': '时尚',
+                '养生': '健康养生',
 
-            '黑莓': '', '综艺': '综艺', '都市': '都市', '看天下': '', '咪咕': '', '谍战': '电视剧',
+                '黑莓': '', '综艺': '综艺', '都市': '都市', '看天下': '', '咪咕': '', '谍战': '电视剧',
 
-            '华语': '', '影视': '影视', '科教': '科技', '生活': '生活', 'discovery': '探索发现',
-            '娱乐': '', '电视': '电视台', '纪录': '纪录片', '外语': '外语', '车迷': '汽车',
-            '留学': '留学', '新闻频道': '新闻', '靓装': '时尚', '戏曲': '戏曲', '电视台': '电视台',
-            '综合频道': '电视台', '解密': '探索发现',
-            '综合': '电视台', '法制': '法制', '数码': '数码', '汽车': '汽车', '军旅': '影视', '古装': '影视',
-            '喜剧': '影视', '科技': '科技', '惊悚': '影视', '悬疑': '影视',
-            '科幻': '影视', '全球大片': '影视',
-            '咏春': '影视', '黑帮': '影视', '古墓': '影视',
-            '警匪': '影视', '少儿': '少儿',
+                '华语': '', '影视': '影视', '科教': '科技', '生活': '生活', 'discovery': '探索发现',
+                '娱乐': '', '电视': '电视台', '纪录': '纪录片', '外语': '外语', '车迷': '汽车',
+                '留学': '留学', '新闻频道': '新闻', '靓装': '时尚', '戏曲': '戏曲', '电视台': '电视台',
+                '综合频道': '电视台', '解密': '探索发现',
+                '综合': '电视台', '法制': '法制', '数码': '数码', '汽车': '汽车', '军旅': '影视', '古装': '影视',
+                '喜剧': '影视', '科技': '科技', '惊悚': '影视', '悬疑': '影视',
+                '科幻': '影视', '全球大片': '影视',
+                '咏春': '影视', '黑帮': '影视', '古墓': '影视',
+                '警匪': '影视', '少儿': '少儿',
 
-            '课堂': '教育',
-            '政务': '政务',
+                '课堂': '教育',
+                '政务': '政务',
 
-            '民生': '', '农村': '', '人文': '', '幸福彩': '',
-            '家庭': '', '新视觉': '科技',
+                '民生': '', '农村': '', '人文': '', '幸福彩': '',
+                '家庭': '', '新视觉': '科技',
 
-            '长城': '',
-            '金色频道': '',
-            '气象': '', '炫舞': '', '新华英文': '', '陶瓷': '',
-            '垂钓': '钓鱼',
-            '时代': '', '休闲': '',
-            '文旅': '', '朝鲜': '', '汉语': '',
-            '兵团': '',
-            '兵器': '兵器',
+                '长城': '',
+                '金色频道': '',
+                '气象': '', '炫舞': '', '新华英文': '', '陶瓷': '',
+                '垂钓': '钓鱼',
+                '时代': '', '休闲': '',
+                '文旅': '', '朝鲜': '', '汉语': '',
+                '兵团': '',
+                '兵器': '兵器',
 
-            '纯享': '',
-            'SiTV': '', 'CHC': '',
-            'BRTV': '', 'Lifetime': '',
-            'GINX': '', 'Rollor': '',
-            'GlobalTrekker': '', 'LUXE TV': '', 'Insight': '', 'Evenement': '',
-            'Clarity': '', 'hbo': '',
-            'TRAVELXP': '', 'ODISEA': '', 'MUZZIK': '', 'SKY HIGH': '',
-            'Liberty': ''
-        }
+                '纯享': '',
+                'SiTV': '', 'CHC': '',
+                'BRTV': '', 'Lifetime': '',
+                'GINX': '', 'Rollor': '',
+                'GlobalTrekker': '', 'LUXE TV': '', 'Insight': '', 'Evenement': '',
+                'Clarity': '', 'hbo': '',
+                'TRAVELXP': '', 'ODISEA': '', 'MUZZIK': '', 'SKY HIGH': '',
+                'Liberty': ''
+                }
         redis_add_map(REDIS_KEY_M3U_WHITELIST, dict)
         m3u_whitlist = dict.copy()
     m3u_whitlist = dict.copy()
@@ -3369,22 +3488,24 @@ def addHistorySubscribePass(password, name):
     redis_add_map(REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS, my_dict)
 
 
-file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u': 'aliveM3u', 'healthM3u': 'healthM3u',
-                  'tvDomainForAdguardhome': 'tvDomainForAdguardhome',
-                  'tvDomainForAdguardhomeSecret': 'tvDomainForAdguardhomeSecret',
-                  'whiteListDnsmasq': 'whiteListDnsmasq', 'whiteListDnsmasqSecret': 'whiteListDnsmasqSecret',
-                  'whiteListDomian': 'whiteListDomian',
-                  'whiteListDomianSecret': 'whiteListDomianSecret',
-                  'openclashFallbackFilterDomain': 'openclashFallbackFilterDomain',
-                  'openclashFallbackFilterDomainSecret': 'openclashFallbackFilterDomainSecret',
-                  'blackListDomain': 'blackListDomain',
-                  'blackListDomainSecret': 'blackListDomainSecret', 'ipv4': 'ipv4', 'ipv4Secret': 'ipv4Secret',
-                  'ipv6': 'ipv6',
-                  'ipv6Secret': 'ipv6Secret', 'proxyConfig': 'proxyConfig', 'proxyConfigSecret': 'proxyConfigSecret',
-                  'whitelistDirectRule': 'whitelistDirectRule', 'blacklistProxyRule': 'blacklistProxyRule',
-                  'simpleOpenclashFallBackFilterDomain': 'simpleOpenclashFallBackFilterDomain',
-                  'simpleblacklistProxyRule': 'simpleblacklistProxyRule', 'simpleDnsmasq': 'simpleDnsmasq',
-                  'simplewhitelistProxyRule': 'simplewhitelistProxyRule'}
+file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u': 'aliveM3u',
+                          'healthM3u': 'healthM3u',
+                          'tvDomainForAdguardhome': 'tvDomainForAdguardhome',
+                          'tvDomainForAdguardhomeSecret': 'tvDomainForAdguardhomeSecret',
+                          'whiteListDnsmasq': 'whiteListDnsmasq', 'whiteListDnsmasqSecret': 'whiteListDnsmasqSecret',
+                          'whiteListDomian': 'whiteListDomian',
+                          'whiteListDomianSecret': 'whiteListDomianSecret',
+                          'openclashFallbackFilterDomain': 'openclashFallbackFilterDomain',
+                          'openclashFallbackFilterDomainSecret': 'openclashFallbackFilterDomainSecret',
+                          'blackListDomain': 'blackListDomain',
+                          'blackListDomainSecret': 'blackListDomainSecret', 'ipv4': 'ipv4', 'ipv4Secret': 'ipv4Secret',
+                          'ipv6': 'ipv6',
+                          'ipv6Secret': 'ipv6Secret', 'proxyConfig': 'proxyConfig',
+                          'proxyConfigSecret': 'proxyConfigSecret',
+                          'whitelistDirectRule': 'whitelistDirectRule', 'blacklistProxyRule': 'blacklistProxyRule',
+                          'simpleOpenclashFallBackFilterDomain': 'simpleOpenclashFallBackFilterDomain',
+                          'simpleblacklistProxyRule': 'simpleblacklistProxyRule', 'simpleDnsmasq': 'simpleDnsmasq',
+                          'simplewhitelistProxyRule': 'simplewhitelistProxyRule'}
 
 
 def init_file_name():
@@ -4209,7 +4330,7 @@ def chaoronghe7():
                                OPENCLASH_FALLBACK_FILTER_DOMAIN_LEFT,
                                OPENCLASH_FALLBACK_FILTER_DOMAIN_RIGHT,
                                path2,
-                               PROXY_RULE_LEFT, PROXY_RULE_RIGHT)
+                               PROXY_RULE_LEFT)
     except Exception as e:
         return "empty"
 
@@ -4225,7 +4346,7 @@ def chaoronghe8():
                                BLACKLIST_DNSMASQ_FORMATION_LEFT,
                                BLACKLIST_DNSMASQ_FORMATION_right,
                                path2,
-                               DIRECT_RULE_LEFT, DIRECT_RULE_RIGHT)
+                               DIRECT_RULE_LEFT)
     except Exception as e:
         return "empty"
 

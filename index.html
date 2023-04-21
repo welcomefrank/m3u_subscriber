@@ -1042,6 +1042,7 @@
         <h1>M3U白名单</h1>
         <div style="float: left;width: 70%">
             <h3>上传文件导入合并M3U白名单</h3>
+            <h3>港澳台、央视、卫视分组做了特殊处理，不要修改这些分组名字</h3>
         </div>
         <div style="width:100%">
             <div>
@@ -1059,7 +1060,7 @@
             <button id="removem3ulinks11" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks11')">删除全部关键字
             </button>
             <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">关键字:过滤生成有效大陆直播源的判断依据；备注:作为白名单分组组名
+                <div class="notice" style="display: flex;width: 80%;">关键字:过滤生成有效大陆直播源的判断依据;备注:频道分组
                 </div>
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
@@ -1223,9 +1224,10 @@
     <div id="page19" style="display: none;">
         <h1>简易DNS分流白名单</h1>
         <div style="float: left;width: 70%">
-            <h3>填写个人日常使用的白名单域名一级域名，比如:bilibili.com，bilivideo.com</h3>
+            <h3>填写个人日常使用的白名单域名一\二级域名，比如:bilibili.com，bilivideo.com</h3>
             <h3>这里的数据不建议特别多,根据个人网络冲浪习惯设置</h3>
             <h3>该规则优先于DNS白名单订阅的全部域名规则</h3>
+            <h3>当这里出现外国域名就代表泄露翻墙的可能性已经成立，要绝对避免</h3>
             <h3>默认自动开启自主生成白名单数据,如果不可靠可以在功能开关关闭该功能</h3>
             <h3 class="urllink">个人白名单浏览记录-dnsmasq: http://192.168.5.1:22771/secret/simpleDnsmasq.conf</h3>
             <h3 class="urllink">个人白名单分流规则-openclash: http://192.168.5.1:22771/secret/simplewhitelistProxyRule.txt</h3>
@@ -1268,6 +1270,7 @@
             <h3>填写个人日常使用的黑名单域名一\二级域名，比如:youtube.com，twitter.com,m.youtube.com</h3>
             <h3>这里的数据不建议特别多,根据个人网络冲浪习惯设置</h3>
             <h3>该规则优先于DNS黑名单订阅的全部域名规则</h3>
+            <h3>当这里出现大陆域名不一定泄露,如果是openclash作为上游还有保底的余地</h3>
             <h3>默认自动开启自主生成黑名单数据,如果不可靠可以在功能开关关闭该功能</h3>
             <h3 class="urllink">个人黑名单浏览记录-openclash: http://192.168.5.1:22771/secret/simpleOpenclashFallBackFilterDomain.txt</h3>
             <h3 class="urllink">个人黑名单分流规则-openclash: http://192.168.5.1:22771/secret/simpleblacklistProxyRule.txt</h3>

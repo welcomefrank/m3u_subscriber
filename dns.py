@@ -74,6 +74,19 @@ def put_element(q, element):
     #     print("队列已满，不能添加更多元素")
 
 
+def clearCache(second):
+    while True:
+        black_list_simple_tmp_cache.clear()
+        black_list_simple_tmp_policy.clear()
+        white_list_simple_tmp_cache.clear()
+        white_list_simple_tmp_policy.clear()
+        black_list_tmp_cache.clear()
+        black_list_tmp_policy.clear()
+        white_list_tmp_cache.clear()
+        white_list_tmp_policy.clear()
+        time.sleep(second)
+
+
 # 自动更新黑白名单数据至redis,多线程插入会丢失数据，只能把插数据的操作集中到单个线程
 def deal_black_list_simple_policy_queue(second):
     global black_list_simple_policy_queue
@@ -730,7 +743,7 @@ def initSimpleWhiteList():
     if simplewhitelist and len(simplewhitelist) > 0:
         white_list_simple_nameserver_policy.clear()
         for domain in simplewhitelist:
-            #updateSimpleWhiteListSpData(domain)
+            # updateSimpleWhiteListSpData(domain)
             updateSpData(domain, white_list_simple_nameserver_policy)
 
 
@@ -1200,6 +1213,9 @@ def main():
     timer_thread2 = threading.Thread(target=deal_black_list_simple_policy_queue,
                                      args=(10,), daemon=True)
     timer_thread2.start()
+    timer_thread3 = threading.Thread(target=clearCache,
+                                     args=(86400,), daemon=True)
+    timer_thread3.start()
     # 中国dns端口
     china_port = chinadnsport[REDIS_KEY_CHINA_DNS_PORT]
     # 中国dns服务器
