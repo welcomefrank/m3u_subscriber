@@ -328,6 +328,10 @@
         <input type="radio" name="page" id="page23">
         <span>M3U垃圾过滤</span>
     </label>
+    <label>
+        <input type="radio" name="page" id="page24">
+        <span>M3U白名单分组优先级</span>
+    </label>
 </div>
 <div id="choice">
     <div id="page1" style="display: block;">
@@ -384,8 +388,9 @@
     </div>
     <div id="page2" style="display: none;">
         <h1>直播源粘贴板:永久保存直播源到本地</h1>
-        <h3>点击超融合链接，则会合并这里的直播源到A.m3u</h3>
+        <h3>点击超融合链接，则会合并这里的直播源到全部直播源</h3>
         <h3>这部分的直播源只能通过手动删除</h3>
+        <h3>没有在功能开关开启有效直播源和白名单直播源则无法使用该功能</h3>
         <h3>上传m3u文件自动/复制直播源到文本框手动合并直播源</h3>
         <input type="file" id="upload-m3u-btn" style="width: 100%"></input>
         <textarea id="m3uarea" rows="10" style="width: 100%;background-color: #758a99;color: aliceblue"></textarea>
@@ -1513,6 +1518,37 @@
             </table>
         </div>
     </div>
+    <div id="page24" style="display: none;">
+        <h1>M3U白名单分组优先级</h1>
+        <div style="float: left;width: 70%">
+            <h3>上传文件导入合并M3U白名单配置</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn16" class="uploadjsonbtn" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row16" class="addNewSubscriber" style="width:100%">新增分组配置</button>
+            </div>
+            <div>
+                <button id="download-json-btn16" class="button download-json-btn" style="width: 100%">导出分组配置备份</button>
+            </div>
+            <div style="width: 97%;">
+                <input type="text" id="searchInput16" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks16" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks16')">删除全部关键字
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">分组:m3u白名单分组;备注:优先级数字,未命名分组默认-1
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table16" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -1705,6 +1741,11 @@
     const inputTable15 = document.getElementById('input-table15');
     const downloadBtn15 = document.getElementById('download-json-btn15');
 
+    const fileInput16 = document.getElementById('upload-json-btn16');
+    const addRowButton16 = document.getElementById('add-row16');
+    const inputTable16 = document.getElementById('input-table16');
+    const downloadBtn16 = document.getElementById('download-json-btn16');
+
     // 输入框显示主机ip
     const iptext = document.getElementById('iptext');
     // 主机ip缓存
@@ -1776,8 +1817,12 @@
     const searchInput13 = document.getElementById('searchInput13');
         // 获取页面元素-m3u黑名单
     const searchInput14 = document.getElementById('searchInput14');
+    // 获取页面元素-m3u白名单分组优先级
+    const searchInput16 = document.getElementById('searchInput16');
 
-        // 给m3u黑名单搜索框绑定'oninput'事件
+    // 给m3u白名单分组优先级搜索框绑定'oninput'事件
+    searchAddListener(searchInput16,inputTable16)
+    // 给m3u黑名单搜索框绑定'oninput'事件
     searchAddListener(searchInput14,inputTable15)
     // 给节点后端配置订阅搜索框绑定'oninput'事件
     searchAddListener(searchInput13,inputTable10)
@@ -2403,6 +2448,10 @@
     function reloadM3uWhiteList() {
         reloadBase('/api/getall11',  inputTable11)
     }
+    //M3U白名单分组优先级-从数据库拉取关键字列表数据
+    function reloadM3uWhiteListRank() {
+        reloadBase('/api/getall16',  inputTable16)
+    }
     //M3U黑名单-从数据库拉取关键字列表数据
     function reloadM3uBlackList() {
         reloadBase('/api/getall15',  inputTable15)
@@ -2549,6 +2598,11 @@
         saveInputValuebase(inputValue, name, '/api/addnewm3u15')
     }
 
+    //保留关键字-M3U白名单分组优先级配置
+    function saveInputValue16(inputValue, name) {
+        saveInputValuebase(inputValue, name, '/api/addnewm3u16')
+    }
+
     //简易DNS白名单配置
     function saveInputValue12(inputValue, name) {
         saveInputValuebase(inputValue, name, '/api/addnewm3u12')
@@ -2635,6 +2689,11 @@
         deleteInputRowBase(row, inputValue, '/api/deletewm3u11')
     }
 
+    //删除关键字-M3U白名单优先级分组
+    function deleteInputRow16(row, inputValue) {
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u16')
+    }
+
         //删除关键字-M3U黑名单
     function deleteInputRow15(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u15')
@@ -2697,7 +2756,9 @@
         return window[methodName].apply(null, params)
     }
 
-        //m3u黑名单-关键字列表里按钮监听
+    //m3u白名单分组优先级-关键字列表里按钮监听
+    inputableAddEventListener(inputTable16,  'saveInputValue16', 'deleteInputRow16')
+    //m3u黑名单-关键字列表里按钮监听
     inputableAddEventListener(inputTable15,  'saveInputValue15', 'deleteInputRow15')
     //加密订阅密码历史记录
     inputableAddEventListener(inputTable14,  'saveInputValue14', 'deleteInputRow14')
@@ -2750,6 +2811,8 @@
         });
     }
 
+    //m3u白名单分组优先级-导入json配置
+    fileInputAddEventListenerBase(fileInput16, '/api/upload_json_file16')
     //m3u黑名单-关键字-导入json配置
     fileInputAddEventListenerBase(fileInput15, '/api/upload_json_file15')
     //加密订阅密码历史记录-导入json配置
@@ -3102,6 +3165,9 @@
         } else if (selectedPage === pages[22].id) {
             reloadM3uBlackList()
         }
+        else if (selectedPage === pages[23].id) {
+            reloadM3uWhiteListRank()
+        }
         if (selectedPage !== pages[1].id) {
             window.removeEventListener('scroll', handleScroll);
         }
@@ -3142,7 +3208,9 @@
         });
     }
 
-        // M3U黑名单-导出订阅json配置
+    // M3U白名单分组优先级-导出订阅json配置
+    downloadBtnAddEventListenerBase(downloadBtn16, '/api/download_json_file16', 'temp_m3uwhiteranklist.json')
+    // M3U黑名单-导出订阅json配置
     downloadBtnAddEventListenerBase(downloadBtn15, '/api/download_json_file15', 'temp_m3ublacklist.json')
     // 加密订阅密码历史记录-导出订阅json配置
     downloadBtnAddEventListenerBase(downloadBtn14, '/api/download_json_file14', 'temp_historysubscribepasslist.json')
@@ -3194,6 +3262,8 @@
         });
     }
 
+    //M3U白名单分组优先级-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton16, inputTable16)
     //M3U黑名单-关键字-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton15, inputTable15)
     //DNS简易黑名单-只添加一行列表，不存储数据

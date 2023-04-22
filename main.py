@@ -73,8 +73,10 @@ REDIS_KEY_PROXIES_MODEL_CHOSEN = "proxiesmodelchosen"
 REDIS_KEY_PROXIES_SERVER = "proxiesserver"
 # 代理转换选择的服务器订阅:url,name
 REDIS_KEY_PROXIES_SERVER_CHOSEN = "proxiesserverchosen"
-# m3u白名单:关键字,
+# m3u白名单:关键字,分组
 REDIS_KEY_M3U_WHITELIST = "m3uwhitelist"
+# m3u白名单:分组,排名
+REDIS_KEY_M3U_WHITELIST_RANK = "m3uwhitelistrank"
 # m3u黑名单:关键字,
 REDIS_KEY_M3U_BLACKLIST = "m3ublacklist"
 # 简易DNS域名白名单
@@ -139,7 +141,7 @@ allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_
               REDIS_KEY_PROXIES_MODEL, REDIS_KEY_PROXIES_MODEL_CHOSEN, REDIS_KEY_PROXIES_SERVER,
               REDIS_KEY_PROXIES_SERVER_CHOSEN, REDIS_KEY_GITEE, REDIS_KEY_GITHUB,
               REDIS_KEY_M3U_WHITELIST, REDIS_KEY_SECRET_PASS_NOW, REDIS_KEY_WEBDAV, REDIS_KEY_FILE_NAME,
-              REDIS_KEY_M3U_BLACKLIST, 
+              REDIS_KEY_M3U_BLACKLIST,
               REDIS_KEY_FUNCTION_DICT, REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS]
 
 # Adguardhome屏蔽前缀
@@ -2023,64 +2025,48 @@ def process_data(data, index, step, my_dict):
                 continue
 
 
+# 已经排序的直播源分组名单,关键字，分组
+ranked_m3u_whitelist_set = []
+
+
+def getRankWhiteList():
+    global m3u_whitlist_rank
+    global m3u_whitlist
+    global ranked_m3u_whitelist_set
+    ranked_m3u_whitelist_set.clear()
+    ranked_m3u_whitelist = {}
+    restSetDict = {}
+    for key, value in m3u_whitlist.items():
+        if value not in m3u_whitlist_rank.keys():
+            restSetDict[key] = value
+        if value == '':
+            restSetDict[key] = value
+    for group, rank in m3u_whitlist_rank.items():
+        if group not in m3u_whitlist.values():
+            continue
+        if group == '':
+            continue
+        rank = int(rank)
+        dict = {}
+        for key, value in m3u_whitlist.items():
+            if value == group:
+                dict[key] = value
+        ranked_m3u_whitelist[rank] = dict
+    seta = sorted(ranked_m3u_whitelist.keys())  # 对字典的键进行排序
+    for key in seta:
+        ranked_m3u_whitelist_set.append(ranked_m3u_whitelist[key])  # 将排序后的值依次添加到有序集合中
+    ranked_m3u_whitelist_set.append(restSetDict)
+
+
 # 获取白名单分组
 def getMyGroup(str):
-    # 先优选港澳台
-    for key, group in m3u_whitlist.items():
-        if group == '':
-            continue
-        if '港澳台' not in group:
-            continue
-        if key in str:
-            return group
-    # CCTV其次
-    for key, group in m3u_whitlist.items():
-        if group == '':
-            continue
-        if '央视' not in group:
-            continue
-        if key in str:
-            return group
-    # 卫视
-    for key, group in m3u_whitlist.items():
-        if group == '':
-            continue
-        if '卫视' not in group:
-            continue
-        if key in str:
-            return group
-    # 日本台
-    for key, group in m3u_whitlist.items():
-        if group == '':
-            continue
-        if '日本台' not in group:
-            continue
-        if key in str:
-            return group
-    # usa
-    for key, group in m3u_whitlist.items():
-        if group == '':
-            continue
-        if '美利坚合众国' not in group:
-            continue
-        if key in str:
-            return group
-    # 其他
-    for key, group in m3u_whitlist.items():
-        if group == '':
-            continue
-        if '港澳台' in group:
-            continue
-        if '央视' in group:
-            continue
-        if '卫视' in group:
-            continue
-        if '日本台' in group:
-            continue
-        if '美利坚合众国' in group:
-            continue
-        if key in str:
-            return group
+    try:
+        for dict in ranked_m3u_whitelist_set:
+            for key, group in dict.items():
+                if key in str:
+                    return group
+    except Exception as e:
+        print(e)
     return ''
 
 
@@ -3153,7 +3139,10 @@ def decrypt(password, ciphertext):
     return plaintext
 
 
+# 关键字，分组
 m3u_whitlist = {}
+# 分组,排名
+m3u_whitlist_rank = {}
 m3u_blacklist = {}
 
 
@@ -3173,7 +3162,9 @@ def init_m3u_blacklist():
 # 初始化m3u白名单
 def init_m3u_whitelist():
     global m3u_whitlist
+    global m3u_whitlist_rank
     dict = redis_get_map(REDIS_KEY_M3U_WHITELIST)
+    dictRank = redis_get_map(REDIS_KEY_M3U_WHITELIST_RANK)
     if not dict or len(dict) == 0:
         dict = {'美国宇航局': '美利坚合众国', '美国购物': '美利坚合众国', 'FOX 体育新闻': '美利坚合众国',
                 '美国历史': '美利坚合众国', '美国红牛运动': '美利坚合众国', '美国1': '美利坚合众国',
@@ -3331,8 +3322,8 @@ def init_m3u_whitelist():
 
                 '新闻': '新闻', '体育': '体育', '动漫': '动漫', 'NASA': '科技', '豆瓣': '影视',
                 '电影': '影视', '动画': '动画', 'Sport': '体育', '體育': '体育', '運動': '体育',
-                '游戏': '游戏', '卡通': '卡通', '影院': '影视', '足球': '体育', '剧场': '剧场', '东方': '',
-                '纪实': '纪录片', '电竞': '游戏', '教育': '教育', '自然': '自然', '动物': '自然', 'NATURE': '自然',
+                '游戏风云': '游戏频道', '卡通': '卡通', '影院': '影视', '足球': '体育', '剧场': '剧场', '东方': '',
+                '纪实': '纪录片', '电竞': '游戏频道', '教育': '教育', '自然': '自然', '动物': '自然', 'NATURE': '自然',
 
                 '成龍': '明星', '成龙': '明星', '李连杰': '明星', '周星驰': '明星', '吴孟达': '明星', '刘德华': '明星',
                 '周润发': '明星', '洪金宝': '明星', '黄渤': '明星', '林正英': '明星',
@@ -3390,7 +3381,25 @@ def init_m3u_whitelist():
                 }
         redis_add_map(REDIS_KEY_M3U_WHITELIST, dict)
         m3u_whitlist = dict.copy()
-    m3u_whitlist = dict.copy()
+    else:
+        m3u_whitlist = dict.copy()
+    if not dictRank or len(dictRank) == 0:
+        dictRank = {'央视': '1', '港澳台': '0', '卫视': '2', '日本台': '4', '美利坚合众国': '5', '百视通': '6',
+                    'NewTV': '7',
+                    'CIBN': '8', '体育': '3', '华数': '9', '动漫': '10', '电视剧': '12', '影视': '11', '明星': '13',
+                    '自然': '14',
+                    '剧场': '15', '动画': '16', '卡通': '17', '探索发现': '18', '钓鱼': '19', '少儿': '20',
+                    '戏曲': '21', '政务': '22',
+                    '教育': '23', '数码': '24', '科技': '25', '新闻': '26', '旅游': '27', '时尚': '28', '法制': '29',
+                    '汽车': '30',
+                    '游戏频道': '31', '留学': '32', '纪录片': '33', '电视台': '34', '综艺': '35', '美食': '36',
+                    '都市': '37', '音乐': '38'
+                    }
+        redis_add_map(REDIS_KEY_M3U_WHITELIST_RANK, dictRank)
+        m3u_whitlist_rank = dictRank.copy()
+    else:
+        m3u_whitlist_rank = dictRank.copy()
+    getRankWhiteList()
 
 
 # 获取软路由主路由ip
@@ -3668,6 +3677,12 @@ def upload_json_file11():
     return upload_json(request, REDIS_KEY_M3U_WHITELIST, f"{secret_path}tmp_data11.json")
 
 
+# 上传m3u白名单json文件
+@app.route('/api/upload_json_file16', methods=['POST'])
+def upload_json_file16():
+    return upload_json(request, REDIS_KEY_M3U_WHITELIST_RANK, f"{secret_path}tmp_data16.json")
+
+
 # 上传m3u黑名单json文件
 @app.route('/api/upload_json_file15', methods=['POST'])
 def upload_json_file15():
@@ -3929,6 +3944,12 @@ def download_json_file11():
     return download_json_file_base(REDIS_KEY_M3U_WHITELIST, f"{secret_path}temp_m3uwhitelist.json")
 
 
+# 导出m3u白名单分组优先级配置
+@app.route('/api/download_json_file16', methods=['GET'])
+def download_json_file16():
+    return download_json_file_base(REDIS_KEY_M3U_WHITELIST_RANK, f"{secret_path}temp_m3uwhiteranklist.json")
+
+
 # 导出m3u黑名单配置
 @app.route('/api/download_json_file15', methods=['GET'])
 def download_json_file15():
@@ -3939,8 +3960,57 @@ def download_json_file15():
 @app.route('/api/deletewm3u11', methods=['POST'])
 def deletewm3u11():
     deleteurl = request.json.get('deleteurl')
+    group = m3u_whitlist.get(deleteurl)
     del m3u_whitlist[deleteurl]
+    checkAndRemoveM3uRank(group)
     return dellist(request, REDIS_KEY_M3U_WHITELIST)
+
+
+# 删除M3U白名单分组优先级
+@app.route('/api/deletewm3u16', methods=['POST'])
+def deletewm3u16():
+    deleteurl = request.json.get('deleteurl')
+    rank = m3u_whitlist_rank.get(deleteurl)
+    del m3u_whitlist_rank[deleteurl]
+    dealRemoveRankGroup(rank)
+    return dellist(request, REDIS_KEY_M3U_WHITELIST_RANK)
+
+
+def dealRemoveRankGroup(rank):
+    rankNum = int(rank)
+    updateDict = {}
+    for key, value in m3u_whitlist_rank.items():
+        num = int(value)
+        if num <= rankNum:
+            continue
+        finalRank = str(num - 1)
+        updateDict[key] = finalRank
+        m3u_whitlist_rank[key] = finalRank
+    if len(updateDict) > 0:
+        redis_add_map(REDIS_KEY_M3U_WHITELIST_RANK, updateDict)
+    getRankWhiteList()
+
+
+def checkAndRemoveM3uRank(group):
+    global m3u_whitlist_rank
+    global m3u_whitlist
+    if group not in m3u_whitlist.values():
+        if group in m3u_whitlist_rank:
+            rank = m3u_whitlist_rank.get(group)
+            del m3u_whitlist_rank[group]
+            r.hdel(REDIS_KEY_M3U_WHITELIST_RANK, group)
+            rankNum = int(rank)
+            updateDict = {}
+            for key, value in m3u_whitlist_rank.items():
+                num = int(value)
+                if num <= rankNum:
+                    continue
+                finalRank = str(num - 1)
+                updateDict[key] = finalRank
+                m3u_whitlist_rank[key] = finalRank
+            if len(updateDict) > 0:
+                redis_add_map(REDIS_KEY_M3U_WHITELIST_RANK, updateDict)
+    getRankWhiteList()
 
 
 # 删除M3U黑名单
@@ -3956,8 +4026,88 @@ def deletewm3u15():
 def addnewm3u11():
     addurl = request.json.get('addurl')
     name = request.json.get('name')
+    checkAndUpdateM3uRank(name)
     m3u_whitlist[addurl] = name
     return addlist(request, REDIS_KEY_M3U_WHITELIST)
+
+
+# 添加M3U白名单分组优先级
+@app.route('/api/addnewm3u16', methods=['POST'])
+def addnewm3u16():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    checkAndUpdateM3uRank(addurl, name)
+    return jsonify({'addresult': "add success"})
+
+
+def checkAndUpdateM3uRank(group, rank):
+    if group == '':
+        return
+    global m3u_whitlist_rank
+    global m3u_whitlist
+    rankNum = int(rank)
+    updateDict = {}
+    updateDict[group] = rank
+    # 新分组
+    if group not in m3u_whitlist_rank:
+        for key, value in m3u_whitlist_rank.items():
+            num = int(value)
+            if num < rankNum:
+                continue
+            finalRank = str(num + 1)
+            updateDict[key] = finalRank
+            m3u_whitlist_rank[key] = finalRank
+        redis_add_map(REDIS_KEY_M3U_WHITELIST_RANK, updateDict)
+        m3u_whitlist_rank[group] = rank
+    else:
+        oldRank = int(m3u_whitlist_rank.get(group))
+        # 排名后退，中间排名向前
+        if oldRank < rankNum:
+            for key, value in m3u_whitlist_rank.items():
+                num = int(value)
+                if num <= oldRank:
+                    continue
+                if num > rankNum:
+                    continue
+                finalRank = str(num - 1)
+                updateDict[key] = finalRank
+                m3u_whitlist_rank[key] = finalRank
+        # 排名前进，中间排名向后
+        elif oldRank > rankNum:
+            for key, value in m3u_whitlist_rank.items():
+                num = int(value)
+                if num < rankNum:
+                    continue
+                if num >= oldRank:
+                    continue
+                finalRank = str(num + 1)
+                updateDict[key] = finalRank
+                m3u_whitlist_rank[key] = finalRank
+        redis_add_map(REDIS_KEY_M3U_WHITELIST_RANK, updateDict)
+        m3u_whitlist_rank[group] = rank
+    getRankWhiteList()
+
+
+def getMaxRank():
+    global m3u_whitlist_rank
+    num = 0
+    for value in m3u_whitlist_rank.values():
+        num = max(num, int(value))
+    return str(num + 1)
+
+
+def checkAndUpdateM3uRank(group):
+    if group == '':
+        return
+    global m3u_whitlist_rank
+    global m3u_whitlist
+    # 新分组，默认加到最后
+    if group not in m3u_whitlist.values():
+        if group not in m3u_whitlist_rank:
+            rank = getMaxRank()
+            m3u_whitlist_rank[group] = rank
+            redis_add_map(REDIS_KEY_M3U_WHITELIST_RANK, {group, rank})
+    getRankWhiteList()
 
 
 # 添加M3U黑名单
@@ -3977,6 +4127,16 @@ def getall11():
     else:
         init_m3u_whitelist()
         return jsonify(m3u_whitlist)
+
+
+# 拉取全部m3u白名单分组优先级配置
+@app.route('/api/getall16', methods=['GET'])
+def getall16():
+    if m3u_whitlist_rank and len(m3u_whitlist_rank.items()) > 0:
+        return jsonify(m3u_whitlist_rank)
+    else:
+        init_m3u_whitelist()
+        return jsonify(m3u_whitlist_rank)
 
 
 # 拉取全部m3u黑名单配置
@@ -4568,6 +4728,15 @@ def removem3ulinks12():
 def removem3ulinks11():
     m3u_whitlist.clear()
     redis_del_map(REDIS_KEY_M3U_WHITELIST)
+    return "success"
+
+
+# 删除全部M3U白名单分组优先级
+@app.route('/api/removem3ulinks16', methods=['GET'])
+def removem3ulinks16():
+    m3u_whitlist_rank.clear()
+    ranked_m3u_whitelist_set.clear()
+    redis_del_map(REDIS_KEY_M3U_WHITELIST_RANK)
     return "success"
 
 
