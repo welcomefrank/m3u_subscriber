@@ -1,8 +1,0 @@
-black_list_simple_tmp_cache.clear()
-black_list_simple_tmp_policy.clear()
-white_list_simple_tmp_cache.clear()
-white_list_simple_tmp_policy.clear()
-black_list_tmp_cache.clear()
-black_list_tmp_policy.clear()
-white_list_tmp_cache.clear()
-white_list_tmp_policy.clear()

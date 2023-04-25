@@ -86,6 +86,7 @@ REDIS_KEY_DNS_SIMPLE_BLACKLIST = "dnssimpleblacklist"
 # 加密订阅密码历史记录,包括当前密码组
 REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS = "secretSubscribeHistoryPass"
 
+# 加密订阅密码当前配置
 REDIS_KEY_SECRET_PASS_NOW = 'secretpassnow'
 
 redisKeySecretPassNow = {'m3u': '', 'whitelist': '', 'blacklist': '', 'ipv4': '', 'ipv6': '', 'proxy': ''}
@@ -135,7 +136,19 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'simpleblacklistProxyRule': 'simpleblacklistProxyRule', 'simpleDnsmasq': 'simpleDnsmasq',
                   'simplewhitelistProxyRule': 'simplewhitelistProxyRule'}
 
-# 全部有redis备份字典key
+# 单独导入导出使用一个配置,需特殊处理:{{url:{pass,name}}}
+# 下载网络配置并且加密后上传:url+加密密钥+加密文件名字
+REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME = 'downloadAndSecretUploadUrlPasswordAndName'
+downAndSecUploadUrlPassAndName = {'key1': {'password': '', 'secretName': 'dffwfwef.txt'},
+                                  'key2': {'password': '', 'secretName': 'ewgdvwvwkdb.mp3'}}
+
+# 下载加密网络配置并且解密还原成源文件:加密url+加密密钥+源文件名字
+REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME = 'downloadAndDeSecretUrlPasswordAndName'
+downAndDeSecUrlPassAndName = {'key1': {'password': '', 'secretName': 'dhfkfgkf.ini'},
+                              'key2': {'password': '', 'secretName': 'wygduwgdkw.txt'}}
+
+NORMAL_REDIS_KEY = 'normalRedisKey'
+# 全部有redis备份字典key-普通redis结构
 allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_LINK, REDIS_KEY_WHITELIST_IPV4_LINK,
               REDIS_KEY_WHITELIST_IPV6_LINK, REDIS_KEY_PASSWORD_LINK, REDIS_KEY_PROXIES_LINK, REDIS_KEY_PROXIES_TYPE,
               REDIS_KEY_PROXIES_MODEL, REDIS_KEY_PROXIES_MODEL_CHOSEN, REDIS_KEY_PROXIES_SERVER,
@@ -143,6 +156,10 @@ allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_
               REDIS_KEY_M3U_WHITELIST, REDIS_KEY_SECRET_PASS_NOW, REDIS_KEY_WEBDAV, REDIS_KEY_FILE_NAME,
               REDIS_KEY_M3U_BLACKLIST,
               REDIS_KEY_FUNCTION_DICT, REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS]
+
+SPECIAL_REDIS_KEY = 'specialRedisKey'
+specialRedisKey = [REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME,
+                   REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME]
 
 # Adguardhome屏蔽前缀
 BLACKLIST_ADGUARDHOME_FORMATION = "0.0.0.0 "
@@ -303,7 +320,11 @@ def upload_json(request, rediskey, filename):
             json.dump(json.loads(file_content_str), f)
         with open(filename, 'r') as f:
             json_dict = json.load(f)
-        redis_add_map(rediskey, json_dict)
+        if rediskey not in specialRedisKey:
+            redis_add_map(rediskey, json_dict)
+            importToReloadCache(rediskey, json_dict)
+        else:
+            importToReloadCacheForSpecial(rediskey, json_dict)
         os.remove(filename)
         return jsonify({'success': True})
     except Exception as e:
@@ -364,6 +385,34 @@ timer_condition_ipv4list = threading.Condition()
 timer_condition_ipv6list = threading.Condition()
 # 节点订阅线程阻塞开关
 timer_condition_proxylist = threading.Condition()
+# 下载加密上传线程阻塞开关
+timer_condition_downUpload = threading.Condition()
+# 下载解密线程阻塞开关
+timer_condition_download = threading.Condition()
+
+
+def executeDown(sleepSecond):
+    while True:
+        with timer_condition_download:
+            if not isOpenFunction('switch34'):
+                timer_condition_download.wait(sleepSecond)
+            # 执行方法
+            chaoronghe10()
+            print("下载解密定时器执行成功")
+            timer_condition_download.wait(sleepSecond)
+        time.sleep(sleepSecond)
+
+
+def executeDownUpload(sleepSecond):
+    while True:
+        with timer_condition_downUpload:
+            if not isOpenFunction('switch33'):
+                timer_condition_downUpload.wait(sleepSecond)
+            # 执行方法
+            chaoronghe9()
+            print("下载加密上传定时器执行成功")
+            timer_condition_downUpload.wait(sleepSecond)
+        time.sleep(sleepSecond)
 
 
 def executeProxylist(sleepSecond):
@@ -374,7 +423,7 @@ def executeProxylist(sleepSecond):
             # 执行方法
             chaoronghe6()
             timer_condition_proxylist.wait(sleepSecond)
-        time.sleep(10)
+        time.sleep(sleepSecond)
 
 
 def executeIPV6list(sleepSecond):
@@ -385,7 +434,7 @@ def executeIPV6list(sleepSecond):
             # 执行方法
             chaoronghe5()
             timer_condition_ipv6list.wait(sleepSecond)
-        time.sleep(10)
+        time.sleep(sleepSecond)
 
 
 def executeIPV4list(sleepSecond):
@@ -396,7 +445,7 @@ def executeIPV4list(sleepSecond):
             # 执行方法
             chaoronghe4()
             timer_condition_ipv4list.wait(sleepSecond)
-        time.sleep(10)
+        time.sleep(sleepSecond)
 
 
 def executeBlacklist(sleepSecond):
@@ -407,7 +456,7 @@ def executeBlacklist(sleepSecond):
             # 执行方法
             chaoronghe3()
             timer_condition_blacklist.wait(sleepSecond)
-        time.sleep(10)
+        time.sleep(sleepSecond)
 
 
 def executeWhitelist(sleepSecond):
@@ -418,7 +467,7 @@ def executeWhitelist(sleepSecond):
             # 执行方法
             chaoronghe2()
             timer_condition_whitelist.wait(sleepSecond)
-        time.sleep(10)
+        time.sleep(sleepSecond)
 
 
 def toggle_m3u(functionId, value):
@@ -457,6 +506,16 @@ def toggle_m3u(functionId, value):
             function_dict[functionId] = str(value)
             redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
             timer_condition_proxylist.notify()
+    elif functionId == 'switch33':
+        with timer_condition_downUpload:
+            function_dict[functionId] = str(value)
+            redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
+            timer_condition_downUpload.notify()
+    elif functionId == 'switch34':
+        with timer_condition_download:
+            function_dict[functionId] = str(value)
+            redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
+            timer_condition_download.notify()
 
 
 def executeM3u(sleepSecond):
@@ -467,7 +526,7 @@ def executeM3u(sleepSecond):
             # 执行方法
             chaoronghe()
             timer_condition_m3u.wait(sleepSecond)
-        time.sleep(10)
+        time.sleep(sleepSecond)
 
 
 async def checkWriteHealthM3u(url):
@@ -548,6 +607,44 @@ def checkToDecrydecrypt(url, redis_dict, m3u_string):
             blankContent = decrypt(password, m3u_string)
             return blankContent
     return m3u_string
+
+
+# 判断是否需要解密
+def checkToDecrydecrypt3(url, redis_dict, m3u_string, filenameDict):
+    password = redis_dict.get(url)
+    if password:
+        if password != "":
+            blankContent = decrypt(password, m3u_string)
+            thread_write_bytes_to_file(filenameDict[url], checkbytes(blankContent).encode())
+    else:
+        if isinstance(m3u_string, bytes):
+            thread_write_bytes_to_file(filenameDict[url], m3u_string)
+        else:
+            thread_write_bytes_to_file(filenameDict[url], m3u_string.encode())
+
+
+# 判断是否需要加密
+def checkToDecrydecrypt2(url, redis_dict, m3u_string, filenameDict, secretNameDict, uploadGitee,
+                         uploadGithub, uploadWebdav):
+    password = redis_dict.get(url)
+    if password:
+        if password != "":
+            secretContent = encrypt2(m3u_string, password)
+            secretFileName = secretNameDict[url]
+            thread_write_bytes_to_file(secretFileName, secretContent)
+            # 加密文件上传至gitee,
+            if uploadGitee:
+                task_queue.put(os.path.basename(secretFileName))
+            # 加密文件上传至github,
+            if uploadGithub:
+                task_queue_github.put(os.path.basename(secretFileName))
+            # 加密文件上传至webdav,
+            if uploadWebdav:
+                task_queue_webdav.put(os.path.basename(secretFileName))
+    if isinstance(m3u_string, bytes):
+        thread_write_bytes_to_file(filenameDict[url], m3u_string)
+    else:
+        thread_write_bytes_to_file(filenameDict[url], m3u_string.encode('utf-8'))
 
 
 def fetch_url(url, redis_dict):
@@ -638,6 +735,92 @@ def download_files(urls, redis_dict):
                 results.append(result)
     # 将结果按照原始URL列表的顺序排序并返回它们
     return "".join(results)
+
+
+def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, uploadGithub, uploadWebdav):
+    try:
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
+        # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
+        m3u_string = response.content
+        # 加密文件检测和解码
+        checkToDecrydecrypt2(url, passwordDict, m3u_string, filenameDict, secretNameDict, uploadGitee,
+                             uploadGithub, uploadWebdav)
+    except requests.exceptions.SSLError:
+        response = requests.get(url, timeout=5, verify=False)
+        response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
+        # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
+        m3u_string = response.content
+        # 加密文件检测和解码
+        checkToDecrydecrypt2(url, passwordDict, m3u_string, filenameDict, secretNameDict, uploadGitee,
+                             uploadGithub, uploadWebdav)
+    except requests.exceptions.Timeout:
+        print("timeout error, try to get data with longer timeout:" + url)
+    except requests.exceptions.RequestException as e:
+        url = url.decode('utf-8')
+        response = requests.get(url, timeout=5, verify=False)
+        response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
+        # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
+        m3u_string = response.content
+        # 加密文件检测和解码
+        checkToDecrydecrypt2(url, passwordDict, m3u_string, filenameDict, secretNameDict, uploadGitee,
+                             uploadGithub, uploadWebdav)
+    except Exception as e:
+        print("fetch_url2 error:", e)
+        pass
+
+
+def fetch_url3(url, passwordDict, filenameDict):
+    try:
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
+        # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
+        m3u_string = response.content
+        # 加密文件检测和解码
+        checkToDecrydecrypt3(url, passwordDict, m3u_string, filenameDict)
+    except requests.exceptions.SSLError:
+        response = requests.get(url, timeout=5, verify=False)
+        response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
+        # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
+        m3u_string = response.content
+        # 加密文件检测和解码
+        checkToDecrydecrypt3(url, passwordDict, m3u_string, filenameDict)
+    except requests.exceptions.Timeout:
+        print("timeout error, try to get data with longer timeout:" + url)
+    except requests.exceptions.RequestException as e:
+        url = url.decode('utf-8')
+        response = requests.get(url, timeout=5, verify=False)
+        response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
+        # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
+        m3u_string = response.content
+        # 加密文件检测和解码
+        checkToDecrydecrypt3(url, passwordDict, m3u_string, filenameDict)
+    except Exception as e:
+        print("fetch_url3 error:", e)
+        pass
+
+
+#
+def download_files2(urls, passwordDict, filenameDict, secretNameDict, uploadGitee, uploadGithub,
+                    uploadWebdav):
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        # 提交下载任务并获取future对象列表
+        future_to_url = {
+            executor.submit(fetch_url2, url, passwordDict, filenameDict, secretNameDict, uploadGitee,
+                            uploadGithub, uploadWebdav): url for
+            url in urls}
+    # 等待所有任务执行完毕
+    executor.shutdown(wait=True)
+
+
+def download_files3(urls, passwordDict, filenameDict):
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        # 提交下载任务并获取future对象列表
+        future_to_url = {
+            executor.submit(fetch_url3, url, passwordDict, filenameDict): url for
+            url in urls}
+    # 等待所有任务执行完毕
+    executor.shutdown(wait=True)
 
 
 # 添加一条数据进入字典
@@ -1185,6 +1368,7 @@ def init_db():
     init_pass('blacklist')
     init_pass('whitelist')
     init_pass('m3u')
+    initReloadCacheForSpecial()
 
 
 def init_function_dict():
@@ -1288,6 +1472,12 @@ def init_function_dict():
         # 上传至Webdav
         if 'switch32' not in keys:
             dict['switch32'] = '0'
+        # 下载加密上传-定时器
+        if 'switch33' not in keys:
+            dict['switch33'] = '0'
+        # 下载解密-定时器
+        if 'switch34' not in keys:
+            dict['switch34'] = '0'
         redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
         function_dict = dict.copy()
     else:
@@ -1298,7 +1488,8 @@ def init_function_dict():
                 'switch15': '0', 'switch16': '0', 'switch17': '0', 'switch18': '0', 'switch19': '0', 'switch20': '0',
                 'switch21': '0',
                 'switch22': '1', 'switch23': '1', 'switch24': '1', 'switch25': '0', 'switch26': '0', 'switch27': '0'
-            , 'switch28': '0', 'switch29': '1', 'switch30': '0', 'switch31': '0', 'switch32': '0'}
+            , 'switch28': '0', 'switch29': '1', 'switch30': '0', 'switch31': '0', 'switch32': '0', 'switch33': '0',
+                'switch34': '0'}
         redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
         function_dict = dict.copy()
 
@@ -2179,7 +2370,12 @@ def update_epg(s, searchurl):
 
 
 def generate_json_string(mapname):
-    m3ulink = redis_get_map(mapname)
+    if mapname not in specialRedisKey:
+        m3ulink = redis_get_map(mapname)
+    else:
+        # 从Redis中读取JSON字符串
+        m3ulink = r.get(mapname)
+        m3ulink = json.loads(m3ulink)
     # 将字典转换为JSON字符串并返回
     json_str = json.dumps(m3ulink)
     return json_str
@@ -2188,13 +2384,33 @@ def generate_json_string(mapname):
 # 一键导出全部json配置
 def generate_multi_json_string(mapnameArr):
     finalDict = {}
+    # 普通python字典结构统一转换成对应的redis结构
     for name in mapnameArr:
         m3ulink = redis_get_map(name)
-        if len(m3ulink) > 0:
+        if len(m3ulink.keys()) > 0:
             finalDict[name] = m3ulink
-    # 将字典转换为JSON字符串并返回
-    json_str = json.dumps(finalDict)
-    return json_str
+    outDict1 = {}
+    outDict1[NORMAL_REDIS_KEY] = finalDict
+
+    # 特殊python字典结构存入redis统一转换成string
+    finalDict2 = {}
+    for name in specialRedisKey:
+        try:
+            # 从Redis中读取JSON字符串
+            json_string_redis = r.get(name)
+            # 反序列化成Python对象
+            my_dict_redis = json.loads(json_string_redis)
+            if len(my_dict_redis.keys()) > 0:
+                finalDict2[name] = my_dict_redis
+        except Exception as e:
+            pass
+    outDict2 = {}
+    outDict2[SPECIAL_REDIS_KEY] = finalDict2
+    # 合并字典
+    merged_dict = {**outDict1, **outDict2}
+    # 将合并后的字典导出成json字符串
+    json_string = json.dumps(merged_dict)
+    return json_string
 
 
 # 上传订阅配置
@@ -2209,14 +2425,24 @@ def upload_oneKey_json(request, filename):
             json.dump(json.loads(file_content_str), f)
         with open(filename, 'r') as f:
             json_dict = json.load(f)
-        for cachekey, valuedict in json_dict.items():
-            if len(valuedict) > 0:
-                redis_add_map(cachekey, valuedict)
-                importToReloadCache(cachekey, valuedict)
+        # 批量写入数据
+        pipe = r.pipeline()
+        for key, value in json_dict.items():
+            if key in NORMAL_REDIS_KEY:
+                for finalKey11, finalDict11 in value.items():
+                    if len(finalDict11) > 0:
+                        pipe.hmset(finalKey11, finalDict11)
+                        #redis_add_map(finalKey11, finalDict11)
+                        importToReloadCache(finalKey11, finalDict11)
+            elif key in SPECIAL_REDIS_KEY:
+                for finalKey22, finalDict22 in value.items():
+                    if len(finalDict22) > 0:
+                        importToReloadCacheForSpecial(finalKey22, finalDict22)
+        pipe.execute()
         os.remove(filename)
         return jsonify({'success': True})
     except Exception as e:
-        print("An error occurred: ", e)
+        print("An error occurred in upload_oneKey_json: ", e)
         return jsonify({'success': False})
 
 
@@ -2949,6 +3175,32 @@ def init_extra_dns_server():
     return num
 
 
+def initReloadCacheForSpecial():
+    for redisKey in specialRedisKey:
+        if redisKey in REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME:
+            try:
+                # 从Redis中读取JSON字符串
+                json_string_redis = r.get(redisKey)
+                # 反序列化成Python对象
+                my_dict_redis = json.loads(json_string_redis)
+                global downAndSecUploadUrlPassAndName
+                downAndSecUploadUrlPassAndName.clear()
+                downAndSecUploadUrlPassAndName = my_dict_redis.copy()
+            except Exception as e:
+                pass
+        elif redisKey in REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME:
+            try:
+                # 从Redis中读取JSON字符串
+                json_string_redis = r.get(redisKey)
+                # 反序列化成Python对象
+                my_dict_redis = json.loads(json_string_redis)
+                global downAndDeSecUrlPassAndName
+                downAndDeSecUrlPassAndName.clear()
+                downAndDeSecUrlPassAndName = my_dict_redis.copy()
+            except Exception as e:
+                pass
+
+
 def init_pass(cacheKey):
     # redisKeySecretPassNow = {'m3u': '', 'whitelist': '', 'blacklist': '', 'ipv4': '', 'ipv6': '', 'proxy': ''}
     global redisKeySecretPassNow
@@ -3104,6 +3356,24 @@ def getIV(passwordStr):
 # 加密函数   # bytes ciphertext
 def encrypt(plaintext, cachekey):
     password = init_pass(cachekey)
+    arr = getIV(password)
+    # generate key and iv
+    key = arr[0]
+    # iv = os.urandom(16)
+    # create cipher object
+    backend = default_backend()
+    algorithm = algorithms.AES(key)
+    mode = modes.CTR(arr[1])
+    cipher = Cipher(algorithm, mode, backend=backend)
+    # encrypt plaintext
+    encryptor = cipher.encryptor()
+    ciphertext = encryptor.update(plaintext) + encryptor.finalize()
+    # return ciphertext, iv, algorithm, and mode
+    return ciphertext
+
+
+# 加密函数   # bytes ciphertext
+def encrypt2(plaintext, password):
     arr = getIV(password)
     # generate key and iv
     key = arr[0]
@@ -3429,6 +3699,23 @@ def init_IP():
     return num
 
 
+def importToReloadCacheForSpecial(finalKey22, finalDict22):
+    if finalKey22 == REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME:
+        global downAndSecUploadUrlPassAndName
+        downAndSecUploadUrlPassAndName.update(finalDict22)
+        # 序列化成JSON字符串
+        json_string = json.dumps(downAndSecUploadUrlPassAndName)
+        # 将JSON字符串存储到Redis中
+        r.set(finalKey22, json_string)
+    elif finalKey22 == REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME:
+        global downAndDeSecUrlPassAndName
+        downAndDeSecUrlPassAndName.update(finalDict22)
+        # 序列化成JSON字符串
+        json_string = json.dumps(downAndDeSecUrlPassAndName)
+        # 将JSON字符串存储到Redis中
+        r.set(finalKey22, json_string)
+
+
 def importToReloadCache(cachekey, dict):
     if cachekey == REDIS_KEY_GITEE:
         global redisKeyGitee
@@ -3683,10 +3970,52 @@ def upload_json_file16():
     return upload_json(request, REDIS_KEY_M3U_WHITELIST_RANK, f"{secret_path}tmp_data16.json")
 
 
+# 上传下载加密上传json文件
+@app.route('/api/upload_json_file17', methods=['POST'])
+def upload_json_file17():
+    return upload_json(request, REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME, f"{secret_path}tmp_data17.json")
+
+
+# 上传下载解密密json文件
+@app.route('/api/upload_json_file18', methods=['POST'])
+def upload_json_file18():
+    return upload_json(request, REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME, f"{secret_path}tmp_data18.json")
+
+
 # 上传m3u黑名单json文件
 @app.route('/api/upload_json_file15', methods=['POST'])
 def upload_json_file15():
     return upload_json(request, REDIS_KEY_M3U_BLACKLIST, f"{secret_path}tmp_data15.json")
+
+
+# 上传加密订阅重命名json文件
+@app.route('/api/upload_json_file19', methods=['POST'])
+def upload_json_file19():
+    return upload_json(request, REDIS_KEY_FILE_NAME, f"{secret_path}tmp_data19.json")
+
+
+# 上传订阅密码锁json文件
+@app.route('/api/upload_json_file20', methods=['POST'])
+def upload_json_file20():
+    return upload_json(request, REDIS_KEY_SECRET_PASS_NOW, f"{secret_path}tmp_data20.json")
+
+
+# 上传gitee同步账号json文件
+@app.route('/api/upload_json_file21', methods=['POST'])
+def upload_json_file21():
+    return upload_json(request, REDIS_KEY_GITEE, f"{secret_path}tmp_data21.json")
+
+
+# 上传gitee同步账号json文件
+@app.route('/api/upload_json_file22', methods=['POST'])
+def upload_json_file22():
+    return upload_json(request, REDIS_KEY_GITHUB, f"{secret_path}tmp_data22.json")
+
+
+# 上传webdav同步账号json文件
+@app.route('/api/upload_json_file23', methods=['POST'])
+def upload_json_file23():
+    return upload_json(request, REDIS_KEY_WEBDAV, f"{secret_path}tmp_data23.json")
 
 
 # 上传节点后端服务器json文件
@@ -3730,7 +4059,7 @@ def getSwitchstate():
 
 
 # 需要额外操作的
-clockArr = ['switch25', 'switch26', 'switch27', 'switch28', 'switch29', 'switch13', 'switch25']
+clockArr = ['switch25', 'switch26', 'switch27', 'switch28', 'switch29', 'switch13', 'switch25', 'switch33', 'switch34']
 
 
 # 切换功能开关
@@ -3788,6 +4117,8 @@ def serverMode():
         switchSingleFunction('switch30', '1')
         switchSingleFunction('switch31', '1')
         switchSingleFunction('switch32', '1')
+        switchSingleFunction('switch33', '0')
+        switchSingleFunction('switch34', '0')
     elif mode == 'client':
         switchSingleFunction('switch2', '0')
         switchSingleFunction('switch3', '0')
@@ -3821,6 +4152,8 @@ def serverMode():
         switchSingleFunction('switch30', '0')
         switchSingleFunction('switch31', '0')
         switchSingleFunction('switch32', '0')
+        switchSingleFunction('switch33', '0')
+        switchSingleFunction('switch34', '0')
     return 'success'
 
 
@@ -3950,6 +4283,55 @@ def download_json_file16():
     return download_json_file_base(REDIS_KEY_M3U_WHITELIST_RANK, f"{secret_path}temp_m3uwhiteranklist.json")
 
 
+# 导出下载加密上传配置
+@app.route('/api/download_json_file17', methods=['GET'])
+def download_json_file17():
+    return download_json_file_base(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME,
+                                   f"{secret_path}temp_downloadAndSecretUpload.json")
+
+
+# 导出下载解密配置
+@app.route('/api/download_json_file18', methods=['GET'])
+def download_json_file18():
+    return download_json_file_base(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME,
+                                   f"{secret_path}temp_downloadAndDeSecret.json")
+
+
+# 导出订阅重命名配置
+@app.route('/api/download_json_file19', methods=['GET'])
+def download_json_file19():
+    return download_json_file_base(REDIS_KEY_FILE_NAME,
+                                   f"{secret_path}temp_subscribeName.json")
+
+
+# 导出订阅密码锁配置
+@app.route('/api/download_json_file20', methods=['GET'])
+def download_json_file20():
+    return download_json_file_base(REDIS_KEY_SECRET_PASS_NOW,
+                                   f"{secret_path}temp_subscribePass.json")
+
+
+# 导出gitee账号配置
+@app.route('/api/download_json_file21', methods=['GET'])
+def download_json_file21():
+    return download_json_file_base(REDIS_KEY_GITEE,
+                                   f"{secret_path}temp_outputGitee.json")
+
+
+# 导出github账号配置
+@app.route('/api/download_json_file22', methods=['GET'])
+def download_json_file22():
+    return download_json_file_base(REDIS_KEY_GITHUB,
+                                   f"{secret_path}temp_outputGithub.json")
+
+
+# 导出webdav账号配置
+@app.route('/api/download_json_file23', methods=['GET'])
+def download_json_file23():
+    return download_json_file_base(REDIS_KEY_WEBDAV,
+                                   f"{secret_path}temp_outputWebdav.json")
+
+
 # 导出m3u黑名单配置
 @app.route('/api/download_json_file15', methods=['GET'])
 def download_json_file15():
@@ -4021,6 +4403,30 @@ def deletewm3u15():
     return dellist(request, REDIS_KEY_M3U_BLACKLIST)
 
 
+# 删除单个下载加密上传
+@app.route('/api/deletewm3u17', methods=['POST'])
+def deletewm3u17():
+    deleteurl = request.json.get('deleteurl')
+    del downAndSecUploadUrlPassAndName[deleteurl]
+    # 序列化成JSON字符串
+    json_string = json.dumps(downAndSecUploadUrlPassAndName)
+    # 将JSON字符串存储到Redis中
+    r.set(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME, json_string)
+    return jsonify({'deleteresult': "delete success"})
+
+
+# 删除单个下载解密
+@app.route('/api/deletewm3u18', methods=['POST'])
+def deletewm3u18():
+    deleteurl = request.json.get('deleteurl')
+    del downAndDeSecUrlPassAndName[deleteurl]
+    # 序列化成JSON字符串
+    json_string = json.dumps(downAndDeSecUrlPassAndName)
+    # 将JSON字符串存储到Redis中
+    r.set(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME, json_string)
+    return jsonify({'deleteresult': "delete success"})
+
+
 # 添加M3U白名单
 @app.route('/api/addnewm3u11', methods=['POST'])
 def addnewm3u11():
@@ -4037,6 +4443,46 @@ def addnewm3u16():
     addurl = request.json.get('addurl')
     name = request.json.get('name')
     checkAndUpdateM3uRank(addurl, name)
+    return jsonify({'addresult': "add success"})
+
+
+# 添加下载加密上传-特殊字典结构保存到redis
+@app.route('/api/addnewm3u17', methods=['POST'])
+def addnewm3u17():
+    addurl = request.json.get('url')
+    password = request.json.get('password')
+    name = request.json.get('secretName')
+    if len(downAndSecUploadUrlPassAndName.items()) == 0:
+        # 从Redis中读取JSON字符串
+        json_string_redis = r.get(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME)
+        # 反序列化成Python对象
+        my_dict_redis = json.loads(json_string_redis)
+        downAndSecUploadUrlPassAndName.update(my_dict_redis)
+    downAndSecUploadUrlPassAndName[addurl] = {'password': password, 'secretName': name}
+    # 序列化成JSON字符串
+    json_string = json.dumps(downAndSecUploadUrlPassAndName)
+    # 将JSON字符串存储到Redis中
+    r.set(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME, json_string)
+    return jsonify({'addresult': "add success"})
+
+
+# 添加下载解密-特殊字典结构保存到redis
+@app.route('/api/addnewm3u18', methods=['POST'])
+def addnewm3u18():
+    addurl = request.json.get('url')
+    password = request.json.get('password')
+    name = request.json.get('secretName')
+    if len(downAndDeSecUrlPassAndName.items()) == 0:
+        # 从Redis中读取JSON字符串
+        json_string_redis = r.get(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME)
+        # 反序列化成Python对象
+        my_dict_redis = json.loads(json_string_redis)
+        downAndDeSecUrlPassAndName.update(my_dict_redis)
+    downAndDeSecUrlPassAndName[addurl] = {'password': password, 'secretName': name}
+    # 序列化成JSON字符串
+    json_string = json.dumps(downAndDeSecUrlPassAndName)
+    # 将JSON字符串存储到Redis中
+    r.set(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME, json_string)
     return jsonify({'addresult': "add success"})
 
 
@@ -4122,29 +4568,32 @@ def addnewm3u15():
 # 拉取全部m3u白名单配置
 @app.route('/api/getall11', methods=['GET'])
 def getall11():
-    if m3u_whitlist and len(m3u_whitlist.items()) > 0:
-        return jsonify(m3u_whitlist)
-    else:
-        init_m3u_whitelist()
-        return jsonify(m3u_whitlist)
+    init_m3u_whitelist()
+    return jsonify(m3u_whitlist)
 
 
 # 拉取全部m3u白名单分组优先级配置
 @app.route('/api/getall16', methods=['GET'])
 def getall16():
-    if m3u_whitlist_rank and len(m3u_whitlist_rank.items()) > 0:
-        return jsonify(m3u_whitlist_rank)
-    else:
-        init_m3u_whitelist()
-        return jsonify(m3u_whitlist_rank)
+    init_m3u_whitelist()
+    return jsonify(m3u_whitlist_rank)
+
+
+# 拉取全部下载加密上传
+@app.route('/api/getall17', methods=['GET'])
+def getall17():
+    return jsonify(downAndSecUploadUrlPassAndName)
+
+
+# 拉取全部下载解密
+@app.route('/api/getall18', methods=['GET'])
+def getall18():
+    return jsonify(downAndDeSecUrlPassAndName)
 
 
 # 拉取全部m3u黑名单配置
 @app.route('/api/getall15', methods=['GET'])
 def getall15():
-    if m3u_blacklist and len(m3u_blacklist.items()) > 0:
-        return jsonify(m3u_blacklist)
-    else:
         init_m3u_blacklist()
         return jsonify(m3u_blacklist)
 
@@ -4192,6 +4641,22 @@ def changeSubscribePassword():
     cacheKey = request.json['cacheKey']
     num = update_m3u_subscribe_pass(cacheKey)
     return jsonify({"password": num})
+
+
+# 通用随机订阅密码切换-下载加密上传功能
+@app.route("/api/changeSubscribePassword2", methods=['POST'])
+def changeSubscribePassword2():
+    url = request.json['cacheKey']
+    password = generateEncryptPassword()
+    global downAndSecUploadUrlPassAndName
+    myDict = downAndSecUploadUrlPassAndName.get(url)
+    if myDict:
+        myDict['password'] = password
+        # 序列化成JSON字符串
+        json_string = json.dumps(downAndSecUploadUrlPassAndName)
+        # 将JSON字符串存储到Redis中
+        r.set(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME, json_string)
+    return jsonify({"password": password})
 
 
 # 查询订阅文件名字
@@ -4511,6 +4976,56 @@ def chaoronghe8():
         return "empty"
 
 
+def getUrlFileName(url):
+    arr = url.split('/')
+    return arr[len(arr) - 1]
+
+
+# 下载加密上传执行
+@app.route('/api/chaoronghe9', methods=['GET'])
+def chaoronghe9():
+    global downAndSecUploadUrlPassAndName
+    urls = []
+    passwordDict = {}
+    filenameDict = {}
+    secretNameDict = {}
+    try:
+        for url, urlDict in downAndSecUploadUrlPassAndName.items():
+            password = urlDict['password']
+            secretName = urlDict['secretName']
+            filename = getUrlFileName(url)
+            filenameDict[url] = f"{secret_path}{filename}"
+            secretNameDict[url] = f"{public_path}{secretName}"
+            urls.append(url)
+            passwordDict[url] = password
+        download_files2(urls, passwordDict, filenameDict, secretNameDict,
+                        isOpenFunction('switch30'),
+                        isOpenFunction('switch31'), isOpenFunction('switch32'))
+        return "result"
+    except Exception as e:
+        return "empty"
+
+
+# 下载解密
+@app.route('/api/chaoronghe10', methods=['GET'])
+def chaoronghe10():
+    global downAndDeSecUrlPassAndName
+    urls = []
+    passwordDict = {}
+    filenameDict = {}
+    try:
+        for url, urlDict in downAndDeSecUrlPassAndName.items():
+            password = urlDict['password']
+            secretName = urlDict['secretName']
+            filenameDict[url] = f"{secret_path}{secretName}"
+            urls.append(url)
+            passwordDict[url] = password
+        download_files3(urls, passwordDict, filenameDict)
+        return "result"
+    except Exception as e:
+        return "empty"
+
+
 # 一键导出全部配置
 @app.route('/api/download_json_file7', methods=['GET'])
 def download_json_file7():
@@ -4740,6 +5255,22 @@ def removem3ulinks16():
     return "success"
 
 
+# 删除全部下载加密上传
+@app.route('/api/removem3ulinks17', methods=['GET'])
+def removem3ulinks17():
+    downAndSecUploadUrlPassAndName.clear()
+    redis_del(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME)
+    return "success"
+
+
+# 删除全部下载解密
+@app.route('/api/removem3ulinks18', methods=['GET'])
+def removem3ulinks18():
+    downAndDeSecUrlPassAndName.clear()
+    redis_del(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME)
+    return "success"
+
+
 # 删除全部M3U黑名单
 @app.route('/api/removem3ulinks15', methods=['GET'])
 def removem3ulinks15():
@@ -4954,6 +5485,10 @@ def main():
     timer_thread7.start()
     timer_thread8 = threading.Thread(target=thread_recall_chaoronghe8, args=(600,), daemon=True)
     timer_thread8.start()
+    timer_thread9 = threading.Thread(target=executeDownUpload, args=(86400,), daemon=True)
+    timer_thread9.start()
+    timer_thread10 = threading.Thread(target=executeDown, args=(86400,), daemon=True)
+    timer_thread10.start()
     # 启动工作线程消费上传数据至gitee
     t = threading.Thread(target=worker_gitee, daemon=True)
     t.start()
