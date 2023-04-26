@@ -10,33 +10,35 @@
 ![image](https://github.com/paperbluster/m3u_subscriber/blob/main/%E5%9B%BE%E7%89%874.png?raw=true)
 ![image](https://github.com/paperbluster/m3u_subscriber/blob/main/%E5%9B%BE%E7%89%875.png?raw=true)
 ![image](https://github.com/paperbluster/m3u_subscriber/blob/main/%E5%9B%BE%E7%89%876.png?raw=true)
+![image](https://github.com/paperbluster/m3u_subscriber/blob/main/%E5%9B%BE%E7%89%877.png?raw=true)
+![image](https://github.com/paperbluster/m3u_subscriber/blob/main/%E5%9B%BE%E7%89%878.png?raw=true)
 ### 安装步骤:
 
 #### 一、host模式:推荐使用，可以减少一层路由，利好dns分流器
 
 ## 普通:一般用下面的就可以
 
-docker run -d --name m3usubscriber -v /mnt/redis/redis.conf:/etc/redis/redis.conf --restart unless-stopped --net=host -d jkld310/m3usubscriber:latest
+docker run -d --name m3usubscriber  --restart unless-stopped --net=host -d jkld310/m3usubscriber:latest
 
-docker run -d --name m3usubscriber -v /mnt/redis/redis.conf:/etc/redis/redis.conf --restart unless-stopped --net=host -d jkld310/m3usubscriber:arm64v8
+docker run -d --name m3usubscriber --restart unless-stopped --net=host -d jkld310/m3usubscriber:arm64v8
 
-docker run -d --name m3usubscriber -v /mnt/redis/redis.conf:/etc/redis/redis.conf --restart unless-stopped --net=host -d jkld310/m3usubscriber:x86_64
+docker run -d --name m3usubscriber --restart unless-stopped --net=host -d jkld310/m3usubscriber:x86_64
 
 ## 特权:开放全部线程和管理权限
 
-docker run -d --name m3usubscriber -v /mnt/redis/redis.conf:/etc/redis/redis.conf --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged=true --cap-add=ALL -d jkld310/m3usubscriber:latest
+docker run -d --name m3usubscriber --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged=true --cap-add=ALL -d jkld310/m3usubscriber:latest
 
-docker run -d --name m3usubscriber -v /mnt/redis/redis.conf:/etc/redis/redis.conf --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged=true --cap-add=ALL -d jkld310/m3usubscriber:arm64v8
+docker run -d --name m3usubscriber  --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged=true --cap-add=ALL -d jkld310/m3usubscriber:arm64v8
 
-docker run -d --name m3usubscriber -v /mnt/redis/redis.conf:/etc/redis/redis.conf --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged=true --cap-add=ALL -d jkld310/m3usubscriber:x86_64
+docker run -d --name m3usubscriber --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged=true --cap-add=ALL -d jkld310/m3usubscriber:x86_64
 
 #### 二、bridge模式:
 
-docker run -d --name m3usubscriber -v /mnt/redis/redis.conf:/etc/redis/redis.conf --restart unless-stopped -p 22771:22771 -p 22770:22770 -d jkld310/m3usubscriber:latest
+docker run -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 22770:22770 -p 22772:22772 -d jkld310/m3usubscriber:latest
 
-docker run -d --name m3usubscriber -v /mnt/redis/redis.conf:/etc/redis/redis.conf --restart unless-stopped -p 22771:22771 -p 22770:22770 -d jkld310/m3usubscriber:arm64v8
+docker run -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 22770:22770 -p 22772:22772 -d jkld310/m3usubscriber:arm64v8
 
-docker run -d --name m3usubscriber -v /mnt/redis/redis.conf:/etc/redis/redis.conf --restart unless-stopped -p 22771:22771 -p 22770:22770 -d jkld310/m3usubscriber:x86_64
+docker run -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 22770:22770 -p 22772:22772 -d jkld310/m3usubscriber:x86_64
 
 ### 非常高兴能为您介绍本工具所实现的各项功能：
 
@@ -92,6 +94,18 @@ adguardhome)，dns监听端口-22770(在软路由dhcp/dns设置转发127.0.0.1#2
 
 19-增加了搜索功能
 
+#### 20-订阅文件重命名，同步上传的订阅文件现在支持自命名，不支持格式修改，默认txt
+
+21-直播源垃圾过滤，禁止关键字相关直播源数据入库
+
+#### 22-直播源白名单分组优先级，根据优先级来配置优先筛选直播源对其归类为对应分组，数字越小分组越优先
+
+#### 23-通用网络文件下载加密后上传至同步账号，支持自定义文件名字，包括格式
+
+#### 24-通用下载加密订阅解密，配合23可以实现客户机对服务器两者数据传递
+
+#### 25-参考benmoose39大佬的项目https://github.com/benmoose39/YouTube_to_m3u，加入了youtube转直播源订阅功能，该功能生成的直播源列表会自动追加在白名单和有效直播源里，定时器功能需要在功能开关开启
+
 ### 接下来，您只需要按照以下步骤即可使用本工具：
 
 1-新增网络直播源订阅或上传文件导入合并M3U超融合备份；
@@ -110,9 +124,11 @@ http://192.168.5.1:22771/url/A.m3u
 
 ### 本人也必须坦诚地告诉您，本工具也存在一些缺点，包括：
 
-1-直播源有效性检测效果一般，但是应该可以在网络直播源方面把tvheadend踩在脚下了，有点狂妄哈哈哈
+#### 1-直播源有效性检测比较简单，仅仅通过连通性测试来完成，并且由于大超量并发检测导致可能存在被网站当成爬虫攻击被拉黑IP，自己权衡是否使用该功能
 
-2-镜像有点大，已经压缩到200兆了，有在考虑要不要放弃nginx
+2-镜像有点大，已经压缩到200兆了，有在考虑要不要放弃nginx，塞了一个redis哈哈哈哈哈！
+
+redis导致镜像在不断变大有点蛋疼,当然你只使用dns分流器的话这个趋势会很慢
 
 3-主要是为了自己网上冲浪畅通无阻写的，其他人使用起来应该很痛苦吧哈哈哈哈哈哈哈哈哈
 
@@ -131,6 +147,10 @@ subconverter很强大，我无法对其进行参考改造合并，尝试自己�
 8-epg没做，因为是整合网络全部直播源，所以资源格式乱七八糟，目前以整合优化格式为主
 
 9-dns分流器第一次遇到的域名请求全都是对黑白名单全部数据进行查询，所以第一次比较慢，第一次命中后会把命中域名规则和查询的域名全部缓存起来，后期查询速度就非常快
+
+10-dns分流器虽然实现了完全自动化，目前没有接入ip分流，主要是ip分流写出BUG了@_@
+
+11-dns分流器目前基于域名分流，如果订阅的黑白域名组有脏东西的话还是会导致分流异常；同时域名分流仅仅基于子域名匹配规则来进行，可以应付大多数情况
 
 ### 此外，本人也希望借此机会进行一些吐槽：
 
