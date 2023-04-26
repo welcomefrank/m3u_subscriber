@@ -1915,6 +1915,7 @@
     const downloadBtn23 = document.getElementById('download-json-btn23');
     // 输入框显示主机ip
     const iptext = document.getElementById('iptext');
+    var iptextCache = sessionStorage.getItem('iptext');
 
     // 获取所有具有类名 "urllink" 的 h3 元素
     var elements = document.getElementsByClassName("urllink");
@@ -2466,6 +2467,9 @@
                 .then(data => {
                     // 更新服务器设置
                     targetConst.value = data.button;
+                    if (requestpath === '/api/getIP') {
+                        sessionStorage.setItem('iptext', data.button);
+                    }
                    // sessionStorage.setItem(targetCacheName, data.button);
                 })
        // }

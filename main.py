@@ -575,7 +575,8 @@ def check_file(m3u_dict):
         oldChinaChannelDict = redis_get_map(REDIS_KET_TMP_CHINA_CHANNEL)
         if oldChinaChannelDict:
             tmp_url_tvg_name_dict.update(oldChinaChannelDict)
-        redis_add_map(REDIS_KET_TMP_CHINA_CHANNEL, tmp_url_tvg_name_dict)
+        if len(tmp_url_tvg_name_dict.keys()) > 0:
+            redis_add_map(REDIS_KET_TMP_CHINA_CHANNEL, tmp_url_tvg_name_dict)
         if len(m3u_dict) == 0:
             return
         path = f"{secret_path}{getFileNameByTagName('aliveM3u')}.m3u"
@@ -2042,7 +2043,7 @@ def format_data(data, index, step, my_dict):
         if not line.startswith(("http", "rtsp", "rtmp")):
             # 匹配格式：频道,url
             if re.match(r"^[^#].*,(http|rtsp|rtmp)", line):
-                name, url = line.split(",", 1)
+                name, url = getChannelAndUrl(",", line)
                 searchurl = pureUrl(url)
                 if searchurl in my_dict.keys():
                     continue
@@ -2053,7 +2054,7 @@ def format_data(data, index, step, my_dict):
                 else:
                     my_dict[searchurl] = f'#EXTINF:-1  tvg-name="{defalutname}",{defalutname}\n'
             elif re.match(r"^[^#].*，(http|rtsp|rtmp)", line):
-                name, url = line.split("，", 1)
+                name, url = getChannelAndUrl("，", line)
                 searchurl = pureUrl(url)
                 if searchurl in my_dict.keys():
                     continue
@@ -2124,6 +2125,17 @@ def jumpBlackM3uList(tvg_name):
     return False
 
 
+def getChannelAndUrl(split, str):
+    arr = str.split(split)
+    length = len(arr)
+    if length == 2:
+        return arr[0], arr[1]
+    name = ''
+    for i in range(0, length - 2):
+        name += arr[i]
+    return name, arr[length - 1]
+
+
 # 超融合-直播源字符串内容处理-m3u
 def process_data(data, index, step, my_dict):
     end_index = min(index + step, len(data))
@@ -2144,7 +2156,7 @@ def process_data(data, index, step, my_dict):
         if not lineEncoder.startswith((b"http", b"rtsp", b"rtmp")):
             # 匹配格式：频道,url
             if re.match(r"^[^#].*,(http|rtsp|rtmp)", line):
-                name, url = line.split(",", 1)
+                name, url = getChannelAndUrl(",", line)
                 searchurl = pureUrl(url)
                 if searchurl in my_dict.keys():
                     continue
@@ -2159,7 +2171,7 @@ def process_data(data, index, step, my_dict):
                     updateAdguardhomeWithelistForM3u(searchurl)
             # 匹配格式：频道，url
             elif re.match(r"^[^#].*，(http|rtsp|rtmp)", line):
-                name, url = line.split("，", 1)
+                name, url = getChannelAndUrl("，", line)
                 searchurl = pureUrl(url)
                 if searchurl in my_dict.keys():
                     continue
@@ -2432,7 +2444,7 @@ def upload_oneKey_json(request, filename):
                 for finalKey11, finalDict11 in value.items():
                     if len(finalDict11) > 0:
                         pipe.hmset(finalKey11, finalDict11)
-                        #redis_add_map(finalKey11, finalDict11)
+                        # redis_add_map(finalKey11, finalDict11)
                         importToReloadCache(finalKey11, finalDict11)
             elif key in SPECIAL_REDIS_KEY:
                 for finalKey22, finalDict22 in value.items():
@@ -3423,7 +3435,7 @@ def init_m3u_blacklist():
     if not dict or len(dict) == 0:
         dict = {'动画杂烩': '', '巨兵长城': '', '车载': '', "DJ音乐": '', '舞曲': '', '炫动卡通': '',
                 '金鹰卡通': '', '卡酷少儿': '', '优漫卡通': '', '浙江少儿': '', '河北少儿': '', '潍坊': ''
-            , '黑莓动画': ''}
+            , '黑莓动画': '', 'SPORTSWEAR': '', 'SPORTS WEAR': ''}
         redis_add_map(REDIS_KEY_M3U_BLACKLIST, dict)
         m3u_blacklist = dict.copy()
     m3u_blacklist = dict.copy()
@@ -3437,7 +3449,7 @@ def init_m3u_whitelist():
     dictRank = redis_get_map(REDIS_KEY_M3U_WHITELIST_RANK)
     if not dict or len(dict) == 0:
         dict = {'美国宇航局': '美利坚合众国', '美国购物': '美利坚合众国', 'FOX 体育新闻': '美利坚合众国',
-                '美国历史': '美利坚合众国', '美国红牛运动': '美利坚合众国', '美国1': '美利坚合众国',
+                '美国历史': '美利坚合众国', '美国红牛运动': '体育', '美国1': '美利坚合众国',
                 '美国之音': '美利坚合众国',
                 'FOXNews': '美利坚合众国', 'Ion Plus': '美利坚合众国', 'ION Plus': '美利坚合众国',
                 '美国中文': '美利坚合众国', '美国狗狗宠物': '美利坚合众国', 'BlazeTV': '美利坚合众国',
@@ -3454,7 +3466,21 @@ def init_m3u_whitelist():
                 '.sci-fi': '美利坚合众国', 'UniMÁS': '美利坚合众国', 'Cartoons_90': '美利坚合众国',
                 'Cartoons Short': '美利坚合众国', 'Cartoons Big': '美利坚合众国', 'CineMan': '美利坚合众国',
                 'USA': '美利坚合众国', 'BCU Кинозал Premiere': '美利坚合众国', 'TNT': '美利坚合众国',
-                'beIN SPORTS': '美利坚合众国', 'Sky Sports': '美利坚合众国', 'NBC NEWS': '美利坚合众国',
+                'NBC NEWS': '美利坚合众国', 'SKY SPORT': '体育', 'Auto Motor Sport': '体育',
+                'sky sport': '体育', 'sky Sport': '体育', 'BT SPORT': '体育', 'sportv': '体育',
+                'fight sport': '体育', 'Sportitalia': '体育', 'sportitalia': '体育', 'elta sport': '体育',
+                'Sport 5': '体育', 'claro sport': '体育', 'xsport': '体育', 'sporting': '体育', 'TV3 sport': '体育',
+                'Trace Sport': '体育', 'SPORT 1': '体育', 'sport 3': '体育', 'sport 4k': '体育',
+                'edgesport': '体育', 'sport club': '体育', 'sport tv': '体育', 'j sport': '体育',
+                'viasat sport': '体育','sport 5': '体育',
+                'QAZsport_live': '体育', 'SPORT 5': '体育', 'SPORT 2': '体育', 'Alfa Sport': '体育',
+                'tring sport': '体育',
+                'Sportv': '体育', 'diema sport': '体育', 'Edge Sport': '体育', 'supersport': '体育', 'sport ru': '体育',
+                'Sport 1': '体育', 'Sport+': '体育', 'Esport3': '体育', 'Sport En France': '体育', 'sport en': '体育',
+                'sports': '体育', 'Pluto TV SPORT': '体育', 'NBC News': '体育', 'ssc sport': '体育', 'SporTV': '体育',
+                'bein sport': '体育', 'TV 2 Sport': '体育', 'Sports': '体育', 'SPORT TV': '体育',
+                'FR_RMC_Sport': '体育','EDGEsport': '体育',
+                'SPORTS': '体育', 'k+ sport': '体育', 'digi sport': '体育', 'Eurosport': '体育', 'Sport 3': '体育',
                 'NFL NETWORK': '美利坚合众国', 'WWE NETWORK': '美利坚合众国', 'A&E': '美利坚合众国',
                 'AMC': '美利坚合众国', 'BBC AMERICA': '美利坚合众国', 'BET': '美利坚合众国',
                 'BRAVO': '美利坚合众国', 'USA NETWORK': '美利坚合众国', 'CNBC': '美利坚合众国',
@@ -4594,8 +4620,8 @@ def getall18():
 # 拉取全部m3u黑名单配置
 @app.route('/api/getall15', methods=['GET'])
 def getall15():
-        init_m3u_blacklist()
-        return jsonify(m3u_blacklist)
+    init_m3u_blacklist()
+    return jsonify(m3u_blacklist)
 
 
 # 通用获取同步账户数据-cachekey,flag(bbs-gitee,pps-github,lls-webdav)
@@ -5365,8 +5391,9 @@ def upload_m3u_file():
     my_dict = formatdata_multithread(file_content.splitlines(), 100)
     # my_dict = formattxt_multithread(file_content.splitlines(), 100)
     redis_add_map(REDIS_KEY_M3U_DATA, my_dict)
-    redis_add_map(REDIS_KET_TMP_CHINA_CHANNEL, tmp_url_tvg_name_dict)
-    tmp_url_tvg_name_dict.clear()
+    if len(tmp_url_tvg_name_dict.keys()) > 0:
+        redis_add_map(REDIS_KET_TMP_CHINA_CHANNEL, tmp_url_tvg_name_dict)
+        tmp_url_tvg_name_dict.clear()
     return '文件已上传'
 
 
