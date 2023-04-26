@@ -2,6 +2,7 @@
 ## m3u超融合
 
 ## 一个偏离初心的工具箱，目前有直播源订阅、直播源检测、直播源分组、白名单黑名单订阅、节点订阅、订阅合并、订阅加密、dns分流器、youtube直播源等功能，主要是为了方便自己的网上冲浪做的，并不是很好入手
+## PS:因为解决不了容器太大的问题干脆把所有工具全部放到这个项目里
 
 
 ![image](https://github.com/paperbluster/m3u_subscriber/blob/main/%E5%9B%BE%E7%89%871.png?raw=true)
