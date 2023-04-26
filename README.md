@@ -70,7 +70,7 @@ docker run -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 2
 
 12-添加了白名单、黑名单、ipv4\ipv6订阅，主要是拿来喂养openclash，自用喂养DNS分流器功能
 
-#### 13-添加了类似acl4ssr的功能，测试效果比较弱鸡,自用,需要额外安装docker容器subconverter或者公共转换服务器
+#### 13-添加了类似acl4ssr的功能，需要额外安装docker容器subconverter或者公共转换服务器，我直接把acl4ssr作者的代理模板存进去了，做了保底措施，当只能下载其他情况全部失效的情况下会把一个加密订阅解锁后作为最终代理文件
 
 #### 14-增加了基于redis的dns分流器，配合白名单和黑名单进行分流，转发7874端口(外国+中国域名漏网之鱼，可以使用openclash)，转发5336端口(大部分命中的中国域名，可以使用
 
@@ -78,9 +78,9 @@ adguardhome)，dns监听端口-22770(在软路由dhcp/dns设置转发127.0.0.1#2
 
 备注：dns分流器可以自己设置服务器和端口，建议使用host模式减少一层路由。
 
-实际使用中建议把它作为软路由adguardhome插件的上游dns，adguardhome作为dnsmasq的上游，
+实际使用中建议把它作为软路由adguardhome插件的上游dns，adguardhome劫持dnsmasq的53端口，
 
-在分流器里外国dns设置openclash，国内dns随便你填野生的114.114.114.114:53或者自己整的
+在分流器里外国dns设置openclash，国内dns我填写了第二个adguardhome，这个全部是大陆dns
 
 这样子顺便可以集中使用adguardhome插件的广告过滤
 
