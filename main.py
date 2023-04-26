@@ -139,13 +139,16 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
 # 单独导入导出使用一个配置,需特殊处理:{{url:{pass,name}}}
 # 下载网络配置并且加密后上传:url+加密密钥+加密文件名字
 REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME = 'downloadAndSecretUploadUrlPasswordAndName'
-downAndSecUploadUrlPassAndName = {'key1': {'password': '', 'secretName': 'dffwfwef.txt'},
-                                  'key2': {'password': '', 'secretName': 'ewgdvwvwkdb.mp3'}}
+downAndSecUploadUrlPassAndName = {'key1': {'password': '', 'secretName': 'dffwfwef.txt'}}
 
 # 下载加密网络配置并且解密还原成源文件:加密url+加密密钥+源文件名字
 REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME = 'downloadAndDeSecretUrlPasswordAndName'
-downAndDeSecUrlPassAndName = {'key1': {'password': '', 'secretName': 'dhfkfgkf.ini'},
-                              'key2': {'password': '', 'secretName': 'wygduwgdkw.txt'}}
+downAndDeSecUrlPassAndName = {'key1': {'password': '', 'secretName': 'dhfkfgkf.ini'}}
+
+# youtube直播源
+REDIS_KEY_YOUTUBE = 'redisKeyYoutube'
+# youtube直播源地址，频道名字
+redisKeyYoutube = {}
 
 NORMAL_REDIS_KEY = 'normalRedisKey'
 # 全部有redis备份字典key-普通redis结构
@@ -154,7 +157,7 @@ allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_
               REDIS_KEY_PROXIES_MODEL, REDIS_KEY_PROXIES_MODEL_CHOSEN, REDIS_KEY_PROXIES_SERVER,
               REDIS_KEY_PROXIES_SERVER_CHOSEN, REDIS_KEY_GITEE, REDIS_KEY_GITHUB,
               REDIS_KEY_M3U_WHITELIST, REDIS_KEY_SECRET_PASS_NOW, REDIS_KEY_WEBDAV, REDIS_KEY_FILE_NAME,
-              REDIS_KEY_M3U_BLACKLIST,
+              REDIS_KEY_M3U_BLACKLIST, REDIS_KEY_YOUTUBE,
               REDIS_KEY_FUNCTION_DICT, REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS]
 
 SPECIAL_REDIS_KEY = 'specialRedisKey'
@@ -389,6 +392,20 @@ timer_condition_proxylist = threading.Condition()
 timer_condition_downUpload = threading.Condition()
 # 下载解密线程阻塞开关
 timer_condition_download = threading.Condition()
+# youtube直播源线程阻塞开关
+timer_condition_youtube = threading.Condition()
+
+
+def executeYoutube(sleepSecond):
+    while True:
+        with timer_condition_youtube:
+            if not isOpenFunction('switch35'):
+                timer_condition_youtube.wait(sleepSecond)
+            # 执行方法
+            chaoronghe24()
+            print("youtube直播源定时器执行成功")
+            timer_condition_youtube.wait(sleepSecond)
+        time.sleep(sleepSecond)
 
 
 def executeDown(sleepSecond):
@@ -516,6 +533,11 @@ def toggle_m3u(functionId, value):
             function_dict[functionId] = str(value)
             redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
             timer_condition_download.notify()
+    elif functionId == 'switch35':
+        with timer_condition_youtube:
+            function_dict[functionId] = str(value)
+            redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
+            timer_condition_youtube.notify()
 
 
 def executeM3u(sleepSecond):
@@ -567,6 +589,12 @@ async def asynctask(m3u_dict):
         await asyncio.gather(*tasks)
 
 
+def copyAndRename(source_file, destination_file):
+    with open(source_file, 'rb') as fsrc:
+        with open(destination_file, 'wb') as fdst:
+            fdst.write(fsrc.read())
+
+
 def check_file(m3u_dict):
     try:
         """
@@ -582,10 +610,15 @@ def check_file(m3u_dict):
         path = f"{secret_path}{getFileNameByTagName('aliveM3u')}.m3u"
         if os.path.exists(path):
             os.remove(path)
+        path3 = f"{secret_path}youtube.m3u"
+        if os.path.exists(path3):
+            copyAndRename(path3, path)
         path2 = f"{secret_path}{getFileNameByTagName('healthM3u')}.m3u"
         if isOpenFunction('switch5'):
             if os.path.exists(path2):
                 os.remove(path2)
+            if os.path.exists(path3):
+                copyAndRename(path3, path2)
             # 异步缓慢检测出有效链接
         asyncio.run(asynctask(m3u_dict))
     except:
@@ -736,6 +769,44 @@ def download_files(urls, redis_dict):
                 results.append(result)
     # 将结果按照原始URL列表的顺序排序并返回它们
     return "".join(results)
+
+
+def download_files4():
+    global redisKeyYoutube
+    urls = redisKeyYoutube.keys()
+    m3u_dict = {}
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        # 提交下载任务并获取future对象列表
+        future_to_url = {
+            executor.submit(grab, url, redisKeyYoutube, m3u_dict): url for
+            url in urls}
+    # 等待所有任务执行完毕
+    executor.shutdown(wait=True)
+    return m3u_dict
+
+
+def grab(url, redisKeyYoutube, m3u_dict):
+    response = requests.get(url, timeout=15).text
+    if '.m3u8' not in response:
+        # response = requests.get(url).text
+        if '.m3u8' not in response:
+            # os.system(f'wget {url} -O temp.txt')
+            os.system(f'curl "{url}" > temp.txt')
+            response = ''.join(open('temp.txt').readlines())
+            if '.m3u8' not in response:
+                return
+    end = response.find('.m3u8') + 5
+    tuner = 100
+    while True:
+        if 'https://' in response[end - tuner: end]:
+            link = response[end - tuner: end]
+            start = link.find('https://')
+            end = link.find('.m3u8') + 5
+            break
+        else:
+            tuner += 5
+    m3u_dict[link[start: end]] = redisKeyYoutube[url]
+    # print(f"{link[start: end]}")
 
 
 def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, uploadGithub, uploadWebdav):
@@ -948,8 +1019,12 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
     if ism3u:
         old_dict = redis_get_map(redisKeyData)
         my_dict.update(old_dict)
-    # 同步方法写出全部配置
-    distribute_data(my_dict, fileName, 100)
+    if ism3u:
+        if isOpenFunction('switch4'):
+            distribute_data(my_dict, fileName, 100)
+    else:
+        # 同步方法写出全部配置
+        distribute_data(my_dict, fileName, 100)
     if ism3u:
         redis_add_map(redisKeyData, my_dict)
         # M3U域名tvlist - 无加密
@@ -1361,8 +1436,6 @@ def init_db():
     init_m3u_whitelist()
     init_m3u_blacklist()
     init_IP()
-    init_function_dict()
-    init_file_name()
     init_pass('proxy')
     init_pass('ipv6')
     init_pass('ipv4')
@@ -1370,6 +1443,7 @@ def init_db():
     init_pass('whitelist')
     init_pass('m3u')
     initReloadCacheForSpecial()
+    initReloadCacheForNormal()
 
 
 def init_function_dict():
@@ -1479,6 +1553,9 @@ def init_function_dict():
         # 下载解密-定时器
         if 'switch34' not in keys:
             dict['switch34'] = '0'
+        # YOUTUBE-定时器
+        if 'switch35' not in keys:
+            dict['switch35'] = '0'
         redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
         function_dict = dict.copy()
     else:
@@ -1490,7 +1567,7 @@ def init_function_dict():
                 'switch21': '0',
                 'switch22': '1', 'switch23': '1', 'switch24': '1', 'switch25': '0', 'switch26': '0', 'switch27': '0'
             , 'switch28': '0', 'switch29': '1', 'switch30': '0', 'switch31': '0', 'switch32': '0', 'switch33': '0',
-                'switch34': '0'}
+                'switch34': '0','switch35': '0'}
         redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
         function_dict = dict.copy()
 
@@ -3187,6 +3264,22 @@ def init_extra_dns_server():
     return num
 
 
+def initReloadCacheForNormal():
+    for redisKey in allListArr:
+        if redisKey in REDIS_KEY_YOUTUBE:
+            try:
+                global redisKeyYoutube
+                redisKeyYoutube.clear()
+                dict = redis_get_map(REDIS_KEY_YOUTUBE)
+                redisKeyYoutube.update(dict)
+            except Exception as e:
+                pass
+        elif redisKey in REDIS_KEY_FUNCTION_DICT:
+            init_function_dict()
+        elif redisKey in REDIS_KEY_FILE_NAME:
+            init_file_name()
+
+
 def initReloadCacheForSpecial():
     for redisKey in specialRedisKey:
         if redisKey in REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME:
@@ -3448,7 +3541,7 @@ def init_m3u_whitelist():
     dict = redis_get_map(REDIS_KEY_M3U_WHITELIST)
     dictRank = redis_get_map(REDIS_KEY_M3U_WHITELIST_RANK)
     if not dict or len(dict) == 0:
-        dict = {'美国宇航局': '美利坚合众国', '美国购物': '美利坚合众国', 'FOX 体育新闻': '美利坚合众国',
+        dict = {'美国宇航局': '美利坚合众国', '美国购物': '美利坚合众国', 'FOX 体育新闻': '体育',
                 '美国历史': '美利坚合众国', '美国红牛运动': '体育', '美国1': '美利坚合众国',
                 '美国之音': '美利坚合众国',
                 'FOXNews': '美利坚合众国', 'Ion Plus': '美利坚合众国', 'ION Plus': '美利坚合众国',
@@ -3472,16 +3565,16 @@ def init_m3u_whitelist():
                 'Sport 5': '体育', 'claro sport': '体育', 'xsport': '体育', 'sporting': '体育', 'TV3 sport': '体育',
                 'Trace Sport': '体育', 'SPORT 1': '体育', 'sport 3': '体育', 'sport 4k': '体育',
                 'edgesport': '体育', 'sport club': '体育', 'sport tv': '体育', 'j sport': '体育',
-                'viasat sport': '体育','sport 5': '体育',
+                'viasat sport': '体育', 'sport 5': '体育',
                 'QAZsport_live': '体育', 'SPORT 5': '体育', 'SPORT 2': '体育', 'Alfa Sport': '体育',
-                'tring sport': '体育',
+                'tring sport': '体育', 'wwe': '体育', 'WWE': '体育',
                 'Sportv': '体育', 'diema sport': '体育', 'Edge Sport': '体育', 'supersport': '体育', 'sport ru': '体育',
                 'Sport 1': '体育', 'Sport+': '体育', 'Esport3': '体育', 'Sport En France': '体育', 'sport en': '体育',
                 'sports': '体育', 'Pluto TV SPORT': '体育', 'NBC News': '体育', 'ssc sport': '体育', 'SporTV': '体育',
                 'bein sport': '体育', 'TV 2 Sport': '体育', 'Sports': '体育', 'SPORT TV': '体育',
-                'FR_RMC_Sport': '体育','EDGEsport': '体育',
+                'FR_RMC_Sport': '体育', 'EDGEsport': '体育',
                 'SPORTS': '体育', 'k+ sport': '体育', 'digi sport': '体育', 'Eurosport': '体育', 'Sport 3': '体育',
-                'NFL NETWORK': '美利坚合众国', 'WWE NETWORK': '美利坚合众国', 'A&E': '美利坚合众国',
+                'NFL NETWORK': '美利坚合众国', 'WWE NETWORK': '体育', 'A&E': '美利坚合众国',
                 'AMC': '美利坚合众国', 'BBC AMERICA': '美利坚合众国', 'BET': '美利坚合众国',
                 'BRAVO': '美利坚合众国', 'USA NETWORK': '美利坚合众国', 'CNBC': '美利坚合众国',
                 'NHL Network': '美利坚合众国', '5USA': '美利坚合众国', 'CBS SPORTS': '美利坚合众国',
@@ -3498,7 +3591,7 @@ def init_m3u_whitelist():
                 'usa fight network': '美利坚合众国', 'E! Entertaiment USA': '美利坚合众国',
                 'USA Today': '美利坚合众国', 'usa espn': '美利坚合众国', 'UK: 5 USA': '美利坚合众国',
                 'CMC-USA': '美利坚合众国', 'usa disney': '美利坚合众国', 'usa network': '美利坚合众国',
-                'usa ufc': '美利坚合众国', 'usa wwe': '美利坚合众国', 'usa mtv': '美利坚合众国',
+                'usa ufc': '美利坚合众国', 'usa wwe': '体育', 'usa mtv': '美利坚合众国',
                 'usa crime': '美利坚合众国', 'usa cnbc': '美利坚合众国', 'GoUSA TV': '美利坚合众国',
                 'Harvest TV USA': '美利坚合众国', 'jltv usa': '美利坚合众国', 'Best Movies HD (USA)': '美利坚合众国',
                 'usa news': '美利坚合众国', 'Go USA': '美利坚合众国', 'usa american heroes': '美利坚合众国',
@@ -3553,21 +3646,22 @@ def init_m3u_whitelist():
                 '龙华动画': '港澳台', '龙华戏剧': '港澳台', '龙华偶像': '港澳台', '龙华电影': '港澳台',
                 '龙华影剧': '港澳台', '国兴卫视': '港澳台', '國興衛視': '港澳台', '愛爾達': '港澳台',
                 '爱尔达': '港澳台',
-                '龙华洋片': '港澳台',
-                '龙华经典': '港澳台', 'ELEVEN体育': '港澳台', '亚洲旅游台': '港澳台', '亞洲旅遊台': '港澳台',
+                '龙华洋片': '港澳台', '半岛新闻': '美利坚合众国',
+                '龙华经典': '港澳台', 'ELEVEN体育': '体育', '亚洲旅游台': '港澳台', '亞洲旅遊台': '港澳台',
                 '壹新聞': '港澳台', 'J2': '港澳台', '华丽台': '港澳台',
                 '靖洋': '港澳台', '靖天': '港澳台', '乐活频道': '港澳台', '视纳华仁': '港澳台', '采昌影剧': '港澳台',
-                '华艺影剧': '港澳台', '华艺': '港澳台', '智林体育': '港澳台', 'Z频道': '港澳台',
+                '华艺影剧': '港澳台', '华艺': '港澳台', '智林体育': '体育', 'Z频道': '港澳台',
                 '新唐人': '港澳台', '大爱': '港澳台', '镜电视': '港澳台', '十方法界': '港澳台', '华藏卫星': '港澳台',
                 '世界电视': '港澳台', '生命电视': '港澳台', '希望综合': '港澳台', '新天地民俗': '港澳台',
                 '天美丽电视': '港澳台', '环宇新闻': '港澳台', '環宇新聞': '港澳台', '非凡新聞': '港澳台',
-                'JET综合': '港澳台', 'JET綜合': '港澳台', '东风卫视': '港澳台',
+                'JET综合': '港澳台', 'JET綜合': '港澳台', '东风卫视': '港澳台', 'TVB无线': '港澳台',
                 '東風衛視': '港澳台',
+                '亚洲新闻': '港澳台', '有线新闻': '港澳台', '耀才财经': '港澳台', '有线财经': '港澳台',
                 '正德电视': '港澳台', '双子卫视': '港澳台', '信大电视': '港澳台', '番薯卫星': '港澳台',
                 '信吉艺文': '港澳台', '信吉卫星': '港澳台', '天良卫星': '港澳台', '大立电视': '港澳台',
                 '诚心电视': '港澳台', '富立电视': '港澳台',
                 '全大电视': '港澳台', '威达超舜': '港澳台', '海豚综合': '港澳台', '唯心电视': '港澳台',
-                '冠军电视': '港澳台', '冠军梦想台': '港澳台', 'A-One体育': '港澳台', 'HOT频道': '港澳台',
+                '冠军电视': '港澳台', '冠军梦想台': '港澳台', 'A-One体育': '体育', 'HOT频道': '港澳台',
                 '彩虹E台': '港澳台', '澳亚卫视': '港澳台', '澳亞衛視': '港澳台',
                 '彩虹电影': '港澳台', '松视': '港澳台', '惊艳成人电影台': '港澳台', '香蕉台': '港澳台',
                 '美亚电影台': '港澳台',
@@ -3601,79 +3695,58 @@ def init_m3u_whitelist():
                 '人間': '港澳台', '大愛電視': '港澳台', '緯來': '港澳台', '龍華戲劇台': '港澳台',
                 '民视新闻': '港澳台', '东风37': '港澳台',
                 '鳯凰': '港澳台', '天映': '港澳台', '亞旅': '港澳台', '翡翠臺': '港澳台',
-                '八度空间': '港澳台', '华视': '港澳台', '民视': '港澳台', '中视': '港澳台', 'ELTA体育': '港澳台',
+                '八度空间': '港澳台', '华视': '港澳台', '民视': '港澳台', '中视': '港澳台', 'ELTA体育': '体育',
                 '爱达': '港澳台', '波斯魅力台': '港澳台', '寰宇': '港澳台',
                 '澳门莲花': '港澳台', '臺灣': '港澳台',
                 '天才衝衝衝': '港澳台', '有线新闻台': '港澳台', '臺視': '港澳台', '博斯': '港澳台', '龙华': '港澳台',
                 '龍華': '港澳台', '鳳凰': '港澳台', 'ELEVEN': '港澳台', 'eleven': '港澳台',
                 '有線': '港澳台', '無綫': '港澳台', '全民最大党': '港澳台', 'Love Nature': '港澳台',
-
                 '央視': '央视', '中央': '央视', '央视': '央视', 'CCTV': '央视', 'cctv': '央视',
                 '卫视': '卫视', '衛視': '卫视', 'CGTN': '央视', '环球电视': '央视',
-
                 '华数': '华数', 'wasu.tv': '华数', '華數': '华数', 'CIBN': 'CIBN', '/cibn': 'CIBN', 'NewTv': 'NewTv',
                 'NEWTV': 'NewTV', '/newtv': 'NewTV', '百視通': '百视通', '百事通': '百视通', 'BesTV': '百视通',
                 'NewTV': 'NewTV',
                 'BESTV': '百视通', 'BestTv': '百视通', '/bestv': '百视通', '.bestv': '百视通', '百视通': '百视通',
-
-                '新闻': '新闻', '体育': '体育', '动漫': '动漫', 'NASA': '科技', '豆瓣': '影视',
-                '电影': '影视', '动画': '动画', 'Sport': '体育', '體育': '体育', '運動': '体育',
+                '新闻': '电视台', '体育': '体育', '动漫': '动漫', 'NASA': '科技', '豆瓣': '影视',
+                '电影': '影视', '动画': '动画', '體育': '体育', '運動': '体育',
                 '游戏风云': '游戏频道', '卡通': '卡通', '影院': '影视', '足球': '体育', '剧场': '剧场', '东方': '',
                 '纪实': '纪录片', '电竞': '游戏频道', '教育': '教育', '自然': '自然', '动物': '自然', 'NATURE': '自然',
-
                 '成龍': '明星', '成龙': '明星', '李连杰': '明星', '周星驰': '明星', '吴孟达': '明星', '刘德华': '明星',
-                '周润发': '明星', '洪金宝': '明星', '黄渤': '明星', '林正英': '明星',
-
+                '周润发': '明星', '洪金宝': '明星', '黄渤': '明星', '林正英': '明星', '動畫': '动画',
                 '七龍珠': '动漫', '海绵宝宝': '动漫', '猫和老鼠': '动漫',
                 '网球王子': '动漫', '蜡笔小新': '动漫', '海贼王': '动漫', '中华小当家': '动漫', '四驱兄弟': '动漫',
                 '哆啦A梦': '动漫', '樱桃小丸子': '动漫', '柯南': '动漫', '犬夜叉': '动漫', '乱马': '动漫', '童年': '',
                 '高达': '动漫',
                 '守护甜心': '动漫', '开心超人': '动漫', '开心宝贝': '动漫', '百变小樱': '动漫',
                 '咱们裸熊': '动漫', '游戏王': '动漫', 'eva': '动漫',
-
-                '三国演义': '电视剧', '发现': '探索发现', '探索': '探索发现',
-                '连续剧': '电视剧', '音乐': '音乐',
-
-                '财经': '新闻', '经济': '新闻', '美食': '美食', '资讯': '新闻', '时尚': '时尚', '旅游': '旅游',
-
-                '健康': '健康养生', 'Fashion4K': '时尚',
-                '养生': '健康养生',
-
-                '黑莓': '', '综艺': '综艺', '都市': '都市', '看天下': '', '咪咕': '', '谍战': '电视剧',
-
-                '华语': '', '影视': '影视', '科教': '科技', '生活': '生活', 'discovery': '探索发现',
-                '娱乐': '', '电视': '电视台', '纪录': '纪录片', '外语': '外语', '车迷': '汽车',
-                '留学': '留学', '新闻频道': '新闻', '靓装': '时尚', '戏曲': '戏曲', '电视台': '电视台',
-                '综合频道': '电视台', '解密': '探索发现',
-                '综合': '电视台', '法制': '法制', '数码': '数码', '汽车': '汽车', '军旅': '影视', '古装': '影视',
-                '喜剧': '影视', '科技': '科技', '惊悚': '影视', '悬疑': '影视',
-                '科幻': '影视', '全球大片': '影视',
+                '三国演义': '剧场',
+                '连续剧': '剧场', '音乐': '音乐', '綜合': '电视台',
+                '财经': '电视台', '经济': '电视台', '美食': '美食', '资讯': '电视台', '旅游': '电视台',
+                'Fashion4K': '时尚',
+                '黑莓': '其他', '综艺': '综艺', '都市': '电视台', '看天下': '其他', '咪咕': '咪咕', '谍战': '剧场',
+                '华语': '其他', '影视': '影视', '科教': '电视台', '生活': '电视台', 'discovery': '探索发现',
+                '娱乐': '其他', '电视': '电视台', '纪录': '纪录片', '外语': '外语', '车迷': '时尚',
+                '留学': '留学', '新闻频道': '电视台', '靓装': '时尚', '戏曲': '戏曲', '电视台': '电视台',
+                '综合频道': '电视台',
+                '综合': '电视台', '法制': '电视台', '数码': '电视台', '汽车': '时尚', '军旅': '影视', '古装': '影视',
+                '喜剧': '影视', '惊悚': '影视', '悬疑': '影视',
+                '科幻': '影视', '全球大片': '影视', '綜藝': '综艺',
                 '咏春': '影视', '黑帮': '影视', '古墓': '影视',
                 '警匪': '影视', '少儿': '少儿',
-
-                '课堂': '教育',
-                '政务': '政务',
-
-                '民生': '', '农村': '', '人文': '', '幸福彩': '',
-                '家庭': '', '新视觉': '科技',
-
-                '长城': '',
-                '金色频道': '',
-                '气象': '', '炫舞': '', '新华英文': '', '陶瓷': '',
-                '垂钓': '钓鱼',
-                '时代': '', '休闲': '',
-                '文旅': '', '朝鲜': '', '汉语': '',
-                '兵团': '',
+                '课堂': '教育', '政务': '电视台',
+                '民生': '其他', '农村': '其他', '人文': '其他', '幸福彩': '其他',
+                '新视觉': '科技', '金色频道': '其他',
+                '气象': '其他', '炫舞': '其他', '新华英文': '其他', '垂钓': '体育',
+                '时代': '其他', '休闲': '其他',
                 '兵器': '兵器',
-
-                '纯享': '',
-                'SiTV': '', 'CHC': '',
-                'BRTV': '', 'Lifetime': '',
-                'GINX': '', 'Rollor': '',
-                'GlobalTrekker': '', 'LUXE TV': '', 'Insight': '', 'Evenement': '',
-                'Clarity': '', 'hbo': '',
-                'TRAVELXP': '', 'ODISEA': '', 'MUZZIK': '', 'SKY HIGH': '',
-                'Liberty': ''
+                '纯享': '其他',
+                'SiTV': '其他', 'CHC': '影视',
+                'BRTV': '其他', 'Lifetime': '其他',
+                'GINX': '其他', 'Rollor': '其他',
+                'GlobalTrekker': '其他', 'LUXE TV': '其他', 'Insight': '其他', 'Evenement': '其他',
+                'Clarity': '', 'hbo': '美利坚合众国',
+                'TRAVELXP': '其他', 'ODISEA': '其他', 'MUZZIK': '其他', 'SKY HIGH': '美利坚合众国',
+                'Liberty': '其他'
                 }
         redis_add_map(REDIS_KEY_M3U_WHITELIST, dict)
         m3u_whitlist = dict.copy()
@@ -3682,14 +3755,13 @@ def init_m3u_whitelist():
     if not dictRank or len(dictRank) == 0:
         dictRank = {'央视': '1', '港澳台': '0', '卫视': '2', '日本台': '4', '美利坚合众国': '5', '百视通': '6',
                     'NewTV': '7',
-                    'CIBN': '8', '体育': '3', '华数': '9', '动漫': '10', '电视剧': '12', '影视': '11', '明星': '13',
-                    '自然': '14',
-                    '剧场': '15', '动画': '16', '卡通': '17', '探索发现': '18', '钓鱼': '19', '少儿': '20',
-                    '戏曲': '21', '政务': '22',
-                    '教育': '23', '数码': '24', '科技': '25', '新闻': '26', '旅游': '27', '时尚': '28', '法制': '29',
-                    '汽车': '30',
-                    '游戏频道': '31', '留学': '32', '纪录片': '33', '电视台': '34', '综艺': '35', '美食': '36',
-                    '都市': '37', '音乐': '38'
+                    'CIBN': '8', '体育': '3', '华数': '9', '动漫': '10', '影视': '11', '明星': '12',
+                    '自然': '13',
+                    '剧场': '14', '动画': '15', '卡通': '16', '探索发现': '17', '少儿': '18',
+                    '戏曲': '20',
+                    '教育': '21', '科技': '22', '时尚': '23',
+                    '游戏频道': '24', '留学': '25', '纪录片': '19', '电视台': '26', '综艺': '27', '美食': '28',
+                    '音乐': '29', '其他': '30'
                     }
         redis_add_map(REDIS_KEY_M3U_WHITELIST_RANK, dictRank)
         m3u_whitlist_rank = dictRank.copy()
@@ -3767,6 +3839,9 @@ def importToReloadCache(cachekey, dict):
         global function_dict
         function_dict.clear()
         function_dict = dict.copy()
+    elif cachekey == REDIS_KEY_YOUTUBE:
+        global redisKeyYoutube
+        redisKeyYoutube.update(dict)
 
 
 ignore_domain = ['com.', 'cn.', 'org.', 'net.', 'edu.', 'gov.', 'mil.', 'int.', 'biz.', 'info.', 'name.', 'pro.',
@@ -4044,6 +4119,12 @@ def upload_json_file23():
     return upload_json(request, REDIS_KEY_WEBDAV, f"{secret_path}tmp_data23.json")
 
 
+# 上传youtube直播源json文件
+@app.route('/api/upload_json_file24', methods=['POST'])
+def upload_json_file24():
+    return upload_json(request, REDIS_KEY_YOUTUBE, f"{secret_path}tmp_data24.json")
+
+
 # 上传节点后端服务器json文件
 @app.route('/api/upload_json_file10', methods=['POST'])
 def upload_json_file10():
@@ -4085,7 +4166,7 @@ def getSwitchstate():
 
 
 # 需要额外操作的
-clockArr = ['switch25', 'switch26', 'switch27', 'switch28', 'switch29', 'switch13', 'switch25', 'switch33', 'switch34']
+clockArr = ['switch25', 'switch26', 'switch27', 'switch28', 'switch29', 'switch13', 'switch25', 'switch33', 'switch34', 'switch35']
 
 
 # 切换功能开关
@@ -4145,6 +4226,7 @@ def serverMode():
         switchSingleFunction('switch32', '1')
         switchSingleFunction('switch33', '0')
         switchSingleFunction('switch34', '0')
+        switchSingleFunction('switch35', '0')
     elif mode == 'client':
         switchSingleFunction('switch2', '0')
         switchSingleFunction('switch3', '0')
@@ -4180,6 +4262,7 @@ def serverMode():
         switchSingleFunction('switch32', '0')
         switchSingleFunction('switch33', '0')
         switchSingleFunction('switch34', '0')
+        switchSingleFunction('switch35', '0')
     return 'success'
 
 
@@ -4228,6 +4311,14 @@ def deletewm3u13():
     return dellist(request, REDIS_KEY_DNS_SIMPLE_BLACKLIST)
 
 
+# 删除youtube直播源
+@app.route('/api/deletewm3u24', methods=['POST'])
+def deletewm3u24():
+    deleteurl = request.json.get('deleteurl')
+    del redisKeyYoutube[deleteurl]
+    return dellist(request, REDIS_KEY_YOUTUBE)
+
+
 # 添加DNS简易黑名单
 @app.route('/api/addnewm3u13', methods=['POST'])
 def addnewm3u13():
@@ -4245,6 +4336,22 @@ def addnewm3u13():
 @app.route('/api/getall13', methods=['GET'])
 def getall13():
     return jsonify(redis_get_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST))
+
+
+# 拉取全部youtube
+@app.route('/api/getall24', methods=['GET'])
+def getall24():
+    global redisKeyYoutube
+    return returnDictCache(REDIS_KEY_YOUTUBE, redisKeyYoutube)
+
+
+def returnDictCache(redisKey, cacheDict):
+    if len(cacheDict.keys()) > 0:
+        return jsonify(cacheDict)
+    dict = redis_get_map(redisKey)
+    if dict:
+        cacheDict.update(dict)
+    return jsonify(cacheDict)
 
 
 # 导出简易DNS白名单配置
@@ -4358,6 +4465,13 @@ def download_json_file23():
                                    f"{secret_path}temp_outputWebdav.json")
 
 
+# 导出youtube直播源配置
+@app.route('/api/download_json_file24', methods=['GET'])
+def download_json_file24():
+    return download_json_file_base(REDIS_KEY_YOUTUBE,
+                                   f"{secret_path}temp_youtube_m3u.json")
+
+
 # 导出m3u黑名单配置
 @app.route('/api/download_json_file15', methods=['GET'])
 def download_json_file15():
@@ -4461,6 +4575,15 @@ def addnewm3u11():
     checkAndUpdateM3uRank(name)
     m3u_whitlist[addurl] = name
     return addlist(request, REDIS_KEY_M3U_WHITELIST)
+
+
+# 添加youtube直播源
+@app.route('/api/addnewm3u24', methods=['POST'])
+def addnewm3u24():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    redisKeyYoutube[addurl] = name
+    return addlist(request, REDIS_KEY_YOUTUBE)
 
 
 # 添加M3U白名单分组优先级
@@ -5052,6 +5175,24 @@ def chaoronghe10():
         return "empty"
 
 
+# 生成全部youtube直播源
+@app.route('/api/chaoronghe24', methods=['GET'])
+def chaoronghe24():
+    try:
+        m3u_dict = download_files4()
+        if len(m3u_dict) == 0:
+            return "empty"
+        finalDict = {}
+        for url, name in m3u_dict.items():
+            link = f'#EXTINF:-1 group-title="Youtube Live"  tvg-name="{name}",{name}\n'
+            finalDict[url] = link
+        # 同步方法写出全部配置
+        distribute_data(finalDict, f"{secret_path}youtube.m3u", 10)
+        return "result"
+    except Exception as e:
+        return "empty"
+
+
 # 一键导出全部配置
 @app.route('/api/download_json_file7', methods=['GET'])
 def download_json_file7():
@@ -5253,6 +5394,14 @@ def removem3ulinks14():
 def removem3ulinks13():
     redis_del_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST)
     redis_add(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG, 1)
+    return "success"
+
+
+# 删除全部youtube直播源
+@app.route('/api/removem3ulinks24', methods=['GET'])
+def removem3ulinks24():
+    redisKeyYoutube.clear()
+    redis_del_map(REDIS_KEY_YOUTUBE)
     return "success"
 
 
@@ -5516,6 +5665,8 @@ def main():
     timer_thread9.start()
     timer_thread10 = threading.Thread(target=executeDown, args=(86400,), daemon=True)
     timer_thread10.start()
+    timer_thread11 = threading.Thread(target=executeYoutube, args=(10800,), daemon=True)
+    timer_thread11.start()
     # 启动工作线程消费上传数据至gitee
     t = threading.Thread(target=worker_gitee, daemon=True)
     t.start()

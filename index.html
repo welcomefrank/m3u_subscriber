@@ -371,6 +371,10 @@
         <input type="radio" name="page" id="page26">
         <span>网络配置文件下载解密</span>
     </label>
+    <label>
+        <input type="radio" name="page" id="page27">
+        <span>Youtube直播源</span>
+    </label>
 </div>
 <div id="choice">
     <div id="page1" style="display: block;">
@@ -384,6 +388,7 @@
             <h3 class="urllink">电视盒子专用-华语电视台-有效直播源-无加密: http://192.168.5.1:22771/secret/healthM3u.m3u</h3>
             <h3 class="urllink">adguardhome放行直播源域名-无加密: http://192.168.5.1:22771/secret/tvDomainForAdguardhome.txt</h3>
             <h3 class="urllink">adguardhome放行直播源域名-加密: http://192.168.5.1:22771/url/tvDomainForAdguardhomeSecret.txt</h3>
+            <h3 style="color: crimson">有效直播源检测功能可能会被目标域名当成爬虫攻击而被拉黑IP,自己取舍吧</h3>
             <h3>上传文件导入合并M3U超融合备份</h3>
         </div>
         <div style="float: right;width: 30%">
@@ -1299,6 +1304,10 @@
                 <button id="switch34" class="switchfunctionbutton" onclick="toggleSwitch('switch34')">已关闭</button>
                 <input class="toggletext" type="text" value="下载解密-定时器">
             </div>
+            <div class="grid-item">
+                <button id="switch35" class="switchfunctionbutton" onclick="toggleSwitch('switch35')">已关闭</button>
+                <input class="toggletext" type="text" value="youtube-定时器">
+            </div>
         </div>
     </div>
     <div id="page19" style="display: none;">
@@ -1630,7 +1639,7 @@
             <button id="removem3ulinks16" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks16')">删除全部关键字
             </button>
             <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">分组:m3u白名单分组;备注:优先级数字,未命名分组默认-1
+                <div class="notice" style="display: flex;width: 80%;">分组:m3u白名单分组;备注:优先级数字
                 </div>
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
@@ -1644,6 +1653,7 @@
         <h1>网络配置文件下载</h1>
         <div style="float: left;width: 70%">
             <h3>每隔24小时自动执行,默认关闭,可以在功能开关切换</h3>
+            <h3>不建议滥用,只配置必要的配置文件链接即可</h3>
             <h3>上传文件导入合并网络配置文件下载配置</h3>
         </div>
         <div style="width:100%">
@@ -1711,6 +1721,45 @@
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
             <table id="input-table18" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="page27" style="display: none;">
+        <h1>Youtube直播源</h1>
+        <div style="float: left;width: 70%">
+            <h3>后台默认3小时自动执行生成操作,需要在功能开关开启</h3>
+            <h3>超融合油管订阅地址:参考m3u格式</h3>
+            <h3 class="urllink">youtube-无加密:http://192.168.5.1:22771/secret/youtube.m3u</h3>
+            <h3>上传文件导入合并YouTube频道</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn24" class="uploadjsonbtn" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row24" class="addNewSubscriber" style="width:100%">新增YouTube直播频道</button>
+            </div>
+            <div>
+                <button  class="button stepflag" onclick="execute24()" style="width: 100%">生成youtube超融合订阅
+                </button>
+            </div>
+            <div>
+                <button id="download-json-btn24" class="button download-json-btn" style="width: 100%">导出youtube直播频道备份</button>
+            </div>
+            <div style="width: 97%;">
+                <input type="text" id="searchInput24" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks24" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks24')">删除全部订阅
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:youtube直播地址+频道名字
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table24" style="width:100%">
                 <tbody style="width:100%">
                 </tbody>
             </table>
@@ -1930,6 +1979,12 @@
     const inputTable13 = document.getElementById('input-table13');
     const downloadBtn13 = document.getElementById('download-json-btn13');
 
+
+    const fileInput24 = document.getElementById('upload-json-btn24');
+    const addRowButton24 = document.getElementById('add-row24');
+    const inputTable24 = document.getElementById('input-table24');
+    const downloadBtn24 = document.getElementById('download-json-btn24');
+
     // 输入框显示中国DNS端口
     const chinaDnsPort = document.getElementById('chinaDnsPort');
 
@@ -1983,7 +2038,8 @@
     const searchInput17 = document.getElementById('searchInput17');
     // 获取页面元素-下载解密
     const searchInput18 = document.getElementById('searchInput18');
-
+    // 获取页面元素-youtube直播源
+    const searchInput24 = document.getElementById('searchInput24');
 
     searchAddListener2(searchInput18,inputTable18)
     searchAddListener2(searchInput17,inputTable17)
@@ -2009,6 +2065,8 @@
     searchAddListener(searchInput6,inputTable)
     // 给简易dns白名单搜索框绑定'oninput'事件
     searchAddListener(searchInput5,inputTable13)
+    // 给youtube直播源搜索框绑定'oninput'事件
+    searchAddListener(searchInput24,inputTable24)
     // 给简易dns白名单搜索框绑定'oninput'事件
     searchAddListener(searchInput4,inputTable12)
     // 给m3u白名单搜索框绑定'oninput'事件
@@ -2175,6 +2233,10 @@
             var tagnamefile = parts2[2]
             var parts3 = tagnamefile.split(".")
             var tagname = parts3[0]
+            if (tagname==='youtube'){
+                elements[i].innerHTML = prefix + "//" + newIp + suffix2 + "/" + tagname + "." + parts3[1];
+                continue
+            }
             // 设置新的 URL
             var currName = sessionStorage.getItem(tagname);
             if (currName && currName !== "") {
@@ -2664,6 +2726,11 @@
         reloadBase('/api/getall13',  inputTable13)
     }
 
+    //youtube直播源-从数据库拉取关键字列表数据
+    function reloadYoutubeM3U() {
+        reloadBase('/api/getall24',  inputTable24)
+    }
+
     //加密订阅密码历史记录-从数据库拉取关键字列表数据
     function reloadHistorySubscribePassList() {
         reloadBase('/api/getall14',  inputTable14)
@@ -2883,6 +2950,11 @@
         saveInputValuebase(inputValue, name, '/api/addnewm3u13')
     }
 
+    //youtube配置
+    function saveInputValue24(inputValue, name) {
+        saveInputValuebase(inputValue, name, '/api/addnewm3u24')
+    }
+
     //永久列表-保留输入行数据
     function savem3uInputValue(url, info) {
         saveInputValuebase(url, info, '/api/addm3udata')
@@ -3000,7 +3072,10 @@
     function deleteInputRow13(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u13')
     }
-
+    //删除youtube直播源
+    function deleteInputRow24(row, inputValue) {
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u24')
+    }
     //删除加密订阅密码历史记录
     function deleteInputRow14(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u14')
@@ -3073,6 +3148,8 @@
     inputableAddEventListener(inputTable15,  'saveInputValue15', 'deleteInputRow15')
     //加密订阅密码历史记录
     inputableAddEventListener(inputTable14,  'saveInputValue14', 'deleteInputRow14')
+    //youtube直播源
+    inputableAddEventListener(inputTable24,  'saveInputValue24', 'deleteInputRow24')
     //简易DNS黑名单
     inputableAddEventListener(inputTable13,  'saveInputValue13', 'deleteInputRow13')
     //简易DNS白名单
@@ -3162,6 +3239,8 @@
     fileInputAddEventListenerBase(fileInput19, '/api/upload_json_file19')
     //网络下载配置加密上传-导入json配置
     fileInputAddEventListenerBase(fileInput18, '/api/upload_json_file18')
+    //youtube直播源-导入json配置
+    fileInputAddEventListenerBase(fileInput24, '/api/upload_json_file24')
     //网络下载配置加密上传-导入json配置
     fileInputAddEventListenerBase(fileInput17, '/api/upload_json_file17')
     //m3u白名单分组优先级-导入json配置
@@ -3514,6 +3593,8 @@
             reloadFunctionOpenButton('switch33')
             //下载解密-定时器
             reloadFunctionOpenButton('switch34')
+            //youtube-定时器
+            reloadFunctionOpenButton('switch35')
         } else if (selectedPage === pages[18].id) {
             reloadDNSSIMPLEWhiteList()
         } else if (selectedPage === pages[19].id) {
@@ -3529,6 +3610,8 @@
             reloadDownLoadAndSecretUpload()
         } else if (selectedPage === pages[25].id) {
             reloadDownLoadAndDeSecret()
+        }else if (selectedPage === pages[26].id) {
+            reloadYoutubeM3U()
         }
         if (selectedPage !== pages[1].id) {
             window.removeEventListener('scroll', handleScroll);
@@ -3582,6 +3665,8 @@
     downloadBtnAddEventListenerBase(downloadBtn19, '/api/download_json_file19', 'temp_subscribeName.json')
     // 下载解密-导出订阅json配置
     downloadBtnAddEventListenerBase(downloadBtn18, '/api/download_json_file18', 'temp_downloadAndDeSecret.json')
+    // youtube直播源-导出订阅json配置
+    downloadBtnAddEventListenerBase(downloadBtn24, '/api/download_json_file24', 'temp_youtube_m3u.json')
     // 下载加密上传-导出订阅json配置
     downloadBtnAddEventListenerBase(downloadBtn17, '/api/download_json_file17', 'temp_downloadAndSecretUpload.json')
     // M3U白名单分组优先级-导出订阅json配置
@@ -3648,6 +3733,8 @@
     addRowButtonAddEventListener(addRowButton15, inputTable15)
     //DNS简易黑名单-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton13, inputTable13)
+    //youtube直播源-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton24, inputTable24)
     //DNS简易白名单-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton12, inputTable12)
     //M3U白名单-关键字-只添加一行列表，不存储数据
@@ -3792,6 +3879,11 @@
     //超融合-下载+解密
     function execute10() {
         executeBase('/api/chaoronghe10')
+    }
+
+    //超融合-youtube直播源生成
+    function execute24() {
+        executeBase('/api/chaoronghe24')
     }
 
 
