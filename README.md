@@ -179,8 +179,4 @@ bitcoin:BC1QCA337CSCNUFCGLLKZF4UTPLFX0YDZ66UAE38U9?amount=0.00010000&label=%E8%A
 
 bc1qca337cscnufcgllkzf4utplfx0ydz66uae38u9
 
-以太坊
 
-![image](https://github.com/paperbluster/m3u_subscriber/blob/main/BNB.png?raw=true)
-
-0x139C31B19b759a71b7BC3Ec2F4042A76285EF28b
