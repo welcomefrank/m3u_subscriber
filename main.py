@@ -1567,7 +1567,7 @@ def init_function_dict():
                 'switch21': '0',
                 'switch22': '1', 'switch23': '1', 'switch24': '1', 'switch25': '0', 'switch26': '0', 'switch27': '0'
             , 'switch28': '0', 'switch29': '1', 'switch30': '0', 'switch31': '0', 'switch32': '0', 'switch33': '0',
-                'switch34': '0','switch35': '0'}
+                'switch34': '0', 'switch35': '0'}
         redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
         function_dict = dict.copy()
 
@@ -1812,7 +1812,7 @@ PROXY_RULE_RIGHT = ',PROXY'
 
 def updateBlackList(url):
     black_list_nameserver_policy[url] = ""
-    black_list_Proxy_Rules[PROXY_RULE_LEFT + url + PROXY_RULE_RIGHT] = ''
+    black_list_Proxy_Rules[PROXY_RULE_LEFT + url] = ''
 
 
 def updateBlackListSpData(domain):
@@ -2028,7 +2028,7 @@ DIRECT_RULE_RIGHT = ',DIRECT'
 
 def updateOpenclashNameServerPolicy(url):
     white_list_nameserver_policy[url] = ""
-    white_list_Direct_Rules[DIRECT_RULE_LEFT + url + DIRECT_RULE_RIGHT] = ''
+    white_list_Direct_Rules[DIRECT_RULE_LEFT + url] = ''
 
 
 def updateAdguardhomeWithelistForM3u(url):
@@ -3600,7 +3600,7 @@ def init_m3u_whitelist():
                 'CNN': '美利坚合众国', 'usa': '美利坚合众国', 'american': '美利坚合众国',
                 'American': '美利坚合众国', 'cnn': '美利坚合众国',
                 'TOKYO MX': '日本台', 'Tokyo MX': '日本台', 'tokyo mx': '日本台', 'Weather News': '日本台',
-                'weathernews': '日本台',
+                'weathernews': '日本台', 'HOY TV': '港澳台', '香港電視娛樂': '港澳台',
                 'WeatherNews': '日本台', 'hoy tv': '港澳台', 'NHK': '日本台', 'TV Tokyo': '日本台', 'Star 1': '日本台',
                 'Star 2': '日本台', 'Nippon TV': '日本台', 'MBS': '日本台', 'Animax': '日本台', 'QVC Japan': '日本台'
             , 'ANIMAX': '日本台', 'animax': '日本台', 'nhk': '日本台', 'qvc - japan': '日本台',
@@ -3667,7 +3667,7 @@ def init_m3u_whitelist():
                 '美亚电影台': '港澳台',
                 '好消息卫星': '港澳台', '好消息二台': '港澳台', '八大': '港澳台', '三立': '港澳台', 'TVBS': '港澳台',
                 '台視': '港澳台', '中視': '港澳台', '華視': '港澳台', '國會頻道': '港澳台', '民視': '港澳台',
-                '公視': '港澳台',
+                '公視': '港澳台', 'HKIBC': '港澳台', '港台電視': '港澳台', '香港國際財經': '港澳台', 'J2台': '日本台',
                 'Taiwan': '港澳台',
                 '人間衛視': '港澳台', '東森': '港澳台', '超視美洲': '港澳台', '高點綜合': '港澳台',
                 '高點育樂': '港澳台', '年代新聞': '港澳台', '壹電視': '港澳台',
@@ -4166,7 +4166,8 @@ def getSwitchstate():
 
 
 # 需要额外操作的
-clockArr = ['switch25', 'switch26', 'switch27', 'switch28', 'switch29', 'switch13', 'switch25', 'switch33', 'switch34', 'switch35']
+clockArr = ['switch25', 'switch26', 'switch27', 'switch28', 'switch29', 'switch13', 'switch25', 'switch33', 'switch34',
+            'switch35']
 
 
 # 切换功能开关
