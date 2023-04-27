@@ -175,6 +175,10 @@ subconverter很强大，我无法对其进行参考改造合并，尝试自己�
 
 ![image](https://github.com/paperbluster/m3u_subscriber/blob/main/bitcoin.png?raw=true)
 
+bitcoin:BC1QCA337CSCNUFCGLLKZF4UTPLFX0YDZ66UAE38U9?amount=0.00010000&label=%E8%AF%B7%E6%88%91%E5%96%9D%E6%9D%AF%E8%8C%B6%E5%90%A7&message=%E8%AF%B7%E6%88%91%E5%96%9D%E6%9D%AF%E8%8C%B6%E5%90%A7
+
+bc1qca337cscnufcgllkzf4utplfx0ydz66uae38u9
+
 以太坊
 
 ![image](https://github.com/paperbluster/m3u_subscriber/blob/main/BNB.png?raw=true)
