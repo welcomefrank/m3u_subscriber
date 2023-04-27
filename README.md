@@ -33,7 +33,7 @@ docker run -d --name m3usubscriber  --restart unless-stopped --net=host --memory
 
 docker run -d --name m3usubscriber --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged=true --cap-add=ALL -d jkld310/m3usubscriber:x86_64
 
-#### 二、bridge模式:
+#### 二、bridge模式:不建议使用，可能有BUG
 
 docker run -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 22770:22770 -p 22772:22772 -d jkld310/m3usubscriber:latest
 
