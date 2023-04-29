@@ -162,9 +162,9 @@ def schedule_deal_dict_add_remove(myQueue, myDict):
 
 # 并发检测白名单黑名单线程数主键
 REDIS_KEY_THREADS = "threadsnum"
-threadsNum = {REDIS_KEY_THREADS: 1000}
+threadsNum = {REDIS_KEY_THREADS: 100}
 
-MAXTHREAD = 1000
+MAXTHREAD = 100
 
 # 中国DNS服务器主键
 REDIS_KEY_CHINA_DNS_SERVER = "chinadnsserver"
@@ -1051,13 +1051,13 @@ def init_threads_num():
     if num:
         num = int(num.decode())
         if num == 0:
-            num = 1000
+            num = 100
             threadsNum[REDIS_KEY_THREADS] = num
             MAXTHREAD = num
         threadsNum[REDIS_KEY_THREADS] = num
         MAXTHREAD = num
     else:
-        num = 1000
+        num = 100
         threadsNum[REDIS_KEY_THREADS] = num
         MAXTHREAD = num
 

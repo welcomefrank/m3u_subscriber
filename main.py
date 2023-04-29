@@ -20,7 +20,7 @@ import requests
 import time
 from urllib.parse import urlparse, unquote
 # import yaml
-from flask import Flask, jsonify, request, send_file, render_template, send_from_directory, redirect
+from flask import Flask, jsonify, request, send_file, render_template, send_from_directory, redirect, after_this_request
 
 import chardet
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -160,8 +160,8 @@ allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_
               REDIS_KEY_WHITELIST_IPV6_LINK, REDIS_KEY_PASSWORD_LINK, REDIS_KEY_PROXIES_LINK, REDIS_KEY_PROXIES_TYPE,
               REDIS_KEY_PROXIES_MODEL, REDIS_KEY_PROXIES_MODEL_CHOSEN, REDIS_KEY_PROXIES_SERVER,
               REDIS_KEY_PROXIES_SERVER_CHOSEN, REDIS_KEY_GITEE, REDIS_KEY_GITHUB,
-              REDIS_KEY_M3U_WHITELIST, REDIS_KEY_SECRET_PASS_NOW, REDIS_KEY_WEBDAV, REDIS_KEY_FILE_NAME,
-              REDIS_KEY_M3U_BLACKLIST, REDIS_KEY_YOUTUBE,
+              REDIS_KEY_SECRET_PASS_NOW, REDIS_KEY_WEBDAV, REDIS_KEY_FILE_NAME,
+              REDIS_KEY_YOUTUBE,
               REDIS_KEY_FUNCTION_DICT, REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS]
 
 SPECIAL_REDIS_KEY = 'specialRedisKey'
@@ -277,7 +277,14 @@ def serve_files2(filename):
 @app.route('/youtube/<path:filename>')
 def serve_files3(filename):
     id = filename.split('.')[0]
-    return redirect(getTrueUrlById(id))
+    url = getTrueUrlById(id)
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'public, max-age=3600'
+        return response
+
+    return redirect(url)
 
 
 ##########################################################redis数据库操作#############################################
@@ -325,15 +332,7 @@ def redis_del_map(key):
 # 上传订阅配置
 def upload_json(request, rediskey, filename):
     try:
-        # 获取POST请求中的JSON文件内容
-        file_content = request.get_data()
-        # 将字节对象解码为字符串
-        file_content_str = file_content.decode('utf-8')
-        # 将JSON字符串保存到临时文件
-        with open(filename, 'w') as f:
-            json.dump(json.loads(file_content_str), f)
-        with open(filename, 'r') as f:
-            json_dict = json.load(f)
+        json_dict = json.loads(request.get_data())
         if rediskey not in specialRedisKey:
             redis_add_map(rediskey, json_dict)
             importToReloadCache(rediskey, json_dict)
@@ -611,6 +610,7 @@ def check_file(m3u_dict):
         """
             检查直播源文件是否存在且没有被占用
             """
+        chaoronghe24()
         oldChinaChannelDict = redis_get_map(REDIS_KET_TMP_CHINA_CHANNEL)
         if oldChinaChannelDict:
             tmp_url_tvg_name_dict.update(oldChinaChannelDict)
@@ -881,7 +881,7 @@ def addlist(request, rediskey):
 # update 开启m3u域名白名单加密文件上传gitee
 # secretfile 开启m3u域名白名单生成加密文件
 def writeTvList(fileName, secretfilename):
-    distribute_data(white_list_adguardhome, fileName, 100)
+    distribute_data(white_list_adguardhome, fileName, 10)
     white_list_adguardhome.clear()
     download_secert_file(fileName, secretfilename, 'm3u',
                          isOpenFunction('switch8'), isOpenFunction('switch7'), isOpenFunction('switch30'),
@@ -903,10 +903,10 @@ def writeOpenclashNameServerPolicy():
         # 更新redis数据库白名单
         # redis_add_map(REDIS_KEY_WHITE_DOMAINS, white_list_nameserver_policy)
         path = f"{secret_path}{getFileNameByTagName('whiteListDomian')}.txt"
-        distribute_data(white_list_nameserver_policy, path, 100)
+        distribute_data(white_list_nameserver_policy, path, 10)
         white_list_nameserver_policy.clear()
         path2 = f"{secret_path}{getFileNameByTagName('whitelistDirectRule')}.txt"
-        distribute_data(white_list_Direct_Rules, path2, 100)
+        distribute_data(white_list_Direct_Rules, path2, 10)
         white_list_Direct_Rules.clear()
 
         # 白名单加密
@@ -930,11 +930,11 @@ def writeBlackList():
         # 通知dns服务器更新内存
         # redis_add(REDIS_KEY_UPDATE_BLACK_LIST_FLAG, 1)
         path = f"{secret_path}{getFileNameByTagName('blackListDomain')}.txt"
-        distribute_data(black_list_nameserver_policy, path, 100)
+        distribute_data(black_list_nameserver_policy, path, 10)
         black_list_nameserver_policy.clear()
 
         path2 = f"{secret_path}{getFileNameByTagName('blacklistProxyRule')}.txt"
-        distribute_data(black_list_Proxy_Rules, path2, 100)
+        distribute_data(black_list_Proxy_Rules, path2, 10)
         black_list_Proxy_Rules.clear()
 
         # 黑名单加密
@@ -994,10 +994,10 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         my_dict.update(old_dict)
     if ism3u:
         if isOpenFunction('switch4'):
-            distribute_data(my_dict, fileName, 100)
+            distribute_data(my_dict, fileName, 10)
     else:
         # 同步方法写出全部配置
-        distribute_data(my_dict, fileName, 100)
+        distribute_data(my_dict, fileName, 10)
     if ism3u:
         redis_add_map(redisKeyData, my_dict)
         # M3U域名tvlist - 无加密
@@ -1764,7 +1764,7 @@ class MyConcreteClass(MyAbstractClass):
 
 
 def formattxt_multithread(data, method_name):
-    num_threads = 100
+    num_threads = 10
     my_dict = {}
     # 计算每个线程处理的数据段大小
     step = math.ceil(len(data) / num_threads)
@@ -2475,18 +2475,46 @@ def generate_multi_json_string(mapnameArr):
     return json_string
 
 
+CACHE_KEY_TO_GLOBAL_VAR = {
+    REDIS_KEY_GITEE: 'redisKeyGitee',
+    REDIS_KEY_FILE_NAME: 'file_name_dict',
+    REDIS_KEY_GITHUB: 'redisKeyGithub',
+    REDIS_KEY_WEBDAV: 'redisKeyWebDav',
+    REDIS_KEY_SECRET_PASS_NOW: 'redisKeySecretPassNow',
+    REDIS_KEY_FUNCTION_DICT: 'function_dict',
+    REDIS_KEY_YOUTUBE: 'redisKeyYoutube'
+}
+
+
+def importToReloadCache(cachekey, dict):
+    if cachekey in CACHE_KEY_TO_GLOBAL_VAR:
+        global_var = globals()[CACHE_KEY_TO_GLOBAL_VAR[cachekey]]
+        global_var.clear()
+        global_var.update(dict)
+
+    # Define mapping between cache keys and global variables
+
+
+CACHE_KEY_TO_GLOBAL_VAR_SPECIAL = {
+    REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME: 'downAndSecUploadUrlPassAndName',
+    REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME: 'downAndDeSecUrlPassAndName'
+}
+
+
+def importToReloadCacheForSpecial(finalKey22, finalDict22):
+    # Check cache key and update global variable accordingly
+    if finalKey22 in CACHE_KEY_TO_GLOBAL_VAR_SPECIAL:
+        global_var = globals()[CACHE_KEY_TO_GLOBAL_VAR_SPECIAL[finalKey22]]
+        global_var.update(finalDict22)
+        # Serialize global variable to JSON string and store in Redis
+        json_string = json.dumps(global_var)
+        r.set(finalKey22, json_string)
+
+
 # 上传订阅配置
-def upload_oneKey_json(request, filename):
+def upload_oneKey_json(request):
     try:
-        # 获取POST请求中的JSON文件内容
-        file_content = request.get_data()
-        # 将字节对象解码为字符串
-        file_content_str = file_content.decode('utf-8')
-        # 将JSON字符串保存到临时文件
-        with open(filename, 'w') as f:
-            json.dump(json.loads(file_content_str), f)
-        with open(filename, 'r') as f:
-            json_dict = json.load(f)
+        json_dict = json.loads(request.get_data())
         # 批量写入数据
         pipe = r.pipeline()
         for key, value in json_dict.items():
@@ -2496,12 +2524,13 @@ def upload_oneKey_json(request, filename):
                         pipe.hmset(finalKey11, finalDict11)
                         # redis_add_map(finalKey11, finalDict11)
                         importToReloadCache(finalKey11, finalDict11)
+                        if len(finalDict11.keys()) > 100:
+                            pipe.execute()
             elif key in SPECIAL_REDIS_KEY:
                 for finalKey22, finalDict22 in value.items():
                     if len(finalDict22) > 0:
                         importToReloadCacheForSpecial(finalKey22, finalDict22)
         pipe.execute()
-        os.remove(filename)
         return jsonify({'success': True})
     except Exception as e:
         print("An error occurred in upload_oneKey_json: ", e)
@@ -2943,7 +2972,7 @@ def download_files_for_encryp_proxy(urls, redis_dict):
                 tmp_file = f"{current_timestamp}{middleStr}.yaml"
                 with open(f"{secret_path}{tmp_file}", 'w'):
                     pass
-                write_content_to_file(result.encode("utf-8"), f"{secret_path}{tmp_file}", 100)
+                write_content_to_file(result.encode("utf-8"), f"{secret_path}{tmp_file}", 10)
                 proxy_dict[f"http://{ip}:22771/secret/" + tmp_file] = f"{secret_path}{tmp_file}"
                 i = i + 1
     return proxy_dict
@@ -2981,7 +3010,7 @@ def chaorongheProxies(filename):
                 os.remove(filename)
             with open(filename, 'w'):
                 pass
-            write_content_to_file(response.content, filename, 100)
+            write_content_to_file(response.content, filename, 10)
             # # 下载 Clash 配置文件
             # with open(filename, 'wb') as f:
             #     f.write(response.content)
@@ -3096,13 +3125,13 @@ def init_threads_num():
     if num:
         num = int(num.decode())
         if num == 0:
-            num = 1000
+            num = 100
             redis_add(REDIS_KEY_THREADS, num)
             threadsNum[REDIS_KEY_THREADS] = num
             redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 1)
         threadsNum[REDIS_KEY_THREADS] = num
     else:
-        num = 1000
+        num = 100
         redis_add(REDIS_KEY_THREADS, num)
         threadsNum[REDIS_KEY_THREADS] = num
         redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 1)
@@ -3937,53 +3966,6 @@ def init_IP():
     return num
 
 
-def importToReloadCacheForSpecial(finalKey22, finalDict22):
-    if finalKey22 == REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME:
-        global downAndSecUploadUrlPassAndName
-        downAndSecUploadUrlPassAndName.update(finalDict22)
-        # 序列化成JSON字符串
-        json_string = json.dumps(downAndSecUploadUrlPassAndName)
-        # 将JSON字符串存储到Redis中
-        r.set(finalKey22, json_string)
-    elif finalKey22 == REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME:
-        global downAndDeSecUrlPassAndName
-        downAndDeSecUrlPassAndName.update(finalDict22)
-        # 序列化成JSON字符串
-        json_string = json.dumps(downAndDeSecUrlPassAndName)
-        # 将JSON字符串存储到Redis中
-        r.set(finalKey22, json_string)
-
-
-def importToReloadCache(cachekey, dict):
-    if cachekey == REDIS_KEY_GITEE:
-        global redisKeyGitee
-        redisKeyGitee.clear()
-        redisKeyGitee = dict.copy()
-    elif cachekey == REDIS_KEY_FILE_NAME:
-        global file_name_dict
-        file_name_dict.clear()
-        file_name_dict = dict.copy()
-    elif cachekey == REDIS_KEY_GITHUB:
-        global redisKeyGithub
-        redisKeyGithub.clear()
-        redisKeyGithub = dict.copy()
-    elif cachekey == REDIS_KEY_WEBDAV:
-        global redisKeyWebDav
-        redisKeyWebDav.clear()
-        redisKeyWebDav = dict.copy()
-    elif cachekey == REDIS_KEY_SECRET_PASS_NOW:
-        global redisKeySecretPassNow
-        redisKeySecretPassNow.clear()
-        redisKeySecretPassNow = dict.copy()
-    elif cachekey == REDIS_KEY_FUNCTION_DICT:
-        global function_dict
-        function_dict.clear()
-        function_dict = dict.copy()
-    elif cachekey == REDIS_KEY_YOUTUBE:
-        global redisKeyYoutube
-        redisKeyYoutube.update(dict)
-
-
 ignore_domain = ['com.', 'cn.', 'org.', 'net.', 'edu.', 'gov.', 'mil.', 'int.', 'biz.', 'info.', 'name.', 'pro.',
                  'asia.', 'us.', 'uk.', 'jp.']
 
@@ -4286,7 +4268,7 @@ def upload_json_file8():
 # 一键上传全部配置集合文件
 @app.route('/api/upload_json_file7', methods=['POST'])
 def upload_json_file7():
-    return upload_oneKey_json(request, f"{secret_path}tmp_data7.json")
+    return upload_oneKey_json(request)
 
 
 # 赞助-比特币
@@ -5331,10 +5313,11 @@ async def download_files4():
     urls = redisKeyYoutube.keys()
     m3u_dict = {}
     try:
+        sem = asyncio.Semaphore(100)  # 限制TCP连接的数量为100个
         async with aiohttp.ClientSession() as session:
             tasks = []
             for url in urls:
-                task = asyncio.ensure_future(grab(session, url, redisKeyYoutube, m3u_dict))
+                task = asyncio.ensure_future(grab(session, url, redisKeyYoutube, m3u_dict, sem))
                 tasks.append(task)
             await asyncio.gather(*tasks)
     except (aiohttp.ClientError, asyncio.TimeoutError) as e:
@@ -5342,13 +5325,13 @@ async def download_files4():
     return m3u_dict
 
 
-async def grab(session, url, redisKeyYoutube, m3u_dict):
+async def grab(session, url, redisKeyYoutube, m3u_dict, sem):
     try:
-        async with session.get(url) as response:
+        async with sem, session.get(url, timeout=20) as response:
             content = await response.text()
             if '.m3u8' not in content:
-                async with aiohttp.ClientSession() as session2:
-                    async with session2.get(url) as response2:
+                async with sem, aiohttp.ClientSession() as session2:
+                    async with session2.get(url, timeout=20) as response2:
                         content = await response2.text()
                         if '.m3u8' not in content:
                             return
@@ -5382,7 +5365,6 @@ def chaoronghe24():
         redisKeyYoutubeM3uFake = {}
         # fakeurl:192.168.5.1:22771/youtube?id=xxxxx
         fakeurl = f"http://{ip}:{port}/youtube/"
-        dict = {}
         for url, name in m3u_dict.items():
             link = f'#EXTINF:-1 group-title="Youtube Live"  tvg-name="{name}",{name}\n'
             youtubeId = getYoutubeId(name)
@@ -5728,7 +5710,7 @@ def removem3ulinks():
 @app.route('/api/download_m3u_file', methods=['GET'])
 def download_m3u_file():
     my_dict = redis_get_map(REDIS_KEY_M3U_DATA)
-    distribute_data(my_dict, f"{secret_path}temp_m3u.m3u", 100)
+    distribute_data(my_dict, f"{secret_path}temp_m3u.m3u", 10)
     # 发送JSON文件到前端
     return send_file(f"{secret_path}temp_m3u.m3u", as_attachment=True)
 
@@ -5740,7 +5722,7 @@ def upload_m3u_file():
     # file_content = file.read().decode('utf-8')
     file_content = file.read()
     # file_content = read_file_with_encoding(file)
-    my_dict = formatdata_multithread(file_content.splitlines(), 100)
+    my_dict = formatdata_multithread(file_content.splitlines(), 10)
     # my_dict = formattxt_multithread(file_content.splitlines(), 100)
     redis_add_map(REDIS_KEY_M3U_DATA, my_dict)
     if len(tmp_url_tvg_name_dict.keys()) > 0:
@@ -5827,10 +5809,10 @@ def process_file():
     # file_content = file.read().decode('utf-8')
     file_content = file.read()
     # file_content = read_file_with_encoding(file)
-    my_dict = formatdata_multithread(file_content.splitlines(), 100)
+    my_dict = formatdata_multithread(file_content.splitlines(), 10)
     # my_dict = formattxt_multithread(file_content.splitlines(), 100)
     # my_dict = formatdata_multithread(file.readlines(), 100)
-    distribute_data(my_dict, f"{secret_path}tmp.m3u", 100)
+    distribute_data(my_dict, f"{secret_path}tmp.m3u", 10)
     return send_file(f"{secret_path}tmp.m3u", as_attachment=True)
 
 
@@ -5848,7 +5830,7 @@ def thread_recall_chaoronghe8(second):
 
 def main():
     init_db()
-    timer_thread1 = threading.Thread(target=executeM3u, args=(86400,), daemon=True)
+    timer_thread1 = threading.Thread(target=executeM3u, args=(7200,), daemon=True)
     timer_thread1.start()
     timer_thread2 = threading.Thread(target=executeWhitelist, args=(86400,), daemon=True)
     timer_thread2.start()
@@ -5868,7 +5850,7 @@ def main():
     timer_thread9.start()
     timer_thread10 = threading.Thread(target=executeDown, args=(86400,), daemon=True)
     timer_thread10.start()
-    timer_thread11 = threading.Thread(target=executeYoutube, args=(7200,), daemon=True)
+    timer_thread11 = threading.Thread(target=executeYoutube, args=(3600,), daemon=True)
     timer_thread11.start()
     # 启动工作线程消费上传数据至gitee
     t = threading.Thread(target=worker_gitee, daemon=True)
