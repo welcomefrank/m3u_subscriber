@@ -101,7 +101,7 @@ class BiliBili:
                 if return_dict:
                     real_list.append(return_dict)
             if real_list:
-                #real_list.append({'name': self.name(uid)})
+                # real_list.append({'name': self.name(uid)})
                 real_list.append({'name': uid})
                 real_list.append({'rid': self.rid})
 
@@ -110,22 +110,27 @@ class BiliBili:
                 return real_dict
         return {}
 
-    def name(self, uid):
-        url = 'https://api.bilibili.com/x/space/acc/info?mid={}&token=&platform=web&jsonp=jsonp'.format(uid)
-        headers = {
-            'origin': 'https://space.bilibili.com',
-            'referer': 'https://space.bilibili.com/{}/'.format(uid),
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36',
-        }
-        response = requests.get(url, headers=headers, timeout=1).json()
-        name = response['data']['name']
-        if response:
-            return name
-        else:
-            return uid
+
+def getBiliBiliM3UByUid(rid):
+    try:
+        bili = BiliBili(rid)
+        resultDict = bili.get_real_url()
+        arr = resultDict.get('bili')
+        for data in arr:
+            if "线路1_10000" in data.keys():
+                return data.get('线路1_10000')
+            elif "线路1_4000" in data.keys():
+                return data.get('线路1_4000')
+            elif "线路1_2500" in data.keys():
+                return data.get('线路1_2500')
+            elif "线路1_1500" in data.keys():
+                return data.get('线路1_1500')
+        return ''
+    except Exception as e:
+        return ''
 
 
 if __name__ == '__main__':
     rid = '2171135'
-    bili = BiliBili(rid)
-    print(bili.get_real_url())
+    src = getBiliBiliM3UByUid(rid)
+    print(src)

@@ -375,6 +375,10 @@
         <input type="radio" name="page" id="page27">
         <span>Youtube直播源</span>
     </label>
+    <label>
+        <input type="radio" name="page" id="page28">
+        <span>BiliBili直播源</span>
+    </label>
 </div>
 <div id="choice">
     <div id="page1" style="display: block;">
@@ -1728,7 +1732,7 @@
     <div id="page27" style="display: none;">
         <h1>Youtube直播源</h1>
         <div style="float: left;width: 70%">
-            <h3>后台默认3小时自动执行生成操作,需要在功能开关开启</h3>
+            <h3>后台默认1小时自动执行生成操作,需要在功能开关开启</h3>
             <h3>超融合油管订阅地址:参考m3u格式</h3>
             <h3 class="urllink">youtube-无加密:http://192.168.5.1:22771/secret/youtube.m3u</h3>
             <h3>上传文件导入合并YouTube频道</h3>
@@ -1741,23 +1745,70 @@
                 <button id="add-row24" class="addNewSubscriber" style="width:100%">新增YouTube直播频道</button>
             </div>
             <div>
-                <button  class="button stepflag" onclick="execute24()" style="width: 100%">生成youtube超融合订阅
+                <button class="button stepflag" onclick="execute24()" style="width: 100%">生成youtube超融合订阅
                 </button>
             </div>
             <div>
-                <button id="download-json-btn24" class="button download-json-btn" style="width: 100%">导出youtube直播频道备份</button>
+                <button id="download-json-btn24" class="button download-json-btn" style="width: 100%">
+                    导出youtube直播频道备份
+                </button>
             </div>
             <div style="width: 97%;">
-                <input type="text" id="searchInput24" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+                <input type="text" id="searchInput24" placeholder="搜索框" class="searchbox"
+                       style="width: 100%"></input>
             </div>
-            <button id="removem3ulinks24" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks24')">删除全部订阅
+            <button id="removem3ulinks24" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks24')">删除全部订阅
             </button>
             <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">订阅来源:youtube直播地址+频道名字
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:youtube直播ID+频道名字
                 </div>
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
             <table id="input-table24" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="page28" style="display: none;">
+        <h1>BiliBili直播源</h1>
+        <div style="float: left;width: 70%">
+            <h3>后台默认1小时自动执行生成操作,需要在功能开关开启</h3>
+            <h3>超融合哔哩哔哩订阅地址:参考m3u格式</h3>
+            <h3 class="urllink">bilibili-无加密:http://192.168.5.1:22771/secret/bilibili.m3u</h3>
+            <h3>上传文件导入合并Bilibili频道</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn25" class="uploadjsonbtn" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row25" class="addNewSubscriber" style="width:100%">新增BiliBili直播频道</button>
+            </div>
+            <div>
+                <button class="button stepflag" onclick="execute25()" style="width: 100%">生成bilibili超融合订阅
+                </button>
+            </div>
+            <div>
+                <button id="download-json-btn25" class="button download-json-btn" style="width: 100%">
+                    导出bilibili直播频道备份
+                </button>
+            </div>
+            <div style="width: 97%;">
+                <input type="text" id="searchInput25" placeholder="搜索框" class="searchbox"
+                       style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks25" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks25')">删除全部订阅
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:bilibili直播ID+频道名字
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table25" style="width:100%">
                 <tbody style="width:100%">
                 </tbody>
             </table>
@@ -1983,6 +2034,11 @@
     const inputTable24 = document.getElementById('input-table24');
     const downloadBtn24 = document.getElementById('download-json-btn24');
 
+    const fileInput25 = document.getElementById('upload-json-btn25');
+    const addRowButton25 = document.getElementById('add-row25');
+    const inputTable25 = document.getElementById('input-table25');
+    const downloadBtn25 = document.getElementById('download-json-btn25');
+
     // 输入框显示中国DNS端口
     const chinaDnsPort = document.getElementById('chinaDnsPort');
 
@@ -2038,6 +2094,8 @@
     const searchInput18 = document.getElementById('searchInput18');
     // 获取页面元素-youtube直播源
     const searchInput24 = document.getElementById('searchInput24');
+    // 获取页面元素-bilibili直播源
+    const searchInput25 = document.getElementById('searchInput25');
 
     searchAddListener2(searchInput18,inputTable18)
     searchAddListener2(searchInput17,inputTable17)
@@ -2065,6 +2123,8 @@
     searchAddListener(searchInput5,inputTable13)
     // 给youtube直播源搜索框绑定'oninput'事件
     searchAddListener(searchInput24,inputTable24)
+    // 给bilibili直播源搜索框绑定'oninput'事件
+    searchAddListener(searchInput25,inputTable25)
     // 给简易dns白名单搜索框绑定'oninput'事件
     searchAddListener(searchInput4,inputTable12)
     // 给m3u白名单搜索框绑定'oninput'事件
@@ -2231,7 +2291,7 @@
             var tagnamefile = parts2[2]
             var parts3 = tagnamefile.split(".")
             var tagname = parts3[0]
-            if (tagname==='youtube'){
+            if (tagname==='youtube' ||tagname==='bilibili' ){
                 elements[i].innerHTML = prefix + "//" + newIp + suffix2 + "/" + tagname + "." + parts3[1];
                 continue
             }
@@ -2729,6 +2789,11 @@
         reloadBase('/api/getall24',  inputTable24)
     }
 
+    //bilibili直播源-从数据库拉取关键字列表数据
+    function reloadBilibiliM3U() {
+        reloadBase('/api/getall25',  inputTable25)
+    }
+
     //加密订阅密码历史记录-从数据库拉取关键字列表数据
     function reloadHistorySubscribePassList() {
         reloadBase('/api/getall14',  inputTable14)
@@ -2953,6 +3018,11 @@
         saveInputValuebase(inputValue, name, '/api/addnewm3u24')
     }
 
+    //bilibili配置
+    function saveInputValue25(inputValue, name) {
+        saveInputValuebase(inputValue, name, '/api/addnewm3u25')
+    }
+
     //永久列表-保留输入行数据
     function savem3uInputValue(url, info) {
         saveInputValuebase(url, info, '/api/addm3udata')
@@ -3074,6 +3144,10 @@
     function deleteInputRow24(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u24')
     }
+    //删除bilibili直播源
+    function deleteInputRow25(row, inputValue) {
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u25')
+    }
     //删除加密订阅密码历史记录
     function deleteInputRow14(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u14')
@@ -3148,6 +3222,8 @@
     inputableAddEventListener(inputTable14,  'saveInputValue14', 'deleteInputRow14')
     //youtube直播源
     inputableAddEventListener(inputTable24,  'saveInputValue24', 'deleteInputRow24')
+    //bilibili直播源
+    inputableAddEventListener(inputTable25,  'saveInputValue25', 'deleteInputRow25')
     //简易DNS黑名单
     inputableAddEventListener(inputTable13,  'saveInputValue13', 'deleteInputRow13')
     //简易DNS白名单
@@ -3239,6 +3315,8 @@
     fileInputAddEventListenerBase(fileInput18, '/api/upload_json_file18')
     //youtube直播源-导入json配置
     fileInputAddEventListenerBase(fileInput24, '/api/upload_json_file24')
+    //bilibili直播源-导入json配置
+    fileInputAddEventListenerBase(fileInput25, '/api/upload_json_file25')
     //网络下载配置加密上传-导入json配置
     fileInputAddEventListenerBase(fileInput17, '/api/upload_json_file17')
     //m3u白名单分组优先级-导入json配置
@@ -3610,6 +3688,8 @@
             reloadDownLoadAndDeSecret()
         }else if (selectedPage === pages[26].id) {
             reloadYoutubeM3U()
+        }else if (selectedPage === pages[27].id) {
+            reloadBilibiliM3U()
         }
         if (selectedPage !== pages[1].id) {
             window.removeEventListener('scroll', handleScroll);
@@ -3665,6 +3745,8 @@
     downloadBtnAddEventListenerBase(downloadBtn18, '/api/download_json_file18', 'temp_downloadAndDeSecret.json')
     // youtube直播源-导出订阅json配置
     downloadBtnAddEventListenerBase(downloadBtn24, '/api/download_json_file24', 'temp_youtube_m3u.json')
+    // bilibili直播源-导出订阅json配置
+    downloadBtnAddEventListenerBase(downloadBtn25, '/api/download_json_file25', 'temp_bilibili_m3u.json')
     // 下载加密上传-导出订阅json配置
     downloadBtnAddEventListenerBase(downloadBtn17, '/api/download_json_file17', 'temp_downloadAndSecretUpload.json')
     // M3U白名单分组优先级-导出订阅json配置
@@ -3698,7 +3780,7 @@
     // 密码本-导出json配置
     downloadBtnAddEventListenerBase(downloadBtn6, '/api/download_json_file6', 'temp_passwordlist.json')
     // 导出所有json配置
-    downloadBtnAddEventListenerBase(downloadBtn7, '/api/download_json_file7', 'allData.json')
+    downloadBtnAddEventListenerBase(downloadBtn7, '/api/download_json_file7', 'allData.zip')
     // 永久列表-导出永久列表
     downloadBtnAddEventListenerBase(downloadM3UBtn, '/api/download_m3u_file', 'temp_m3u.m3u')
 
@@ -3733,6 +3815,8 @@
     addRowButtonAddEventListener(addRowButton13, inputTable13)
     //youtube直播源-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton24, inputTable24)
+    //bilibili直播源-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton25, inputTable25)
     //DNS简易白名单-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton12, inputTable12)
     //M3U白名单-关键字-只添加一行列表，不存储数据
@@ -3882,6 +3966,11 @@
     //超融合-youtube直播源生成
     function execute24() {
         executeBase('/api/chaoronghe24')
+    }
+
+    //超融合-bilibili直播源生成
+    function execute25() {
+        executeBase('/api/chaoronghe25')
     }
 
 

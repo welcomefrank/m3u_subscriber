@@ -12,7 +12,10 @@ import queue
 import re
 # import subprocess
 import threading
+import zipfile
 from concurrent.futures import ThreadPoolExecutor
+from multiprocessing.pool import ThreadPool
+
 import aiohttp
 import aiofiles
 import redis
@@ -25,6 +28,7 @@ from flask import Flask, jsonify, request, send_file, render_template, send_from
 import chardet
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
+from multidict import CIMultiDict
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True  # 实时更新模板文件
@@ -154,15 +158,27 @@ REDIS_KEY_YOUTUBE_M3U = 'redisKeyYoutubeM3u'
 # youtube频道名字,真实m3u8地址
 redisKeyYoutubeM3u = {}
 
+# bilibili直播源
+REDIS_KEY_BILIBILI = 'redisKeyBilibili'
+# bilibili直播源地址，频道名字
+redisKeyBilili = {}
+# bilibili真实m3u8地址
+REDIS_KEY_BILIBILI_M3U = 'redisKeyBilibiliM3u'
+# bilibili频道名字,真实m3u8地址
+redisKeyBililiM3u = {}
+
 NORMAL_REDIS_KEY = 'normalRedisKey'
-# 全部有redis备份字典key-普通redis结构
+# 全部有redis备份字典key-普通redis结构，重要且数据量比较少的
 allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_LINK, REDIS_KEY_WHITELIST_IPV4_LINK,
               REDIS_KEY_WHITELIST_IPV6_LINK, REDIS_KEY_PASSWORD_LINK, REDIS_KEY_PROXIES_LINK, REDIS_KEY_PROXIES_TYPE,
               REDIS_KEY_PROXIES_MODEL, REDIS_KEY_PROXIES_MODEL_CHOSEN, REDIS_KEY_PROXIES_SERVER,
               REDIS_KEY_PROXIES_SERVER_CHOSEN, REDIS_KEY_GITEE, REDIS_KEY_GITHUB,
               REDIS_KEY_SECRET_PASS_NOW, REDIS_KEY_WEBDAV, REDIS_KEY_FILE_NAME,
-              REDIS_KEY_YOUTUBE,
               REDIS_KEY_FUNCTION_DICT, REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS]
+
+# 数据巨大的redis配置,一键导出时单独导出每个配置
+hugeDataList = [REDIS_KEY_BILIBILI, REDIS_KEY_DNS_SIMPLE_WHITELIST, REDIS_KEY_DNS_SIMPLE_BLACKLIST, REDIS_KEY_YOUTUBE,
+                REDIS_KEY_M3U_WHITELIST_RANK, REDIS_KEY_M3U_BLACKLIST, REDIS_KEY_M3U_WHITELIST]
 
 SPECIAL_REDIS_KEY = 'specialRedisKey'
 specialRedisKey = [REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME,
@@ -277,7 +293,7 @@ def serve_files2(filename):
 @app.route('/youtube/<path:filename>')
 def serve_files3(filename):
     id = filename.split('.')[0]
-    url = getTrueUrlById(id)
+    url = redisKeyYoutubeM3u[id]
 
     @after_this_request
     def add_header(response):
@@ -285,6 +301,31 @@ def serve_files3(filename):
         return response
 
     return redirect(url)
+
+
+# 路由bilibili
+@app.route('/bilibili/<path:filename>')
+def serve_files4(filename):
+    id = filename.split('.')[0]
+    url = redisKeyBililiM3u[id]
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'public, max-age=3600'
+        return response
+
+    return redirect(url)
+
+
+##############################################################bilibili############################################
+def requests_get_code(real_dict):
+    for real_ in real_dict:
+        try:
+            code = requests.get(real_dict[real_], stream=True, timeout=1).status_code
+            if code == 200:
+                return real_dict
+        except:
+            pass
 
 
 ##########################################################redis数据库操作#############################################
@@ -413,6 +454,7 @@ def executeYoutube(sleepSecond):
                 timer_condition_youtube.wait(sleepSecond)
             # 执行方法
             chaoronghe24()
+            chaoronghe25()
             print("youtube直播源定时器执行成功")
             timer_condition_youtube.wait(sleepSecond)
         time.sleep(sleepSecond)
@@ -610,7 +652,8 @@ def check_file(m3u_dict):
         """
             检查直播源文件是否存在且没有被占用
             """
-        chaoronghe24()
+        # chaoronghe24()
+        # chaoronghe25()
         oldChinaChannelDict = redis_get_map(REDIS_KET_TMP_CHINA_CHANNEL)
         if oldChinaChannelDict:
             tmp_url_tvg_name_dict.update(oldChinaChannelDict)
@@ -622,14 +665,19 @@ def check_file(m3u_dict):
         if os.path.exists(path):
             os.remove(path)
         path3 = f"{secret_path}youtube.m3u"
+        path4 = f"{secret_path}bilibili.m3u"
         if os.path.exists(path3):
             copyAndRename(path3, path)
+        if os.path.exists(path4):
+            copyAndRename(path4, path)
         path2 = f"{secret_path}{getFileNameByTagName('healthM3u')}.m3u"
         if isOpenFunction('switch5'):
             if os.path.exists(path2):
                 os.remove(path2)
             if os.path.exists(path3):
                 copyAndRename(path3, path2)
+            if os.path.exists(path4):
+                copyAndRename(path4, path2)
             # 异步缓慢检测出有效链接
         asyncio.run(asynctask(m3u_dict))
     except:
@@ -2482,7 +2530,8 @@ CACHE_KEY_TO_GLOBAL_VAR = {
     REDIS_KEY_WEBDAV: 'redisKeyWebDav',
     REDIS_KEY_SECRET_PASS_NOW: 'redisKeySecretPassNow',
     REDIS_KEY_FUNCTION_DICT: 'function_dict',
-    REDIS_KEY_YOUTUBE: 'redisKeyYoutube'
+    REDIS_KEY_YOUTUBE: 'redisKeyYoutube',
+    REDIS_KEY_BILIBILI: 'redisKeyBilibili'
 }
 
 
@@ -3268,6 +3317,11 @@ def init_extra_dns_server():
 
 def initReloadCacheForNormal():
     for redisKey in allListArr:
+        if redisKey in REDIS_KEY_FUNCTION_DICT:
+            init_function_dict()
+        elif redisKey in REDIS_KEY_FILE_NAME:
+            init_file_name()
+    for redisKey in hugeDataList:
         if redisKey in REDIS_KEY_YOUTUBE:
             try:
                 global redisKeyYoutube
@@ -3280,10 +3334,18 @@ def initReloadCacheForNormal():
                     redisKeyYoutubeM3u.update(dict2)
             except Exception as e:
                 pass
-        elif redisKey in REDIS_KEY_FUNCTION_DICT:
-            init_function_dict()
-        elif redisKey in REDIS_KEY_FILE_NAME:
-            init_file_name()
+        if redisKey in REDIS_KEY_BILIBILI:
+            try:
+                global redisKeyBilili
+                redisKeyBilili.clear()
+                dict = redis_get_map(REDIS_KEY_BILIBILI)
+                if dict:
+                    redisKeyBilili.update(dict)
+                dict2 = redis_get_map(REDIS_KEY_BILIBILI_M3U)
+                if dict2:
+                    redisKeyBililiM3u.update(dict2)
+            except Exception as e:
+                pass
 
 
 def initReloadCacheForSpecial():
@@ -4247,6 +4309,12 @@ def upload_json_file24():
     return upload_json(request, REDIS_KEY_YOUTUBE, f"{secret_path}tmp_data24.json")
 
 
+# 上传bilibili直播源json文件
+@app.route('/api/upload_json_file25', methods=['POST'])
+def upload_json_file25():
+    return upload_json(request, REDIS_KEY_BILIBILI, f"{secret_path}tmp_data25.json")
+
+
 # 上传节点后端服务器json文件
 @app.route('/api/upload_json_file10', methods=['POST'])
 def upload_json_file10():
@@ -4442,6 +4510,14 @@ def deletewm3u24():
     return dellist(request, REDIS_KEY_YOUTUBE)
 
 
+# 删除bilibili直播源
+@app.route('/api/deletewm3u25', methods=['POST'])
+def deletewm3u25():
+    deleteurl = request.json.get('deleteurl')
+    del redisKeyBilili[deleteurl]
+    return dellist(request, REDIS_KEY_BILIBILI)
+
+
 # 添加DNS简易黑名单
 @app.route('/api/addnewm3u13', methods=['POST'])
 def addnewm3u13():
@@ -4466,6 +4542,13 @@ def getall13():
 def getall24():
     global redisKeyYoutube
     return returnDictCache(REDIS_KEY_YOUTUBE, redisKeyYoutube)
+
+
+# 拉取全部bilibili
+@app.route('/api/getall25', methods=['GET'])
+def getall25():
+    global redisKeyBilili
+    return returnDictCache(REDIS_KEY_BILIBILI, redisKeyBilili)
 
 
 def returnDictCache(redisKey, cacheDict):
@@ -4595,6 +4678,13 @@ def download_json_file24():
                                    f"{secret_path}temp_youtube_m3u.json")
 
 
+# 导出bilibili直播源配置
+@app.route('/api/download_json_file25', methods=['GET'])
+def download_json_file25():
+    return download_json_file_base(REDIS_KEY_BILIBILI,
+                                   f"{secret_path}temp_bilibili_m3u.json")
+
+
 # 导出m3u黑名单配置
 @app.route('/api/download_json_file15', methods=['GET'])
 def download_json_file15():
@@ -4707,6 +4797,26 @@ def addnewm3u24():
     name = request.json.get('name')
     redisKeyYoutube[addurl] = name
     return addlist(request, REDIS_KEY_YOUTUBE)
+
+
+# 添加bilibili直播源
+@app.route('/api/addnewm3u25', methods=['POST'])
+def addnewm3u25():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    redisKeyBilili[addurl] = avoidRepeatBiliBiliName(name)
+    return addlist(request, REDIS_KEY_BILIBILI)
+
+
+def avoidRepeatBiliBiliName(name):
+    data = redisKeyBilili.values()
+    index = 1
+    while True:
+        if name in data:
+            index = index + 1
+            name = f'{name}{index}'
+        else:
+            return name
 
 
 # 添加M3U白名单分组优先级
@@ -5301,11 +5411,113 @@ def chaoronghe10():
 def getYoutubeId(name):
     for url, tagname in redisKeyYoutube.items():
         if name == tagname:
-            return url.split('?v=')[1]
+            return url
 
 
-def getTrueUrlById(id):
-    return redisKeyYoutubeM3u[id]
+def getBilibiliId(name):
+    for url, tagname in redisKeyBilili.items():
+        if name == tagname:
+            return url
+
+
+async def download_files5():
+    global redisKeyBilili
+    urls = redisKeyBilili.keys()
+    m3u_dict = {}
+    try:
+        sem = asyncio.Semaphore(100)  # 限制TCP连接的数量为100个
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for url in urls:
+                task = asyncio.ensure_future(grab2(session, url, redisKeyBilili, m3u_dict, sem))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        print(f"Failed to fetch files. Error: {e}")
+    return m3u_dict
+
+
+# 先获取直播状态和真实房间号
+bilibili_real_url = 'https://api.live.bilibili.com/room/v1/Room/room_init'
+bili_header = {
+    'User-Agent': 'Mozilla/5.0 (iPod; CPU iPhone OS 14_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, '
+                  'like Gecko) CriOS/87.0.4280.163 Mobile/15E148 Safari/604.1',
+}
+
+# 转换为 CIMultiDict 对象
+cim_headers = CIMultiDict(bili_header)
+
+biliurl = 'https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo'
+
+
+async def grab2(session, url, redisKeyBilibili, m3u_dict, sem):
+    try:
+        param = {
+            'id': url
+        }
+        async with sem, session.get(bilibili_real_url, headers=cim_headers, params=param, timeout=5) as response:
+            res = await response.json()
+            if '不存在' in res['msg']:
+                return
+            live_status = res['data']['live_status']
+            if live_status != 1:
+                return
+            real_room_id = res['data']['room_id']
+            param2 = {
+                'room_id': real_room_id,
+                'protocol': '0,1',
+                'format': '0,1,2',
+                'codec': '0,1',
+                'qn': 10000,
+                'platform': 'web',
+                'ptype': 8,
+            }
+            async with session.get(biliurl, headers=cim_headers, params=param2, timeout=5) as response2:
+                res = await response2.json()
+                stream_info = res['data']['playurl_info']['playurl']['stream']
+                accept_qn = stream_info[0]['format'][0]['codec'][0]['accept_qn']
+                real_lists = []
+                real_list = []
+                thread_list = []
+                nameArr = []
+                for data in stream_info:
+                    format_name = data['format'][0]['format_name']
+                    if format_name == 'ts':
+                        base_url = data['format'][-1]['codec'][0]['base_url']
+                        url_info = data['format'][-1]['codec'][0]['url_info']
+                        for i, info in enumerate(url_info):
+                            for qn in accept_qn:
+                                url_ = base_url
+                                host = info['host']
+                                extra = info['extra']
+                                if qn < 10000:
+                                    qn = qn * 10
+                                    url_ = re.sub('bluray/index', f'{qn}/index', base_url)
+                                elif qn > 10000:
+                                    continue
+                                extra = re.sub('qn=(\d+)', f'qn={qn}', extra)
+                                namestr = f'线路{i + 1}_{qn}'
+                                nameArr.append(namestr)
+                                real_lists.append({namestr: f'{host}{url_}{extra}'})
+                        break
+                if real_lists:
+                    pool = ThreadPool(processes=int(len(real_lists)))
+                    for real_ in real_lists:
+                        thread_list.append(pool.apply_async(requests_get_code, args=(real_,)))
+                    for thread in thread_list:
+                        return_dict = thread.get()
+                        if return_dict:
+                            real_list.append(return_dict)
+                    if real_list:
+                        for data in real_list:
+                            for i in range(len(nameArr) - 1):
+                                if nameArr[i] in data.keys():
+                                    m3u_dict[data.get(nameArr[i])] = redisKeyBilibili[url]
+                                    return
+                        return
+                return
+    except Exception as e:
+        print(f"bilibili An error occurred while processing {url}. Error: {e}")
 
 
 async def download_files4():
@@ -5325,8 +5537,12 @@ async def download_files4():
     return m3u_dict
 
 
-async def grab(session, url, redisKeyYoutube, m3u_dict, sem):
+youtubeUrl = 'https://www.youtube.com/watch?v='
+
+
+async def grab(session, id, redisKeyYoutube, m3u_dict, sem):
     try:
+        url = youtubeUrl + id
         async with sem, session.get(url, timeout=20) as response:
             content = await response.text()
             if '.m3u8' not in content:
@@ -5345,9 +5561,37 @@ async def grab(session, url, redisKeyYoutube, m3u_dict, sem):
                 break
             else:
                 tuner += 5
-        m3u_dict[link[start: end]] = redisKeyYoutube[url]
+        m3u_dict[link[start: end]] = redisKeyYoutube[id]
     except Exception as e:
         print(f"An error occurred while processing {url}. Error: {e}")
+
+
+# 生成全部bilibili直播源
+@app.route('/api/chaoronghe25', methods=['GET'])
+def chaoronghe25():
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        m3u_dict = loop.run_until_complete(download_files5())
+        if len(m3u_dict) == 0:
+            return "empty"
+        ip = init_IP()
+        port = 22771
+        global redisKeyBililiM3u
+        redisKeyBililiM3uFake = {}
+        # fakeurl:192.168.5.1:22771/bilibili?id=xxxxx
+        fakeurl = f"http://{ip}:{port}/bilibili/"
+        for url, name in m3u_dict.items():
+            link = f'#EXTINF:-1 group-title="Bilibili"  tvg-name="{name}",{name}\n'
+            bilibiliId = getBilibiliId(name)
+            redisKeyBililiM3uFake[f'{fakeurl}{bilibiliId}.m3u8'] = link
+            redisKeyBililiM3u[bilibiliId] = url
+        # 同步方法写出全部配置
+        distribute_data(redisKeyBililiM3uFake, f"{secret_path}bilibili.m3u", 10)
+        redis_add_map(REDIS_KEY_BILIBILI_M3U, redisKeyBililiM3u)
+        return "result"
+    except Exception as e:
+        return "empty"
 
 
 # 生成全部youtube直播源
@@ -5379,8 +5623,15 @@ def chaoronghe24():
 
 
 # 一键导出全部配置
+def delete_all_items_in_db(file_paths):
+    for path in file_paths:
+        if os.path.exists(path):
+            os.remove(path)
+
+
 @app.route('/api/download_json_file7', methods=['GET'])
 def download_json_file7():
+    file_paths = []
     # 生成JSON文件数据
     json_data = generate_multi_json_string(allListArr)
     if os.path.exists(f"{secret_path}allData.json"):
@@ -5388,8 +5639,39 @@ def download_json_file7():
     # 保存JSON数据到临时文件
     with open(f"{secret_path}allData.json", 'w') as f:
         f.write(json_data)
-    # 发送JSON文件到前端
-    return send_file(f"{secret_path}allData.json", as_attachment=True)
+    file_paths.append(f"{secret_path}allData.json")
+    getHugeDataList(file_paths)
+    # 发送所有JSON文件到前端
+    result = send_multiple_files(file_paths)
+    # 删除所有数据项
+    delete_all_items_in_db(file_paths)
+    return result
+
+
+def getHugeDataList(file_paths):
+    for redisKey in hugeDataList:
+        try:
+            # 生成JSON文件数据
+            json_data = generate_json_string(redisKey)
+            filename = f"{secret_path}{redisKey}.json"
+            if os.path.exists(filename):
+                os.remove(filename)
+            # 保存JSON数据到临时文件
+            with open(filename, 'w') as f:
+                f.write(json_data)
+            file_paths.append(filename)
+        except Exception as e:
+            pass
+
+
+def send_multiple_files(file_paths):
+    zip_path = os.path.join(secret_path, "allData.zip")
+    # 将所有文件压缩成zip文件
+    with zipfile.ZipFile(zip_path, 'w') as zip_file:
+        for file_path in file_paths:
+            zip_file.write(file_path, arcname=os.path.basename(file_path))
+    # 发送zip文件到前端
+    return send_file(zip_path, as_attachment=True)
 
 
 # 删除密码
@@ -5587,6 +5869,14 @@ def removem3ulinks13():
 def removem3ulinks24():
     redisKeyYoutube.clear()
     redis_del_map(REDIS_KEY_YOUTUBE)
+    return "success"
+
+
+# 删除全部bilibili直播源
+@app.route('/api/removem3ulinks25', methods=['GET'])
+def removem3ulinks25():
+    redisKeyBilili.clear()
+    redis_del_map(REDIS_KEY_BILIBILI)
     return "success"
 
 
