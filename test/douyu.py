@@ -1,151 +1,123 @@
-import hashlib
-import re
-import time
-import urllib.parse
-
+# coding=utf-8
 import requests
+import execjs
+import time
+import re
+import random
+from ._base_recorder import BaseRecorder, recorder
+from .resources import crypto_js
 
 
-class DouYu:
-    """
-    可用来替换返回链接中的主机部分
-    两个阿里的CDN：
-    dyscdnali1.douyucdn.cn
-    dyscdnali3.douyucdn.cn
-    墙外不用带尾巴的akm cdn：
-    hls3-akm.douyucdn.cn
-    hlsa-akm.douyucdn.cn
-    hls1a-akm.douyucdn.cn
-    """
+@recorder(liver='douyu')
+class DouyuRecorder(BaseRecorder):
 
-    def __init__(self, rid):
-        """
-        房间号通常为1~8位纯数字，浏览器地址栏中看到的房间号不一定是真实rid.
-        Args:
-            rid:
-        """
-        self.did = '10000000000000000000000000001501'
-        self.t10 = str(int(time.time()))
-        self.t13 = str(int((time.time() * 1000)))
-
-        self.s = requests.Session()
-        self.res = self.s.get('https://m.douyu.com/' + str(rid)).text
-        result = re.search(r'rid":(\d{1,8}),"vipId', self.res)
-
-        if result:
-            self.rid = result.group(1)
+    def __init__(self, short_id, **args):
+        BaseRecorder.__init__(self, short_id, **args)
+        if self.cookies == None:
+            self.dy_did = ''.join(random.sample('1234567890qwertyuiopasdfghjklzxcvbnm', 32))
         else:
-            raise Exception('房间号错误')
+            searchObj = re.search("dy_did=([^&; ]+)", self.cookies)
+            self.dy_did = searchObj.group(1)
 
-    @staticmethod
-    def md5(data):
-        return hashlib.md5(data.encode('utf-8')).hexdigest()
+    def getRoomInfo(self):
+        roomInfo = {}
+        roomInfo['short_id'] = self.short_id
 
-    def get_pre(self):
-        url = 'https://playweb.douyucdn.cn/lapi/live/hlsH5Preview/' + self.rid
-        data = {
-            'rid': self.rid,
-            'did': self.did
-        }
-        auth = DouYu.md5(self.rid + self.t13)
+        url = "https://www.douyu.com/%s" % self.short_id
         headers = {
-            'rid': self.rid,
-            'time': self.t13,
-            'auth': auth
+            'Origin': 'https://www.douyu.com',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0',
+            'Accept': 'application/json, text/plain, */*',
+            'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
+            'Accept-Encoding': 'gzip, deflate, br',
         }
-        res = self.s.post(url, headers=headers, data=data).json()
-        error = res['error']
-        data = res['data']
-        key = ''
-        if data:
-            rtmp_live = data['rtmp_live']
-            key = re.search(r'(\d{1,8}[0-9a-zA-Z]+)_?\d{0,4}(/playlist|.m3u8)', rtmp_live).group(1)
-        return error, key
+        if not self.cookies is None:
+            headers['Cookie'] = self.cookies
 
-    def get_js(self):
-        result = re.search(r'(function ub98484234.*)\s(var.*)', self.res).group()
-        func_ub9 = re.sub(r'eval.*;}', 'strc;}', result)
+        http_result = requests.get(url, timeout=10, headers=headers)
+        #         print(http_result.text)
+        searchObj = re.search(r'\$ROOM.room_id ?= ?([0-9]+);', http_result.text)
 
-        # 替换掉所有调用 eval 的语句，解析出 JavaScript 代码字符串
-        pattern = re.compile(r'eval\((.*?)\)', re.S)
-        js_str = pattern.sub(lambda m: m.group(1)[1:-1], func_ub9)
-
-        # 将所有 '[x2]-' 前缀的字符替换为 '_'
-        js_str = js_str.replace('[x2]-', '_')
-
-        v = re.search(r'v=(\d+)', js_str).group(1)
-        rb = DouYu.md5(self.rid + self.did + self.t10 + v)
-
-        # 构造 sign 函数
-        def sign(rid, did, time):
-            str1 = 'room/{0}?cdn={1}&nofan=yes&_t={2}&sign='.format(rid, 'ws-h5', time)
-            sha1 = hashlib.sha1((str1 + rb).encode('utf-8')).hexdigest()
-            str2 = '{0}-{1}-'.format(time, did) + sha1
-            return urllib.parse.quote_plus(str2)
-
-        # 调用 sign 函数生成签名参数
-        params = 'cdn={0}&rate=-1&ver=219032101&_t={1}&did={2}&sign={3}'.format('ws-h5', self.t10, self.did, sign(self.rid, self.did, self.t10))
-
-        url = 'https://m.douyu.com/api/room/ratestream'
-        res = self.s.post(url, data=params).text
-        key = re.search(r'(\d{1,8}[0-9a-zA-Z]+)_?\d{0,4}(.m3u8|/playlist)', res).group(1)
-
-        return key
-
-    def get_pc_js(self, cdn='ws-h5', rate=0):
-        """
-        通过PC网页端的接口获取完整直播源。
-        :param cdn: 主线路ws-h5、备用线路tct-h5
-        :param rate: 1流畅；2高清；3超清；4蓝光4M；0蓝光8M或10M
-        :return: JSON格式
-        """
-        res = self.s.get('https://www.douyu.com/' + str(self.rid)).text
-        result = re.search(r'(vdwdae325w_64we[\s\S]*function ub98484234[\s\S]*?)function', res).group(1)
-        func_ub9 = re.sub(r'eval.*?;}', 'strc;}', result)
-
-        # 替换掉所有调用 eval 的语句，解析出 JavaScript 代码字符串
-        pattern = re.compile(r'eval\((.*?)\)', re.S)
-        js_str = pattern.sub(lambda m: m.group(1)[1:-1], func_ub9)
-
-        # 将所有 '[x2]-' 前缀的字符替换为 '_'
-        js_str = js_str.replace('[x2]-', '_')
-
-        v = re.search(r'v=(\d+)', js_str).group(1)
-        rb = DouYu.md5(self.rid + self.did + self.t10 + v)
-
-        # 构造 sign 函数
-        def sign(rid, did, time):
-            str1 = 'room/{0}?cdn={1}&nofan=yes&_t={2}&sign='.format(rid, 'ws-h5', time)
-            sha1 = hashlib.sha1((str1 + rb).encode('utf-8')).hexdigest()
-            str2 = '{0}-{1}-'.format(time, did) + sha1
-            return urllib.parse.quote_plus(str2)
-
-        # 调用 sign 函数生成签名参数
-        params = 'cdn={0}&rate={1}&ver=219032101&_t={2}&did={3}&sign={4}'.format(cdn, rate, self.t10, self.did,
-                                                                                 sign(self.rid, self.did, self.t10))
-
-        url = 'https://www.douyu.com/lapi/live/getH5Play/{}'.format(self.rid)
-        res = self.s.post(url, data=params).json()
-
-        return res
-
-    def get_real_url(self):
-        error, key = self.get_pre()
-        if error == 0:
-            pass
-        elif error == 102:
-            raise Exception('房间不存在')
-        elif error == 104:
-            raise Exception('房间未开播')
+        roomInfo['room_id'] = searchObj.group(1)
+        searchObj = re.search(r'\$ROOM.show_status ?= ?([0-9]+);', http_result.text)
+        roomInfo['live_status'] = searchObj.group(1)
+        searchObj = re.search(r'<h[0-9] class=\"Title-headlineH2\">([^/]*)</h[0-9]>', http_result.text)
+        if searchObj:
+            roomInfo['room_title'] = searchObj.group(1)
         else:
-            key = self.get_js()
+            searchObj = re.search(r'<title>([^/]*)</title>', http_result.text)
+            roomInfo['room_title'] = searchObj.group(1)
+        searchObj = re.search(r'<div class=\"AnchorAnnounce\"><h3><span>([^/]*)</span></h3></div>', http_result.text)
+        if searchObj:
+            roomInfo['room_description'] = searchObj.group(1)
+        else:
+            roomInfo['room_description'] = '无'
+        searchObj = re.search(r'\$ROOM.owner_uid ?= ?([0-9]+);', http_result.text)
+        roomInfo['room_owner_id'] = searchObj.group(1)
+        searchObj = re.search(r'<a class="Title-anchorName" title="([^"]+)"', http_result.text)
+        if searchObj:
+            roomInfo['room_owner_name'] = searchObj.group(1)
+        else:
+            url = "https://www.douyu.com/betard/%s" % roomInfo['room_id']
+            room_info_json = requests.get(url, timeout=10, headers=headers).json()
+            roomInfo['room_owner_name'] = room_info_json['room']['owner_name']
+            roomInfo['room_title'] = room_info_json['room']['room_name']
 
-        real_url = {}
-        real_url["flv"] = "http://vplay1a.douyucdn.cn/live/{}.flv?uuid=".format(key)
-        real_url["x-p2p"] = "http://tx2play1.douyucdn.cn/live/{}.xs?uuid=".format(key)
+        if roomInfo['live_status'] == '1':
+            quality = {}
+            # self.api_url = "https://www.douyu.com/lapi/live/getH5Play/%s"%roomInfo['room_id']
+            self.api_url = "https://playweb.douyu.com/lapi/live/getH5Play/%s" % roomInfo['room_id']
 
-        return real_url
-if __name__ == '__main__':
-    r = input('输入斗鱼直播间号：\n')
-    s = DouYu(r)
-    print(s.get_real_url())
+            begin = http_result.text.index("var vdwdae325w_64we")
+            end = http_result.text.index("</script>", begin)
+            js_code = crypto_js + '\r\n'
+            js_code += http_result.text[begin:end]
+            self.js_code = js_code
+
+            ctx = execjs.compile(js_code)
+            param = ctx.call("ub98484234", roomInfo['room_id'], self.dy_did, int(time.time()))
+            param += "&cdn=&rate=%d&ver=%s&iar=0&ive=1" % (0, "Douyu_219052705")
+
+            self.api_headers = {
+                'Accept': 'application/json, text/plain, */*',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Accept-Language': 'zh-CN,zh;q=0.8',
+                'content-type': 'application/x-www-form-urlencoded',
+                'x-requested-with': 'XMLHttpRequest',
+                'Origin': 'https://www.douyu.com',
+                'Referer': "https://www.douyu.com/topic/xyb01?rid=%s" % self.short_id,
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0',
+            }
+            if not self.cookies is None:
+                self.api_headers['Cookie'] = self.cookies
+
+            http_result = requests.post(self.api_url, timeout=10, headers=self.api_headers, data=param)
+            multirates = http_result.json()['data']['multirates']
+            for rate in multirates:
+                quality[str(rate['rate'])] = rate['name']
+
+            roomInfo['live_rates'] = quality
+
+        self.roomInfo = roomInfo
+        return roomInfo
+
+    def getLiveUrl(self, qn):
+        if not hasattr(self, 'roomInfo'):
+            self.getRoomInfo()
+        if self.roomInfo['live_status'] != '1':
+            print('当前没有在直播')
+            return None
+
+        ctx = execjs.compile(self.js_code)
+        param = ctx.call("ub98484234", self.roomInfo['room_id'], self.dy_did, int(time.time()))
+        param += "&cdn=&rate=%s&ver=%s&iar=0&ive=1" % (qn, "Douyu_219052705")
+        json_result = requests.post(self.api_url, timeout=10, headers=self.api_headers, data=param).json()
+
+        print("申请清晰度 %s的链接，得到清晰度 %d的链接" % (qn, json_result['data']['rate']))
+        header = json_result['data']['rtmp_url']
+        tail = json_result['data']['rtmp_live']
+
+        self.live_url = header + "/" + tail
+        self.live_qn = json_result['data']['rate']
+        return self.live_url
+

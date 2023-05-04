@@ -12,6 +12,8 @@ import queue
 import re
 # import subprocess
 import threading
+import hashlib
+import urllib
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from multiprocessing.pool import ThreadPool
@@ -167,6 +169,15 @@ REDIS_KEY_BILIBILI_M3U = 'redisKeyBilibiliM3u'
 # bilibili频道名字,真实m3u8地址
 redisKeyBililiM3u = {}
 
+# huya直播源
+REDIS_KEY_HUYA = 'redisKeyHuya'
+# huya直播源地址，频道名字
+redisKeyHuya = {}
+# huya真实m3u8地址
+REDIS_KEY_HUYA_M3U = 'redisKeyHuyaM3u'
+# huya频道名字,真实m3u8地址
+redisKeyHuyaM3u = {}
+
 NORMAL_REDIS_KEY = 'normalRedisKey'
 # 全部有redis备份字典key-普通redis结构，重要且数据量比较少的
 allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_LINK, REDIS_KEY_WHITELIST_IPV4_LINK,
@@ -178,7 +189,7 @@ allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_
 
 # 数据巨大的redis配置,一键导出时单独导出每个配置
 hugeDataList = [REDIS_KEY_BILIBILI, REDIS_KEY_DNS_SIMPLE_WHITELIST, REDIS_KEY_DNS_SIMPLE_BLACKLIST, REDIS_KEY_YOUTUBE,
-                REDIS_KEY_M3U_WHITELIST_RANK, REDIS_KEY_M3U_BLACKLIST, REDIS_KEY_M3U_WHITELIST]
+                REDIS_KEY_M3U_WHITELIST_RANK, REDIS_KEY_M3U_BLACKLIST, REDIS_KEY_M3U_WHITELIST, REDIS_KEY_HUYA]
 
 SPECIAL_REDIS_KEY = 'specialRedisKey'
 specialRedisKey = [REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME,
@@ -317,11 +328,25 @@ def serve_files4(filename):
     return redirect(url)
 
 
+# 路由huya
+@app.route('/huya/<path:filename>')
+def serve_files5(filename):
+    id = filename.split('.')[0]
+    url = redisKeyHuyaM3u[id]
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'public, max-age=3600'
+        return response
+
+    return redirect(url)
+
+
 ##############################################################bilibili############################################
 def requests_get_code(real_dict):
     for real_ in real_dict:
         try:
-            code = requests.get(real_dict[real_], stream=True, timeout=1).status_code
+            code = requests.get(real_dict[real_], stream=True, timeout=5).status_code
             if code == 200:
                 return real_dict
         except:
@@ -455,6 +480,7 @@ def executeYoutube(sleepSecond):
             # 执行方法
             chaoronghe24()
             chaoronghe25()
+            chaoronghe26()
             print("youtube直播源定时器执行成功")
             timer_condition_youtube.wait(sleepSecond)
         time.sleep(sleepSecond)
@@ -659,17 +685,18 @@ def check_file(m3u_dict):
             tmp_url_tvg_name_dict.update(oldChinaChannelDict)
         if len(tmp_url_tvg_name_dict.keys()) > 0:
             redis_add_map(REDIS_KET_TMP_CHINA_CHANNEL, tmp_url_tvg_name_dict)
-        if len(m3u_dict) == 0:
-            return
         path = f"{secret_path}{getFileNameByTagName('aliveM3u')}.m3u"
         if os.path.exists(path):
             os.remove(path)
         path3 = f"{secret_path}youtube.m3u"
         path4 = f"{secret_path}bilibili.m3u"
+        path5 = f"{secret_path}huya.m3u"
         if os.path.exists(path3):
             copyAndRename(path3, path)
         if os.path.exists(path4):
             copyAndRename(path4, path)
+        if os.path.exists(path5):
+            copyAndRename(path5, path)
         path2 = f"{secret_path}{getFileNameByTagName('healthM3u')}.m3u"
         if isOpenFunction('switch5'):
             if os.path.exists(path2):
@@ -678,7 +705,11 @@ def check_file(m3u_dict):
                 copyAndRename(path3, path2)
             if os.path.exists(path4):
                 copyAndRename(path4, path2)
+            if os.path.exists(path5):
+                copyAndRename(path5, path2)
             # 异步缓慢检测出有效链接
+        if len(m3u_dict) == 0:
+            return
         asyncio.run(asynctask(m3u_dict))
     except:
         pass
@@ -1024,30 +1055,37 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         tmp_url_tvg_name_dict.clear()
     result = download_files(results, redis_dict)
     if len(result) > 0:
+        # 格式优化
+        # my_dict = formattxt_multithread(result.split("\n"), 100)
+        my_dict = formattxt_multithread(result.splitlines(), processDataMethodName)
+        # my_dict = formattxt_multithread(result.splitlines(), 100)
         if ism3u:
             CHANNEL_LOGO.clear()
             CHANNEL_GROUP.clear()
             CHANNEL_LOGO = redis_get_map(REDIS_KEY_M3U_EPG_LOGO)
             CHANNEL_GROUP = redis_get_map(REDIS_KEY_M3U_EPG_GROUP)
     else:
-        return "empty"
-    # 格式优化
-    # my_dict = formattxt_multithread(result.split("\n"), 100)
-    my_dict = formattxt_multithread(result.splitlines(), processDataMethodName)
-    # my_dict = formattxt_multithread(result.splitlines(), 100)
+        if not ism3u:
+            return "empty"
+        else:
+            my_dict = {}
     if len(my_dict) == 0:
-        return "empty"
+        if not ism3u:
+            return "empty"
     if ism3u:
-        old_dict = redis_get_map(redisKeyData)
-        my_dict.update(old_dict)
+        if len(my_dict) > 0:
+            old_dict = redis_get_map(redisKeyData)
+            my_dict.update(old_dict)
     if ism3u:
         if isOpenFunction('switch4'):
-            distribute_data(my_dict, fileName, 10)
+            if len(my_dict) > 0:
+                distribute_data(my_dict, fileName, 10)
     else:
         # 同步方法写出全部配置
         distribute_data(my_dict, fileName, 10)
     if ism3u:
-        redis_add_map(redisKeyData, my_dict)
+        if len(my_dict) > 0:
+            redis_add_map(redisKeyData, my_dict)
         # M3U域名tvlist - 无加密
         if isOpenFunction('switch6'):
             # 生成直播源域名-无加密
@@ -1059,11 +1097,13 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
             # 神速直播源有效性检测
             thread2 = threading.Thread(target=check_file, args=(my_dict,))
             thread2.start()
-        # logo,group更新
-        redis_add_map(REDIS_KEY_M3U_EPG_LOGO, CHANNEL_LOGO)
-        redis_add_map(REDIS_KEY_M3U_EPG_GROUP, CHANNEL_GROUP)
-        CHANNEL_LOGO.clear()
-        CHANNEL_GROUP.clear()
+        if len(CHANNEL_LOGO) > 0:
+            # logo,group更新
+            redis_add_map(REDIS_KEY_M3U_EPG_LOGO, CHANNEL_LOGO)
+            CHANNEL_LOGO.clear()
+        if len(CHANNEL_GROUP) > 0:
+            redis_add_map(REDIS_KEY_M3U_EPG_GROUP, CHANNEL_GROUP)
+            CHANNEL_GROUP.clear()
         # 开启直播源加密:
         # 加密全部直播源
         thread3 = threading.Thread(target=download_secert_file,
@@ -1073,6 +1113,7 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
                                        isOpenFunction('switch3'), isOpenFunction('switch30'),
                                        isOpenFunction('switch31'), isOpenFunction('switch32')))
         thread3.start()
+        return "result"
     # 域名白名单
     if processDataMethodName == 'process_data_abstract3':
         # whitelist,白名单域名写入redis
@@ -1087,6 +1128,7 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
                                        isOpenFunction('switch32')))
         thread.start()
         thread2.start()
+        return "result"
     # 域名黑名单
     if processDataMethodName == 'process_data_abstract7':
         # blackList.txt
@@ -1102,6 +1144,7 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
                                        isOpenFunction('switch30'), isOpenFunction('switch31'),
                                        isOpenFunction('switch32')))
         thread2.start()
+        return "result"
     # ipv4
     if processDataMethodName == 'process_data_abstract5':
         # 通知dns服务器更新内存,不给dns分流器使用，数据太大了
@@ -1114,6 +1157,7 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
                                       isOpenFunction('switch19'), isOpenFunction('switch30'),
                                       isOpenFunction('switch31'), isOpenFunction('switch32')))
         thread.start()
+        return "result"
     # ipv6加密
     if processDataMethodName == 'process_data_abstract6':
         # 加密
@@ -1124,6 +1168,7 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
                                       isOpenFunction('switch21'), isOpenFunction('switch30'),
                                       isOpenFunction('switch31'), isOpenFunction('switch32')))
         thread.start()
+        return "result"
     return "result"
 
 
@@ -2531,7 +2576,8 @@ CACHE_KEY_TO_GLOBAL_VAR = {
     REDIS_KEY_SECRET_PASS_NOW: 'redisKeySecretPassNow',
     REDIS_KEY_FUNCTION_DICT: 'function_dict',
     REDIS_KEY_YOUTUBE: 'redisKeyYoutube',
-    REDIS_KEY_BILIBILI: 'redisKeyBilibili'
+    REDIS_KEY_BILIBILI: 'redisKeyBilibili',
+    REDIS_KEY_HUYA: 'redisKeyHuya'
 }
 
 
@@ -3334,7 +3380,7 @@ def initReloadCacheForNormal():
                     redisKeyYoutubeM3u.update(dict2)
             except Exception as e:
                 pass
-        if redisKey in REDIS_KEY_BILIBILI:
+        elif redisKey in REDIS_KEY_BILIBILI:
             try:
                 global redisKeyBilili
                 redisKeyBilili.clear()
@@ -3344,6 +3390,18 @@ def initReloadCacheForNormal():
                 dict2 = redis_get_map(REDIS_KEY_BILIBILI_M3U)
                 if dict2:
                     redisKeyBililiM3u.update(dict2)
+            except Exception as e:
+                pass
+        elif redisKey in REDIS_KEY_HUYA:
+            try:
+                global redisKeyHuya
+                redisKeyHuya.clear()
+                dict = redis_get_map(REDIS_KEY_HUYA)
+                if dict:
+                    redisKeyHuya.update(dict)
+                dict3 = redis_get_map(REDIS_KEY_HUYA_M3U)
+                if dict3:
+                    redisKeyHuyaM3u.update(dict3)
             except Exception as e:
                 pass
 
@@ -4315,6 +4373,12 @@ def upload_json_file25():
     return upload_json(request, REDIS_KEY_BILIBILI, f"{secret_path}tmp_data25.json")
 
 
+# 上传huya直播源json文件
+@app.route('/api/upload_json_file26', methods=['POST'])
+def upload_json_file26():
+    return upload_json(request, REDIS_KEY_HUYA, f"{secret_path}tmp_data26.json")
+
+
 # 上传节点后端服务器json文件
 @app.route('/api/upload_json_file10', methods=['POST'])
 def upload_json_file10():
@@ -4518,6 +4582,14 @@ def deletewm3u25():
     return dellist(request, REDIS_KEY_BILIBILI)
 
 
+# 删除huya直播源
+@app.route('/api/deletewm3u26', methods=['POST'])
+def deletewm3u26():
+    deleteurl = request.json.get('deleteurl')
+    del redisKeyHuya[deleteurl]
+    return dellist(request, REDIS_KEY_HUYA)
+
+
 # 添加DNS简易黑名单
 @app.route('/api/addnewm3u13', methods=['POST'])
 def addnewm3u13():
@@ -4549,6 +4621,13 @@ def getall24():
 def getall25():
     global redisKeyBilili
     return returnDictCache(REDIS_KEY_BILIBILI, redisKeyBilili)
+
+
+# 拉取全部huya
+@app.route('/api/getall26', methods=['GET'])
+def getall26():
+    global redisKeyHuya
+    return returnDictCache(REDIS_KEY_HUYA, redisKeyHuya)
 
 
 def returnDictCache(redisKey, cacheDict):
@@ -4685,6 +4764,13 @@ def download_json_file25():
                                    f"{secret_path}temp_bilibili_m3u.json")
 
 
+# 导出huya直播源配置
+@app.route('/api/download_json_file26', methods=['GET'])
+def download_json_file26():
+    return download_json_file_base(REDIS_KEY_HUYA,
+                                   f"{secret_path}temp_huya_m3u.json")
+
+
 # 导出m3u黑名单配置
 @app.route('/api/download_json_file15', methods=['GET'])
 def download_json_file15():
@@ -4804,12 +4890,23 @@ def addnewm3u24():
 def addnewm3u25():
     addurl = request.json.get('addurl')
     name = request.json.get('name')
-    redisKeyBilili[addurl] = avoidRepeatBiliBiliName(name)
+    global redisKeyBilili
+    redisKeyBilili[addurl] = avoidRepeatBiliBiliName(redisKeyBilili, name)
     return addlist(request, REDIS_KEY_BILIBILI)
 
 
-def avoidRepeatBiliBiliName(name):
-    data = redisKeyBilili.values()
+# 添加huya直播源
+@app.route('/api/addnewm3u26', methods=['POST'])
+def addnewm3u26():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    global redisKeyHuya
+    redisKeyHuya[addurl] = avoidRepeatBiliBiliName(redisKeyHuya, name)
+    return addlist(request, REDIS_KEY_HUYA)
+
+
+def avoidRepeatBiliBiliName(dict, name):
+    data = dict.values()
     index = 1
     while True:
         if name in data:
@@ -5408,14 +5505,8 @@ def chaoronghe10():
         return "empty"
 
 
-def getYoutubeId(name):
-    for url, tagname in redisKeyYoutube.items():
-        if name == tagname:
-            return url
-
-
-def getBilibiliId(name):
-    for url, tagname in redisKeyBilili.items():
+def getTvId(dict, name):
+    for url, tagname in dict.items():
         if name == tagname:
             return url
 
@@ -5430,6 +5521,23 @@ async def download_files5():
             tasks = []
             for url in urls:
                 task = asyncio.ensure_future(grab2(session, url, redisKeyBilili, m3u_dict, sem))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        print(f"Failed to fetch files. Error: {e}")
+    return m3u_dict
+
+
+async def download_files6():
+    global redisKeyHuya
+    urls = redisKeyHuya.keys()
+    m3u_dict = {}
+    try:
+        sem = asyncio.Semaphore(100)  # 限制TCP连接的数量为100个
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for url in urls:
+                task = asyncio.ensure_future(grab3(session, url, redisKeyHuya, m3u_dict, sem))
                 tasks.append(task)
             await asyncio.gather(*tasks)
     except (aiohttp.ClientError, asyncio.TimeoutError) as e:
@@ -5496,9 +5604,10 @@ async def grab2(session, url, redisKeyBilibili, m3u_dict, sem):
                                 elif qn > 10000:
                                     continue
                                 extra = re.sub('qn=(\d+)', f'qn={qn}', extra)
-                                namestr = f'线路{i + 1}_{qn}'
-                                nameArr.append(namestr)
-                                real_lists.append({namestr: f'{host}{url_}{extra}'})
+                                if qn == 10000:
+                                    namestr = f'线路{i + 1}_{qn}'
+                                    nameArr.append(namestr)
+                                    real_lists.append({namestr: f'{host}{url_}{extra}'})
                         break
                 if real_lists:
                     pool = ThreadPool(processes=int(len(real_lists)))
@@ -5509,15 +5618,115 @@ async def grab2(session, url, redisKeyBilibili, m3u_dict, sem):
                         if return_dict:
                             real_list.append(return_dict)
                     if real_list:
-                        for data in real_list:
-                            for i in range(len(nameArr) - 1):
-                                if nameArr[i] in data.keys():
-                                    m3u_dict[data.get(nameArr[i])] = redisKeyBilibili[url]
+                        isOne = len(nameArr) == 1
+                        if isOne:
+                            for data in real_list:
+                                if nameArr[0] in data.keys():
+                                    m3u_dict[data.get(nameArr[0])] = redisKeyBilibili[url]
                                     return
+                        else:
+                            for i in range(len(nameArr) - 1):
+                                for data in real_list:
+                                    if nameArr[i] in data.keys():
+                                        m3u_dict[data.get(nameArr[i])] = redisKeyBilibili[url]
+                                        return
                         return
                 return
     except Exception as e:
         print(f"bilibili An error occurred while processing {url}. Error: {e}")
+
+
+def huya_live(e):
+    i, b = e.split('?')
+    r = i.split('/')
+    s = re.sub(r'.(flv|m3u8)', '', r[-1])
+    c = b.split('&', 3)
+    c = [i for i in c if i != '']
+    n = {i.split('=')[0]: i.split('=')[1] for i in c}
+    fm = urllib.parse.unquote(n['fm'])
+    u = base64.b64decode(fm).decode('utf-8')
+    p = u.split('_')[0]
+    f = str(int(time.time() * 1e7))
+    l = n['wsTime']
+    t = '0'
+    h = '_'.join([p, t, s, f, l])
+    m = hashlib.md5(h.encode('utf-8')).hexdigest()
+    y = c[-1]
+    url = "{}?wsSecret={}&wsTime={}&u={}&seqid={}&{}".format(i, m, l, t, f, y)
+    return url
+
+
+huya_header = {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'User-Agent': 'Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) '
+                  'Chrome/75.0.3770.100 Mobile Safari/537.36 '
+}
+# 转换为 CIMultiDict 对象
+cim_headers_huya = CIMultiDict(huya_header)
+
+
+async def grab3(session, id, redisKeyHuya, m3u_dict, sem):
+    try:
+        param = {
+            'id': id
+        }
+        real_lists = []
+        real_list = []
+        thread_list = []
+        arr = []
+        huya_room_url = 'https://m.huya.com/{}'.format(id)
+        async with sem, session.get(huya_room_url, headers=cim_headers_huya, params=param, timeout=5) as response:
+            res = await response.text()
+            liveLineUrl = re.findall(r'"liveLineUrl":"([\s\S]*?)",', res)[0]
+            liveline = base64.b64decode(liveLineUrl).decode('utf-8')
+            if liveline:
+                if 'replay' in liveline:
+                    real_lists.append({'直播录像': f'https://{liveline}'})
+                else:
+                    liveline = huya_live(liveline)
+                    real_url = ("https:" + liveline).replace("hls", "flv").replace("m3u8", "flv").replace(
+                        '&ctype=tars_mobile', '')
+                    rate = [10000]
+                    #rate = [10000, 8000, 4000, 2000, 500]
+                    arr.append(f'flv_10000')
+                    # arr.append(f'flv_8000')
+                    # arr.append(f'flv_4000')
+                    # arr.append(f'flv_2000')
+                    # arr.append(f'flv_500')
+                    for ratio in range(len(rate) - 1, -1, -1):
+                        ratio = rate[ratio]
+                        if ratio != 10000:
+                            real_url_flv = real_url.replace('.flv?', f'.flv?ratio={ratio}&')
+                            name = f'flv_{ratio}'
+                            real_lists.append({name: real_url_flv})
+                        else:
+                            name = f'flv_{ratio}'
+                            real_lists.append({name: real_url})
+                if real_lists:
+                    pool = ThreadPool(processes=int(len(real_lists)))
+                    for real_ in real_lists:
+                        thread_list.append(pool.apply_async(requests_get_code, args=(real_,)))
+                    for thread in thread_list:
+                        return_dict = thread.get()
+                        if return_dict:
+                            real_list.append(return_dict)
+                    if real_list:
+                        isOne = len(arr) == 1
+                        if isOne:
+                            for data in real_list:
+                                if arr[0] in data.keys():
+                                    m3u_dict[data.get(arr[0])] = redisKeyHuya[id]
+                                    return
+                        else:
+                            for i in range(len(arr) - 1):
+                                for data in real_list:
+                                    if arr[i] in data.keys():
+                                        m3u_dict[data.get(arr[i])] = redisKeyHuya[id]
+                                        return
+                        return
+                return
+    except Exception as e:
+        print(f"huya An error occurred while processing {id}. Error: {e}")
 
 
 async def download_files4():
@@ -5578,17 +5787,47 @@ def chaoronghe25():
         ip = init_IP()
         port = 22771
         global redisKeyBililiM3u
+        global redisKeyBilili
         redisKeyBililiM3uFake = {}
         # fakeurl:192.168.5.1:22771/bilibili?id=xxxxx
         fakeurl = f"http://{ip}:{port}/bilibili/"
         for url, name in m3u_dict.items():
             link = f'#EXTINF:-1 group-title="Bilibili"  tvg-name="{name}",{name}\n'
-            bilibiliId = getBilibiliId(name)
+            bilibiliId = getTvId(redisKeyBilili, name)
             redisKeyBililiM3uFake[f'{fakeurl}{bilibiliId}.m3u8'] = link
             redisKeyBililiM3u[bilibiliId] = url
         # 同步方法写出全部配置
         distribute_data(redisKeyBililiM3uFake, f"{secret_path}bilibili.m3u", 10)
         redis_add_map(REDIS_KEY_BILIBILI_M3U, redisKeyBililiM3u)
+        return "result"
+    except Exception as e:
+        return "empty"
+
+
+# 生成全部huyta直播源
+@app.route('/api/chaoronghe26', methods=['GET'])
+def chaoronghe26():
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        m3u_dict = loop.run_until_complete(download_files6())
+        if len(m3u_dict) == 0:
+            return "empty"
+        ip = init_IP()
+        port = 22771
+        global redisKeyHuyaM3u
+        global redisKeyHuya
+        redisKeyHuyaM3uFake = {}
+        # fakeurl:192.168.5.1:22771/huya?id=xxxxx
+        fakeurl = f"http://{ip}:{port}/huya/"
+        for url, name in m3u_dict.items():
+            link = f'#EXTINF:-1 group-title="Huya"  tvg-name="{name}",{name}\n'
+            huyaId = getTvId(redisKeyHuya, name)
+            redisKeyHuyaM3uFake[f'{fakeurl}{huyaId}.m3u8'] = link
+            redisKeyHuyaM3u[huyaId] = url
+        # 同步方法写出全部配置
+        distribute_data(redisKeyHuyaM3uFake, f"{secret_path}huya.m3u", 10)
+        redis_add_map(REDIS_KEY_HUYA_M3U, redisKeyHuyaM3u)
         return "result"
     except Exception as e:
         return "empty"
@@ -5606,12 +5845,13 @@ def chaoronghe24():
         ip = init_IP()
         port = 22771
         global redisKeyYoutubeM3u
+        global redisKeyYoutube
         redisKeyYoutubeM3uFake = {}
         # fakeurl:192.168.5.1:22771/youtube?id=xxxxx
         fakeurl = f"http://{ip}:{port}/youtube/"
         for url, name in m3u_dict.items():
             link = f'#EXTINF:-1 group-title="Youtube Live"  tvg-name="{name}",{name}\n'
-            youtubeId = getYoutubeId(name)
+            youtubeId = getTvId(redisKeyYoutube, name)
             redisKeyYoutubeM3uFake[f'{fakeurl}{youtubeId}.m3u8'] = link
             redisKeyYoutubeM3u[youtubeId] = url
         # 同步方法写出全部配置
@@ -5877,6 +6117,14 @@ def removem3ulinks24():
 def removem3ulinks25():
     redisKeyBilili.clear()
     redis_del_map(REDIS_KEY_BILIBILI)
+    return "success"
+
+
+# 删除全部huya直播源
+@app.route('/api/removem3ulinks26', methods=['GET'])
+def removem3ulinks26():
+    redisKeyHuya.clear()
+    redis_del_map(REDIS_KEY_HUYA)
     return "success"
 
 

@@ -379,6 +379,10 @@
         <input type="radio" name="page" id="page28">
         <span>BiliBili直播源</span>
     </label>
+    <label>
+        <input type="radio" name="page" id="page29">
+        <span>Huya直播源</span>
+    </label>
 </div>
 <div id="choice">
     <div id="page1" style="display: block;">
@@ -1814,6 +1818,49 @@
             </table>
         </div>
     </div>
+
+    <div id="page29" style="display: none;">
+        <h1>Huya直播源</h1>
+        <div style="float: left;width: 70%">
+            <h3>后台默认1小时自动执行生成操作,需要在功能开关开启</h3>
+            <h3>超融合虎牙订阅地址:参考m3u格式</h3>
+            <h3 class="urllink">huya-无加密:http://192.168.5.1:22771/secret/huya.m3u</h3>
+            <h3>上传文件导入合并Huya频道</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn26" class="uploadjsonbtn" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row26" class="addNewSubscriber" style="width:100%">新增Huya直播频道</button>
+            </div>
+            <div>
+                <button class="button stepflag" onclick="execute26()" style="width: 100%">生成huya超融合订阅
+                </button>
+            </div>
+            <div>
+                <button id="download-json-btn26" class="button download-json-btn" style="width: 100%">
+                    导出huya直播频道备份
+                </button>
+            </div>
+            <div style="width: 97%;">
+                <input type="text" id="searchInput26" placeholder="搜索框" class="searchbox"
+                       style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks26" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks26')">删除全部订阅
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:huya直播ID+频道名字
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table26" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -2039,6 +2086,11 @@
     const inputTable25 = document.getElementById('input-table25');
     const downloadBtn25 = document.getElementById('download-json-btn25');
 
+    const fileInput26 = document.getElementById('upload-json-btn26');
+    const addRowButton26 = document.getElementById('add-row26');
+    const inputTable26 = document.getElementById('input-table26');
+    const downloadBtn26 = document.getElementById('download-json-btn26');
+
     // 输入框显示中国DNS端口
     const chinaDnsPort = document.getElementById('chinaDnsPort');
 
@@ -2096,6 +2148,8 @@
     const searchInput24 = document.getElementById('searchInput24');
     // 获取页面元素-bilibili直播源
     const searchInput25 = document.getElementById('searchInput25');
+    // 获取页面元素-huya直播源
+    const searchInput26 = document.getElementById('searchInput26');
 
     searchAddListener2(searchInput18,inputTable18)
     searchAddListener2(searchInput17,inputTable17)
@@ -2125,6 +2179,8 @@
     searchAddListener(searchInput24,inputTable24)
     // 给bilibili直播源搜索框绑定'oninput'事件
     searchAddListener(searchInput25,inputTable25)
+    // 给huya直播源搜索框绑定'oninput'事件
+    searchAddListener(searchInput26,inputTable26)
     // 给简易dns白名单搜索框绑定'oninput'事件
     searchAddListener(searchInput4,inputTable12)
     // 给m3u白名单搜索框绑定'oninput'事件
@@ -2291,7 +2347,7 @@
             var tagnamefile = parts2[2]
             var parts3 = tagnamefile.split(".")
             var tagname = parts3[0]
-            if (tagname==='youtube' ||tagname==='bilibili' ){
+            if (tagname==='youtube' ||tagname==='bilibili'||tagname==='huya' ){
                 elements[i].innerHTML = prefix + "//" + newIp + suffix2 + "/" + tagname + "." + parts3[1];
                 continue
             }
@@ -2794,6 +2850,11 @@
         reloadBase('/api/getall25',  inputTable25)
     }
 
+    //huya直播源-从数据库拉取关键字列表数据
+    function reloadHuyaM3U() {
+        reloadBase('/api/getall26',  inputTable26)
+    }
+
     //加密订阅密码历史记录-从数据库拉取关键字列表数据
     function reloadHistorySubscribePassList() {
         reloadBase('/api/getall14',  inputTable14)
@@ -3022,6 +3083,10 @@
     function saveInputValue25(inputValue, name) {
         saveInputValuebase(inputValue, name, '/api/addnewm3u25')
     }
+    //huya配置
+    function saveInputValue26(inputValue, name) {
+        saveInputValuebase(inputValue, name, '/api/addnewm3u26')
+    }
 
     //永久列表-保留输入行数据
     function savem3uInputValue(url, info) {
@@ -3148,6 +3213,10 @@
     function deleteInputRow25(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u25')
     }
+    //删除huya直播源
+    function deleteInputRow26(row, inputValue) {
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u26')
+    }
     //删除加密订阅密码历史记录
     function deleteInputRow14(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u14')
@@ -3224,6 +3293,8 @@
     inputableAddEventListener(inputTable24,  'saveInputValue24', 'deleteInputRow24')
     //bilibili直播源
     inputableAddEventListener(inputTable25,  'saveInputValue25', 'deleteInputRow25')
+    //huya直播源
+    inputableAddEventListener(inputTable26,  'saveInputValue26', 'deleteInputRow26')
     //简易DNS黑名单
     inputableAddEventListener(inputTable13,  'saveInputValue13', 'deleteInputRow13')
     //简易DNS白名单
@@ -3317,6 +3388,8 @@
     fileInputAddEventListenerBase(fileInput24, '/api/upload_json_file24')
     //bilibili直播源-导入json配置
     fileInputAddEventListenerBase(fileInput25, '/api/upload_json_file25')
+    //huya直播源-导入json配置
+    fileInputAddEventListenerBase(fileInput26, '/api/upload_json_file26')
     //网络下载配置加密上传-导入json配置
     fileInputAddEventListenerBase(fileInput17, '/api/upload_json_file17')
     //m3u白名单分组优先级-导入json配置
@@ -3690,7 +3763,10 @@
             reloadYoutubeM3U()
         }else if (selectedPage === pages[27].id) {
             reloadBilibiliM3U()
+        }else if (selectedPage === pages[28].id) {
+            reloadHuyaM3U()
         }
+
         if (selectedPage !== pages[1].id) {
             window.removeEventListener('scroll', handleScroll);
         }
@@ -3747,6 +3823,8 @@
     downloadBtnAddEventListenerBase(downloadBtn24, '/api/download_json_file24', 'temp_youtube_m3u.json')
     // bilibili直播源-导出订阅json配置
     downloadBtnAddEventListenerBase(downloadBtn25, '/api/download_json_file25', 'temp_bilibili_m3u.json')
+    // huya直播源-导出订阅json配置
+    downloadBtnAddEventListenerBase(downloadBtn26, '/api/download_json_file26', 'temp_huya_m3u.json')
     // 下载加密上传-导出订阅json配置
     downloadBtnAddEventListenerBase(downloadBtn17, '/api/download_json_file17', 'temp_downloadAndSecretUpload.json')
     // M3U白名单分组优先级-导出订阅json配置
@@ -3817,6 +3895,8 @@
     addRowButtonAddEventListener(addRowButton24, inputTable24)
     //bilibili直播源-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton25, inputTable25)
+    //huya直播源-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton26, inputTable26)
     //DNS简易白名单-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton12, inputTable12)
     //M3U白名单-关键字-只添加一行列表，不存储数据
@@ -3971,6 +4051,11 @@
     //超融合-bilibili直播源生成
     function execute25() {
         executeBase('/api/chaoronghe25')
+    }
+
+       //超融合-huya直播源生成
+    function execute26() {
+        executeBase('/api/chaoronghe26')
     }
 
 
