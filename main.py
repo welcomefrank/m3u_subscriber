@@ -16,7 +16,6 @@ import hashlib
 import urllib
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
-from multiprocessing.pool import ThreadPool
 
 import aiohttp
 import aiofiles
@@ -343,14 +342,14 @@ def serve_files5(filename):
 
 
 ##############################################################bilibili############################################
-def requests_get_code(real_dict):
-    for real_ in real_dict:
-        try:
-            code = requests.get(real_dict[real_], stream=True, timeout=5).status_code
-            if code == 200:
-                return real_dict
-        except:
-            pass
+async def pingM3u(session, value, real_dict, key, sem):
+    try:
+        async with sem, session.get(value, timeout=15) as response:
+            if response.status == 200:
+                real_dict[key] = value
+    except Exception as e:
+        print(e)
+        pass
 
 
 ##########################################################redis数据库操作#############################################
@@ -667,10 +666,9 @@ async def asynctask(m3u_dict):
         await asyncio.gather(*tasks)
 
 
-def copyAndRename(source_file, destination_file):
+def copyAndRename(source_file):
     with open(source_file, 'rb') as fsrc:
-        with open(destination_file, 'wb') as fdst:
-            fdst.write(fsrc.read())
+        return fsrc.read()
 
 
 def check_file(m3u_dict):
@@ -691,22 +689,30 @@ def check_file(m3u_dict):
         path3 = f"{secret_path}youtube.m3u"
         path4 = f"{secret_path}bilibili.m3u"
         path5 = f"{secret_path}huya.m3u"
+        source = ''
         if os.path.exists(path3):
-            copyAndRename(path3, path)
+            source += copyAndRename(path3).decode()
         if os.path.exists(path4):
-            copyAndRename(path4, path)
+            source += '\n'
+            source += copyAndRename(path4).decode()
         if os.path.exists(path5):
-            copyAndRename(path5, path)
+            source += '\n'
+            source += copyAndRename(path5).decode()
+        with open(path, 'wb') as fdst:
+            fdst.write(source.encode('utf-8'))
         path2 = f"{secret_path}{getFileNameByTagName('healthM3u')}.m3u"
         if isOpenFunction('switch5'):
             if os.path.exists(path2):
                 os.remove(path2)
+            source2 = ''
             if os.path.exists(path3):
-                copyAndRename(path3, path2)
+                source2 += copyAndRename(path3).decode()
             if os.path.exists(path4):
-                copyAndRename(path4, path2)
+                source2 += copyAndRename(path4).decode()
             if os.path.exists(path5):
-                copyAndRename(path5, path2)
+                source2 += copyAndRename(path5).decode()
+            with open(path2, 'wb') as fdst:
+                fdst.write(source2.encode('utf-8'))
             # 异步缓慢检测出有效链接
         if len(m3u_dict) == 0:
             return
@@ -4891,7 +4897,7 @@ def addnewm3u25():
     addurl = request.json.get('addurl')
     name = request.json.get('name')
     global redisKeyBilili
-    redisKeyBilili[addurl] = avoidRepeatBiliBiliName(redisKeyBilili, name)
+    redisKeyBilili[addurl] = name
     return addlist(request, REDIS_KEY_BILIBILI)
 
 
@@ -4901,19 +4907,8 @@ def addnewm3u26():
     addurl = request.json.get('addurl')
     name = request.json.get('name')
     global redisKeyHuya
-    redisKeyHuya[addurl] = avoidRepeatBiliBiliName(redisKeyHuya, name)
+    redisKeyHuya[addurl] = name
     return addlist(request, REDIS_KEY_HUYA)
-
-
-def avoidRepeatBiliBiliName(dict, name):
-    data = dict.values()
-    index = 1
-    while True:
-        if name in data:
-            index = index + 1
-            name = f'{name}{index}'
-        else:
-            return name
 
 
 # 添加M3U白名单分组优先级
@@ -5505,22 +5500,16 @@ def chaoronghe10():
         return "empty"
 
 
-def getTvId(dict, name):
-    for url, tagname in dict.items():
-        if name == tagname:
-            return url
-
-
 async def download_files5():
     global redisKeyBilili
     urls = redisKeyBilili.keys()
     m3u_dict = {}
     try:
-        sem = asyncio.Semaphore(100)  # 限制TCP连接的数量为100个
+        sem = asyncio.Semaphore(200)  # 限制TCP连接的数量为100个
         async with aiohttp.ClientSession() as session:
             tasks = []
             for url in urls:
-                task = asyncio.ensure_future(grab2(session, url, redisKeyBilili, m3u_dict, sem))
+                task = asyncio.ensure_future(grab2(session, url, m3u_dict, sem))
                 tasks.append(task)
             await asyncio.gather(*tasks)
     except (aiohttp.ClientError, asyncio.TimeoutError) as e:
@@ -5533,11 +5522,11 @@ async def download_files6():
     urls = redisKeyHuya.keys()
     m3u_dict = {}
     try:
-        sem = asyncio.Semaphore(100)  # 限制TCP连接的数量为100个
+        sem = asyncio.Semaphore(200)  # 限制TCP连接的数量为100个
         async with aiohttp.ClientSession() as session:
             tasks = []
             for url in urls:
-                task = asyncio.ensure_future(grab3(session, url, redisKeyHuya, m3u_dict, sem))
+                task = asyncio.ensure_future(grab3(session, url, m3u_dict, sem))
                 tasks.append(task)
             await asyncio.gather(*tasks)
     except (aiohttp.ClientError, asyncio.TimeoutError) as e:
@@ -5558,12 +5547,12 @@ cim_headers = CIMultiDict(bili_header)
 biliurl = 'https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo'
 
 
-async def grab2(session, url, redisKeyBilibili, m3u_dict, sem):
+async def grab2(session, id, m3u_dict, sem):
     try:
         param = {
-            'id': url
+            'id': id
         }
-        async with sem, session.get(bilibili_real_url, headers=cim_headers, params=param, timeout=5) as response:
+        async with sem, session.get(bilibili_real_url, headers=cim_headers, params=param, timeout=15) as response:
             res = await response.json()
             if '不存在' in res['msg']:
                 return
@@ -5580,13 +5569,12 @@ async def grab2(session, url, redisKeyBilibili, m3u_dict, sem):
                 'platform': 'web',
                 'ptype': 8,
             }
-            async with session.get(biliurl, headers=cim_headers, params=param2, timeout=5) as response2:
+            async with sem, session.get(biliurl, headers=cim_headers, params=param2, timeout=15) as response2:
                 res = await response2.json()
                 stream_info = res['data']['playurl_info']['playurl']['stream']
                 accept_qn = stream_info[0]['format'][0]['codec'][0]['accept_qn']
                 real_lists = []
-                real_list = []
-                thread_list = []
+                real_dict = {}
                 nameArr = []
                 for data in stream_info:
                     format_name = data['format'][0]['format_name']
@@ -5610,30 +5598,29 @@ async def grab2(session, url, redisKeyBilibili, m3u_dict, sem):
                                     real_lists.append({namestr: f'{host}{url_}{extra}'})
                         break
                 if real_lists:
-                    pool = ThreadPool(processes=int(len(real_lists)))
+                    tasks = []
                     for real_ in real_lists:
-                        thread_list.append(pool.apply_async(requests_get_code, args=(real_,)))
-                    for thread in thread_list:
-                        return_dict = thread.get()
-                        if return_dict:
-                            real_list.append(return_dict)
-                    if real_list:
+                        for key, value in real_.items():
+                            task = asyncio.ensure_future(pingM3u(session, value, real_dict, key, sem))
+                            tasks.append(task)
+                    await asyncio.gather(*tasks)
+                    if real_dict:
                         isOne = len(nameArr) == 1
                         if isOne:
-                            for data in real_list:
-                                if nameArr[0] in data.keys():
-                                    m3u_dict[data.get(nameArr[0])] = redisKeyBilibili[url]
+                            for key, value in real_dict.items():
+                                if nameArr[0] == key:
+                                    m3u_dict[value] = id
                                     return
                         else:
                             for i in range(len(nameArr) - 1):
-                                for data in real_list:
-                                    if nameArr[i] in data.keys():
-                                        m3u_dict[data.get(nameArr[i])] = redisKeyBilibili[url]
+                                for key, value in real_dict.items():
+                                    if nameArr[i] == key:
+                                        m3u_dict[value] = id
                                         return
                         return
                 return
     except Exception as e:
-        print(f"bilibili An error occurred while processing {url}. Error: {e}")
+        print(f"bilibili An error occurred while processing {id}. Error: {e}")
 
 
 def huya_live(e):
@@ -5665,17 +5652,16 @@ huya_header = {
 cim_headers_huya = CIMultiDict(huya_header)
 
 
-async def grab3(session, id, redisKeyHuya, m3u_dict, sem):
+async def grab3(session, id, m3u_dict, sem):
     try:
         param = {
             'id': id
         }
         real_lists = []
-        real_list = []
-        thread_list = []
+        real_dict = {}
         arr = []
         huya_room_url = 'https://m.huya.com/{}'.format(id)
-        async with sem, session.get(huya_room_url, headers=cim_headers_huya, params=param, timeout=5) as response:
+        async with sem, session.get(huya_room_url, headers=cim_headers_huya, params=param, timeout=15) as response:
             res = await response.text()
             liveLineUrl = re.findall(r'"liveLineUrl":"([\s\S]*?)",', res)[0]
             liveline = base64.b64decode(liveLineUrl).decode('utf-8')
@@ -5687,7 +5673,7 @@ async def grab3(session, id, redisKeyHuya, m3u_dict, sem):
                     real_url = ("https:" + liveline).replace("hls", "flv").replace("m3u8", "flv").replace(
                         '&ctype=tars_mobile', '')
                     rate = [10000]
-                    #rate = [10000, 8000, 4000, 2000, 500]
+                    # rate = [10000, 8000, 4000, 2000, 500]
                     arr.append(f'flv_10000')
                     # arr.append(f'flv_8000')
                     # arr.append(f'flv_4000')
@@ -5703,25 +5689,25 @@ async def grab3(session, id, redisKeyHuya, m3u_dict, sem):
                             name = f'flv_{ratio}'
                             real_lists.append({name: real_url})
                 if real_lists:
-                    pool = ThreadPool(processes=int(len(real_lists)))
+                    tasks = []
                     for real_ in real_lists:
-                        thread_list.append(pool.apply_async(requests_get_code, args=(real_,)))
-                    for thread in thread_list:
-                        return_dict = thread.get()
-                        if return_dict:
-                            real_list.append(return_dict)
-                    if real_list:
+                        for key, value in real_.items():
+                            task = asyncio.ensure_future(pingM3u(session, value, real_dict, key, sem))
+                            tasks.append(task)
+                    await asyncio.gather(*tasks)
+                    if real_dict:
                         isOne = len(arr) == 1
                         if isOne:
-                            for data in real_list:
-                                if arr[0] in data.keys():
-                                    m3u_dict[data.get(arr[0])] = redisKeyHuya[id]
+                            for key, value in real_dict.items():
+                                if arr[0] == key:
+                                    # 有效直播源,名字/id
+                                    m3u_dict[value] = id
                                     return
                         else:
                             for i in range(len(arr) - 1):
-                                for data in real_list:
-                                    if arr[i] in data.keys():
-                                        m3u_dict[data.get(arr[i])] = redisKeyHuya[id]
+                                for key, value in real_dict.items():
+                                    if arr[i] == key:
+                                        m3u_dict[value] = id
                                         return
                         return
                 return
@@ -5734,11 +5720,11 @@ async def download_files4():
     urls = redisKeyYoutube.keys()
     m3u_dict = {}
     try:
-        sem = asyncio.Semaphore(100)  # 限制TCP连接的数量为100个
+        # sem = asyncio.Semaphore(100)  # 限制TCP连接的数量为100个
         async with aiohttp.ClientSession() as session:
             tasks = []
             for url in urls:
-                task = asyncio.ensure_future(grab(session, url, redisKeyYoutube, m3u_dict, sem))
+                task = asyncio.ensure_future(grab(session, url, m3u_dict))
                 tasks.append(task)
             await asyncio.gather(*tasks)
     except (aiohttp.ClientError, asyncio.TimeoutError) as e:
@@ -5749,13 +5735,13 @@ async def download_files4():
 youtubeUrl = 'https://www.youtube.com/watch?v='
 
 
-async def grab(session, id, redisKeyYoutube, m3u_dict, sem):
+async def grab(session, id, m3u_dict):
     try:
         url = youtubeUrl + id
-        async with sem, session.get(url, timeout=20) as response:
+        async with session.get(url, timeout=20) as response:
             content = await response.text()
             if '.m3u8' not in content:
-                async with sem, aiohttp.ClientSession() as session2:
+                async with aiohttp.ClientSession() as session2:
                     async with session2.get(url, timeout=20) as response2:
                         content = await response2.text()
                         if '.m3u8' not in content:
@@ -5770,9 +5756,9 @@ async def grab(session, id, redisKeyYoutube, m3u_dict, sem):
                 break
             else:
                 tuner += 5
-        m3u_dict[link[start: end]] = redisKeyYoutube[id]
+        m3u_dict[link[start: end]] = id
     except Exception as e:
-        print(f"An error occurred while processing {url}. Error: {e}")
+        print(f"An error occurred while processing {id}. Error: {e}")
 
 
 # 生成全部bilibili直播源
@@ -5791,11 +5777,11 @@ def chaoronghe25():
         redisKeyBililiM3uFake = {}
         # fakeurl:192.168.5.1:22771/bilibili?id=xxxxx
         fakeurl = f"http://{ip}:{port}/bilibili/"
-        for url, name in m3u_dict.items():
+        for url, id in m3u_dict.items():
+            name = redisKeyBilili[id]
             link = f'#EXTINF:-1 group-title="Bilibili"  tvg-name="{name}",{name}\n'
-            bilibiliId = getTvId(redisKeyBilili, name)
-            redisKeyBililiM3uFake[f'{fakeurl}{bilibiliId}.m3u8'] = link
-            redisKeyBililiM3u[bilibiliId] = url
+            redisKeyBililiM3uFake[f'{fakeurl}{id}.m3u8'] = link
+            redisKeyBililiM3u[id] = url
         # 同步方法写出全部配置
         distribute_data(redisKeyBililiM3uFake, f"{secret_path}bilibili.m3u", 10)
         redis_add_map(REDIS_KEY_BILIBILI_M3U, redisKeyBililiM3u)
@@ -5810,6 +5796,7 @@ def chaoronghe26():
     try:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
+        # 有效直播源,名字/id
         m3u_dict = loop.run_until_complete(download_files6())
         if len(m3u_dict) == 0:
             return "empty"
@@ -5820,11 +5807,11 @@ def chaoronghe26():
         redisKeyHuyaM3uFake = {}
         # fakeurl:192.168.5.1:22771/huya?id=xxxxx
         fakeurl = f"http://{ip}:{port}/huya/"
-        for url, name in m3u_dict.items():
+        for url, id in m3u_dict.items():
+            name = redisKeyHuya[id]
             link = f'#EXTINF:-1 group-title="Huya"  tvg-name="{name}",{name}\n'
-            huyaId = getTvId(redisKeyHuya, name)
-            redisKeyHuyaM3uFake[f'{fakeurl}{huyaId}.m3u8'] = link
-            redisKeyHuyaM3u[huyaId] = url
+            redisKeyHuyaM3uFake[f'{fakeurl}{id}.m3u8'] = link
+            redisKeyHuyaM3u[id] = url
         # 同步方法写出全部配置
         distribute_data(redisKeyHuyaM3uFake, f"{secret_path}huya.m3u", 10)
         redis_add_map(REDIS_KEY_HUYA_M3U, redisKeyHuyaM3u)
@@ -5849,11 +5836,11 @@ def chaoronghe24():
         redisKeyYoutubeM3uFake = {}
         # fakeurl:192.168.5.1:22771/youtube?id=xxxxx
         fakeurl = f"http://{ip}:{port}/youtube/"
-        for url, name in m3u_dict.items():
+        for url, id in m3u_dict.items():
+            name = redisKeyYoutube[id]
             link = f'#EXTINF:-1 group-title="Youtube Live"  tvg-name="{name}",{name}\n'
-            youtubeId = getTvId(redisKeyYoutube, name)
-            redisKeyYoutubeM3uFake[f'{fakeurl}{youtubeId}.m3u8'] = link
-            redisKeyYoutubeM3u[youtubeId] = url
+            redisKeyYoutubeM3uFake[f'{fakeurl}{id}.m3u8'] = link
+            redisKeyYoutubeM3u[id] = url
         # 同步方法写出全部配置
         distribute_data(redisKeyYoutubeM3uFake, f"{secret_path}youtube.m3u", 10)
         redis_add_map(REDIS_KEY_YOUTUBE_M3U, redisKeyYoutubeM3u)
