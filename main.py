@@ -344,12 +344,18 @@ def serve_files5(filename):
 ##############################################################bilibili############################################
 async def pingM3u(session, value, real_dict, key, sem):
     try:
-        async with sem, session.get(value, timeout=15) as response:
+        async with sem, session.get(value, timeout=5) as response:
             if response.status == 200:
                 real_dict[key] = value
     except Exception as e:
-        print(e)
-        pass
+        try:
+            async with aiohttp.ClientSession() as session2:
+                async with session2.get(value, timeout=15) as response2:
+                    if response2.status == 200:
+                        real_dict[key] = value
+        except Exception as e:
+            print(e)
+            pass
 
 
 ##########################################################redis数据库操作#############################################
@@ -2582,7 +2588,7 @@ CACHE_KEY_TO_GLOBAL_VAR = {
     REDIS_KEY_SECRET_PASS_NOW: 'redisKeySecretPassNow',
     REDIS_KEY_FUNCTION_DICT: 'function_dict',
     REDIS_KEY_YOUTUBE: 'redisKeyYoutube',
-    REDIS_KEY_BILIBILI: 'redisKeyBilibili',
+    REDIS_KEY_BILIBILI: 'redisKeyBilili',
     REDIS_KEY_HUYA: 'redisKeyHuya'
 }
 
@@ -4103,7 +4109,10 @@ def stupidThinkForChina(domain_name):
         domain = sub_domains[-1]
         for key in ignore_domain:
             if domain.startswith(key):
-                return ''
+                try:
+                    return sub_domains[-2]
+                except Exception as e:
+                    return ''
         return domain
     except Exception as e:
         return ''
@@ -5505,7 +5514,7 @@ async def download_files5():
     urls = redisKeyBilili.keys()
     m3u_dict = {}
     try:
-        sem = asyncio.Semaphore(200)  # 限制TCP连接的数量为100个
+        sem = asyncio.Semaphore(500)  # 限制TCP连接的数量为100个
         async with aiohttp.ClientSession() as session:
             tasks = []
             for url in urls:
@@ -5522,7 +5531,7 @@ async def download_files6():
     urls = redisKeyHuya.keys()
     m3u_dict = {}
     try:
-        sem = asyncio.Semaphore(200)  # 限制TCP连接的数量为100个
+        sem = asyncio.Semaphore(500)  # 限制TCP连接的数量为100个
         async with aiohttp.ClientSession() as session:
             tasks = []
             for url in urls:
@@ -5552,7 +5561,7 @@ async def grab2(session, id, m3u_dict, sem):
         param = {
             'id': id
         }
-        async with sem, session.get(bilibili_real_url, headers=cim_headers, params=param, timeout=15) as response:
+        async with sem, session.get(bilibili_real_url, headers=cim_headers, params=param, timeout=20) as response:
             res = await response.json()
             if '不存在' in res['msg']:
                 return
@@ -5569,7 +5578,9 @@ async def grab2(session, id, m3u_dict, sem):
                 'platform': 'web',
                 'ptype': 8,
             }
-            async with sem, session.get(biliurl, headers=cim_headers, params=param2, timeout=15) as response2:
+        async with aiohttp.ClientSession() as session2:
+            async with session2.get(biliurl, headers=cim_headers, params=param2, timeout=20) as response2:
+            #async with sem, session.get(biliurl, headers=cim_headers, params=param2, timeout=20) as response2:
                 res = await response2.json()
                 stream_info = res['data']['playurl_info']['playurl']['stream']
                 accept_qn = stream_info[0]['format'][0]['codec'][0]['accept_qn']
@@ -5661,7 +5672,7 @@ async def grab3(session, id, m3u_dict, sem):
         real_dict = {}
         arr = []
         huya_room_url = 'https://m.huya.com/{}'.format(id)
-        async with sem, session.get(huya_room_url, headers=cim_headers_huya, params=param, timeout=15) as response:
+        async with sem, session.get(huya_room_url, headers=cim_headers_huya, params=param, timeout=20) as response:
             res = await response.text()
             liveLineUrl = re.findall(r'"liveLineUrl":"([\s\S]*?)",', res)[0]
             liveline = base64.b64decode(liveLineUrl).decode('utf-8')
@@ -5758,7 +5769,7 @@ async def grab(session, id, m3u_dict):
                 tuner += 5
         m3u_dict[link[start: end]] = id
     except Exception as e:
-        print(f"An error occurred while processing {id}. Error: {e}")
+        print(f"youtube An error occurred while processing {id}. Error: {e}")
 
 
 # 生成全部bilibili直播源

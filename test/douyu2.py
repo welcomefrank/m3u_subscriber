@@ -1,29 +1,11 @@
-#  -*- coding: utf-8 -*-
-# @Time:2022/10/13   18:34
-# @Author: Lanser
-# @File:douyu.py
-# Software:PyCharm
-
 # 获取斗鱼直播间的真实流媒体地址，默认最高画质
 # 使用 https://github.com/wbt5/real-url/issues/185 中两位大佬@wjxgzz @4bbu6j5885o3gpv6ss8找到的的CDN，在此感谢！
 import hashlib
-import json
 import re
 import time
-from multiprocessing.pool import ThreadPool
 
 import execjs
 import requests
-
-
-def requests_get_code(real_dict):
-    for real_ in real_dict:
-        try:
-            code = requests.get(real_dict[real_], stream=True, timeout=1).status_code
-            if code == 200:
-                return real_dict
-        except:
-            pass
 
 
 class DouYu:
@@ -39,7 +21,6 @@ class DouYu:
     """
 
     def __init__(self, rid):
-        self.rate_list = []
         """
         房间号通常为1~8位纯数字，浏览器地址栏中看到的房间号不一定是真实rid.
         Args:
@@ -48,8 +29,15 @@ class DouYu:
         self.did = '10000000000000000000000000001501'
         self.t10 = str(int(time.time()))
         self.t13 = str(int((time.time() * 1000)))
-        self.rid = rid
+
         self.s = requests.Session()
+        self.res = self.s.get('https://m.douyu.com/' + str(rid)).text
+        result = re.search(r'rid":(\d{1,8}),"vipId', self.res)
+
+        if result:
+            self.rid = result.group(1)
+        else:
+            raise Exception('房间号错误')
 
     @staticmethod
     def md5(data):
@@ -67,24 +55,17 @@ class DouYu:
             'time': self.t13,
             'auth': auth
         }
-        res = self.s.post(url, headers=headers, data=data, timeout=2).json()
+        res = self.s.post(url, headers=headers, data=data).json()
         error = res['error']
         data = res['data']
-        try:
-            for i in res['data']['settings']:
-                self.rate_list.append(i)
-        except:
-            pass
         key = ''
         if data:
             rtmp_live = data['rtmp_live']
-            key = re.search(
-                r'(\d{1,8}[0-9a-zA-Z]+)_?\d{0,4}(/playlist|.m3u8)', rtmp_live).group(1)
+            key = re.search(r'(\d{1,8}[0-9a-zA-Z]+)_?\d{0,4}(/playlist|.m3u8)', rtmp_live).group(1)
         return error, key
 
     def get_js(self):
-        result = re.search(
-            r'(function ub98484234.*)\s(var.*)', self.res).group()
+        result = re.search(r'(function ub98484234.*)\s(var.*)', self.res).group()
         func_ub9 = re.sub(r'eval.*;}', 'strc;}', result)
         js = execjs.compile(func_ub9)
         res = js.call('ub98484234')
@@ -94,101 +75,63 @@ class DouYu:
 
         func_sign = re.sub(r'return rt;}\);?', 'return rt;}', res)
         func_sign = func_sign.replace('(function (', 'function sign(')
-        func_sign = func_sign.replace(
-            'CryptoJS.MD5(cb).toString()', '"' + rb + '"')
+        func_sign = func_sign.replace('CryptoJS.MD5(cb).toString()', '"' + rb + '"')
 
         js = execjs.compile(func_sign)
         params = js.call('sign', self.rid, self.did, self.t10)
         params += '&ver=219032101&rid={}&rate=-1'.format(self.rid)
 
         url = 'https://m.douyu.com/api/room/ratestream'
-        res = self.s.post(url, params=params, timeout=2).text
-        json_ = json.loads(res)
-        try:
-            for i in json_['data']['settings']:
-                self.rate_list.append(i)
-        except:
-            pass
-        key = re.search(
-            r'(\d{1,8}[0-9a-zA-Z]+)_?\d{0,4}(.m3u8|/playlist)', res).group(1)
+        res = self.s.post(url, params=params).text
+        key = re.search(r'(\d{1,8}[0-9a-zA-Z]+)_?\d{0,4}(.m3u8|/playlist)', res).group(1)
+
         return key
 
+    def get_pc_js(self, cdn='ws-h5', rate=0):
+        """
+        通过PC网页端的接口获取完整直播源。
+        :param cdn: 主线路ws-h5、备用线路tct-h5
+        :param rate: 1流畅；2高清；3超清；4蓝光4M；0蓝光8M或10M
+        :return: JSON格式
+        """
+        res = self.s.get('https://www.douyu.com/' + str(self.rid)).text
+        result = re.search(r'(vdwdae325w_64we[\s\S]*function ub98484234[\s\S]*?)function', res).group(1)
+        func_ub9 = re.sub(r'eval.*?;}', 'strc;}', result)
+        js = execjs.compile(func_ub9)
+        res = js.call('ub98484234')
+
+        v = re.search(r'v=(\d+)', res).group(1)
+        rb = DouYu.md5(self.rid + self.did + self.t10 + v)
+
+        func_sign = re.sub(r'return rt;}\);?', 'return rt;}', res)
+        func_sign = func_sign.replace('(function (', 'function sign(')
+        func_sign = func_sign.replace('CryptoJS.MD5(cb).toString()', '"' + rb + '"')
+
+        js = execjs.compile(func_sign)
+        params = js.call('sign', self.rid, self.did, self.t10)
+
+        params += '&cdn={}&rate={}'.format(cdn, rate)
+        url = 'https://www.douyu.com/lapi/live/getH5Play/{}'.format(self.rid)
+        res = self.s.post(url, params=params).json()
+
+        return res
+
     def get_real_url(self):
-        self.res = self.s.get('https://m.douyu.com/' + str(self.rid)).text
-        result = re.search(r'rid":(\d{1,8}),"vipId', self.res)
-        try:
-            name = re.findall('"nickname":"(.*?)"', self.res)[0]
-        except:
-            name = self.rid
-        if result:
-            self.rid = result.group(1)
-        else:
-            return []
         error, key = self.get_pre()
         if error == 0:
             pass
         elif error == 102:
-            return []
+            raise Exception('房间不存在')
         elif error == 104:
-            return []
+            raise Exception('房间未开播')
         else:
             key = self.get_js()
-
-        real_lists = []
-        real_list = []
-        thread_list = []
-        if not self.rate_list:
-            self.rate_list = [{'name': '蓝光', 'rate': 0, 'high_bit': 1}, {'name': '超清', 'rate': 3, 'high_bit': 0},
-                              {'name': '高清', 'rate': 2, 'high_bit': 0}]
-        for rate in self.rate_list:
-            if rate['rate'] != 0:
-                flv = {"{}_flv".format(rate['name']): "http://ws-tct.douyucdn.cn/live/{}_{}.flv?uuid=".format(key, rate[
-                    'rate'] * 1000)}
-                m3u8 = {
-                    "{}_m3u8".format(rate['name']): "http://ws-tct.douyucdn.cn/live/{}_{}.m3u8?uuid=".format(key, rate[
-                        'rate'] * 1000)}
-                x_p2p = {"{}_x_p2p".format(rate['name']): "http://ws-tct.douyucdn.cn/live/{}_{}.xs?uuid=".format(key,
-                                                                                                                 rate[
-                                                                                                                     'rate'] * 1000)}
-                aliyun = {
-                    "{}_aliyun".format(rate['name']): "http://ws-tct.douyucdn.cn/live/{}_{}.flv?uuid=".format(key,
-                                                                                                                  rate[
-                                                                                                                      'rate'] * 1000)}
-                real_lists.append(flv)
-                real_lists.append(m3u8)
-                real_lists.append(x_p2p)
-                real_lists.append(aliyun)
-            else:
-                flv = {"{}_flv".format(rate['name']): "http://ws-tct.douyucdn.cn/live/{}.flv?uuid=".format(key)}
-                m3u8 = {"{}_m3u8".format(rate['name']): "http://ws-tct.douyucdn.cn/live/{}.m3u8?uuid=".format(key)}
-                x_p2p = {"{}_x_p2p".format(rate['name']): "http://ws-tct.douyucdn.cn/live/{}.xs?uuid=".format(key)}
-                aliyun = {
-                    "{}_aliyun".format(rate['name']): "http://ws-tct.douyucdn.cn/live/{}.flv?uuid=".format(key)}
-                real_lists.append(flv)
-                real_lists.append(m3u8)
-                real_lists.append(x_p2p)
-                real_lists.append(aliyun)
-        if real_lists:
-            pool = ThreadPool(processes=int(len(real_lists)))
-            for real_ in real_lists:
-                thread_list.append(pool.apply_async(requests_get_code, args=(real_,)))
-            for thread in thread_list:
-                return_dict = thread.get()
-                if return_dict:
-                    real_list.append(return_dict)
-            if real_list:
-                # real_list.append({'name': name})
-                # real_list.append({'rid': self.rid})
-                return real_list
-        return []
-
+        real_url = {}
+        real_url["flv"] = "http://vplay1a.douyucdn.cn/live/{}.flv?uuid=".format(key)
+        real_url["x-p2p"] = "http://tx2play1.douyucdn.cn/live/{}.xs?uuid=".format(key)
+        return real_url
 
 if __name__ == '__main__':
-    r = '100'
-    # r = input('输入斗鱼直播间号：\n')
+    r = '6484910'
     s = DouYu(r)
-    src = s.get_real_url()
-    for data in src:
-        for var in data.values():
-            print(var)
-    print(src)
+    print(s.get_real_url())

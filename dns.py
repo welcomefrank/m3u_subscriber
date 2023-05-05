@@ -99,9 +99,11 @@ def deal_black_list_simple_policy_queue(second):
         for i in range(10):
             if not black_list_simple_policy_queue.empty():
                 domain = black_list_simple_policy_queue.get()
+                domain = stupidThink(domain)
                 add_dict[domain] = ''
             if not white_list_simple_nameserver_policy_queue.empty():
                 domain2 = white_list_simple_nameserver_policy_queue.get()
+                domain2 = stupidThink(domain2)
                 add_dict2[domain2] = ''
         if len(add_dict) > 0:
             redis_add_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST, add_dict)
@@ -553,10 +555,19 @@ def stupidThink(domain_name):
         sub_domains = ['.'.join(domain_name.split('.')[i:]) for i in range(len(domain_name.split('.')) - 1)]
     except Exception as e:
         return ''
+    # 一级域名,不是顶级域名那种
+    domain = sub_domains[-1]
     try:
-        return sub_domains[-2]
+        for key in ignore_domain:
+            # 一级域名有顶级域名，找二级域名
+            if domain.startswith(key):
+                try:#二级域名仍然可能有顶级域名，但很少
+                    return sub_domains[-2]
+                except Exception as e:
+                    return domain
+        return domain
     except Exception as e:
-        return sub_domains[-1]
+        return domain
 
 
 # 白名单三段字典:顶级域名,一级域名长度,一级域名首位,一级域名数据
@@ -645,6 +656,10 @@ def put_element(q, element):
     #     print("队列已满，不能添加更多元素")
 
 
+ignore_domain = ['com.', 'cn.', 'org.', 'net.', 'edu.', 'gov.', 'mil.', 'int.', 'biz.', 'info.', 'name.', 'pro.',
+                 'asia.', 'us.', 'uk.', 'jp.']
+
+
 # 外国判断  1  1  1  1   0   1   0    0
 # 中国判断  1     0      0       1
 # 直接信任黑名单规则
@@ -655,13 +670,13 @@ def isChinaDomain(data):
     domain_name = dns_msg.q.qname
     domain_name_str = str(domain_name)
     domain_name_str = domain_name_str[:-1]
-    domain_name_str = stupidThink(domain_name_str)
+    #domain_name_str = stupidThink(domain_name_str)
     ###########################################无脑放行IP检测，排除中国的#######################################
     # if domain_name_str in ipCheckDomian:
     #     return False
     ##########################################中国特色顶级域名，申请必须要经过大陆审批通过，默认全部当成大陆域名#############
-    # if domain_name_str.endswith(".cn") or domain_name_str.endswith(".中国"):
-    #     return True
+    if domain_name_str.endswith(".cn") or domain_name_str.endswith(".中国"):
+        return True
     ###########################################个人日常冲浪的域名分流策略，自己维护##############################
     # 在已经命中的简易外国域名查找，直接丢给5335
     if inSimpleBlackListCache(domain_name_str):
@@ -1230,7 +1245,7 @@ def main():
     timeout = dnstimeout[REDIS_KEY_DNS_TIMEOUT]
     # 开始接收客户端的DNS请求
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-        sock.bind(('0.0.0.0', 22770))  # 22770  53
+        sock.bind(('0.0.0.0', 53))  # 22770  53
         # 设置等待时长为30s
         sock.settimeout(timeout)
         # 创建一个UDP socket
