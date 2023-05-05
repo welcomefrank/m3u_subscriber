@@ -64,6 +64,18 @@ ipCheckDomian = ["ip.skk.moe", "ip.swcdn.skk.moe", "api.ipify.org",
 black_list_simple_policy_queue = queue.Queue(maxsize=100)
 white_list_simple_nameserver_policy_queue = queue.Queue(maxsize=100)
 
+black_list_simple_tmp_cache_queue = queue.Queue(maxsize=100)
+black_list_simple_tmp_policy_queue = queue.Queue(maxsize=100)
+
+white_list_simple_tmp_cache_queue = queue.Queue(maxsize=100)
+white_list_simple_tmp_policy_queue = queue.Queue(maxsize=100)
+
+black_list_tmp_cache_queue = queue.Queue(maxsize=100)
+black_list_tmp_policy_queue = queue.Queue(maxsize=100)
+
+white_list_tmp_cache_queue = queue.Queue(maxsize=100)
+white_list_tmp_policy_queue = queue.Queue(maxsize=100)
+
 
 # 添加元素到队列中
 def put_element(q, element):
@@ -84,7 +96,125 @@ def clearCache(second):
         black_list_tmp_policy.clear()
         white_list_tmp_cache.clear()
         white_list_tmp_policy.clear()
+        global black_list_simple_policy
+        clearAndStoreAtLeast50DataInRedis(REDIS_KEY_DNS_SIMPLE_BLACKLIST, black_list_simple_policy)
+        global white_list_simple_nameserver_policy
+        clearAndStoreAtLeast50DataInRedis(REDIS_KEY_DNS_SIMPLE_WHITELIST, white_list_simple_nameserver_policy)
         time.sleep(second)
+
+
+def clearCacheFast(second):
+    while True:
+        black_list_simple_tmp_cache.clear()
+        black_list_simple_tmp_policy.clear()
+        white_list_simple_tmp_cache.clear()
+        white_list_simple_tmp_policy.clear()
+        black_list_tmp_cache.clear()
+        black_list_tmp_policy.clear()
+        white_list_tmp_cache.clear()
+        white_list_tmp_policy.clear()
+        time.sleep(second)
+
+
+# redis删除map字典
+def redis_del_map(key):
+    r.delete(key)
+
+
+# 简易dns黑白名单保留最低限度的50条数据
+def clearAndStoreAtLeast50DataInRedis(redisKey, cacheDict):
+    cacheDict.clear()
+    tmpDict = redis_get_map(redisKey)
+    count = 0
+    data = {}
+    for key in tmpDict.keys():
+        if count > 50:
+            break
+        updateSpData(key, cacheDict)
+        data[key] = ''
+        count = count + 1
+    try:
+        redis_del_map(redisKey)
+    except Exception as e:
+        pass
+    try:
+        redis_add_map(redisKey, data)
+    except Exception as e:
+        pass
+
+
+def deal_black_list_simple_tmp_cache_queue(second):
+    global black_list_simple_tmp_cache_queue
+    global black_list_simple_tmp_cache
+    while True:
+       deal_tmp_cache_policy_queue(black_list_simple_tmp_cache_queue, black_list_simple_tmp_cache)
+       time.sleep(second)
+
+
+def deal_black_list_simple_tmp_policy_queue(second):
+    global black_list_simple_tmp_policy_queue
+    global black_list_simple_tmp_policy
+    while True:
+       deal_tmp_cache_policy_queue(black_list_simple_tmp_policy_queue, black_list_simple_tmp_policy)
+       time.sleep(second)
+
+
+def deal_white_list_simple_tmp_cache_queue(second):
+    global white_list_simple_tmp_cache_queue
+    global white_list_simple_tmp_cache
+    while True:
+       deal_tmp_cache_policy_queue(white_list_simple_tmp_cache_queue, white_list_simple_tmp_cache)
+       time.sleep(second)
+
+
+def deal_white_list_simple_tmp_policy_queue(second):
+    global white_list_simple_tmp_policy_queue
+    global white_list_simple_tmp_policy
+    while True:
+       deal_tmp_cache_policy_queue(white_list_simple_tmp_policy_queue, white_list_simple_tmp_policy)
+       time.sleep(second)
+
+
+def deal_black_list_tmp_cache_queue(second):
+    global black_list_tmp_cache_queue
+    global black_list_tmp_cache
+    while True:
+       deal_tmp_cache_policy_queue(black_list_tmp_cache_queue, black_list_tmp_cache)
+       time.sleep(second)
+
+
+def deal_black_list_tmp_policy_queue(second):
+    global black_list_tmp_policy_queue
+    global black_list_tmp_policy
+    while True:
+       deal_tmp_cache_policy_queue(black_list_tmp_policy_queue, black_list_tmp_policy)
+       time.sleep(second)
+
+
+def deal_white_list_tmp_cache_queue(second):
+    global white_list_tmp_cache_queue
+    global white_list_tmp_cache
+    while True:
+       deal_tmp_cache_policy_queue(white_list_tmp_cache_queue, white_list_tmp_cache)
+       time.sleep(second)
+
+
+def deal_white_list_tmp_policy_queue(second):
+    global white_list_tmp_policy_queue
+    global white_list_tmp_policy
+    while True:
+       deal_tmp_cache_policy_queue(white_list_tmp_policy_queue, white_list_tmp_policy)
+       time.sleep(second)
+
+
+def deal_tmp_cache_policy_queue(queue, dict):
+    add_dict = {}
+    for i in range(10):
+        if not queue.empty():
+            domain = queue.get()
+            add_dict[domain] = ''
+    if len(add_dict) > 0:
+        dict.update(add_dict)
 
 
 # 自动更新黑白名单数据至redis,多线程插入会丢失数据，只能把插数据的操作集中到单个线程
@@ -115,42 +245,6 @@ def deal_black_list_simple_policy_queue(second):
                 updateSpData(key, white_list_simple_nameserver_policy)
         time.sleep(second)
 
-
-# 单位:秒-1天
-TTL = 86400
-LAST_CLEAR_TIME = 0
-
-
-def addTTl():
-    current_timestamp = int(time.time())
-    return current_timestamp + TTL
-
-
-def schedule_deal_dict_add_remove(myQueue, myDict):
-    # 从队列中取出元素
-    add_dict = {}
-    while not myQueue.empty():
-        item = myQueue.get()
-        type = item[0]
-        url = item[1]
-        if type == 'add':
-            add_dict[url] = ''
-    now = int(time.time())
-    global LAST_CLEAR_TIME
-    if LAST_CLEAR_TIME <= now:
-        myDict.clear()
-        LAST_CLEAR_TIME = addTTl()
-    if len(add_dict) > 0:
-        myDict.update(add_dict)
-
-
-# def deal_white_list_simple_nameserver_policy_queue(second):
-#     global white_list_simple_nameserver_policy_queue
-#     global white_list_simple_nameserver_policy
-#     while True:
-#         schedule_deal_dict_add_remove(white_list_simple_nameserver_policy_queue, white_list_simple_nameserver_policy)
-#         time.sleep(second)
-#
 
 # 规则：先查unkown_list_tmp_cache，有的话转发5335,
 # 没有再查black_list_tmp_cache，有记录直接转发5335,
@@ -190,6 +284,7 @@ dnsquerynum = {REDIS_KEY_DNS_QUERY_NUM: 150}
 REDIS_KEY_DNS_TIMEOUT = "dnstimeout"
 dnstimeout = {REDIS_KEY_DNS_TIMEOUT: 20}
 
+
 # 获取软路由主路由ip
 # def getMasterIp():
 #     # 获取宿主机IP地址
@@ -228,7 +323,7 @@ dnstimeout = {REDIS_KEY_DNS_TIMEOUT: 20}
 #####################################################ip判断####################################################
 
 
-port = 80
+# port = 80
 
 
 # def getHostByName(hostname):
@@ -274,8 +369,9 @@ def inSimpleBlackListPolicyCache(domain_name_str):
     for vistedDomain in black_list_simple_tmp_policy.keys():
         # 缓存域名在新域名里有匹配
         if domain_name_str.endswith(vistedDomain):
-            # put_element(black_list_simple_tmp_cache_queue, domain_name_str)
-            black_list_simple_tmp_cache[domain_name_str] = ""
+            if not black_list_simple_tmp_cache_queue.full():
+                black_list_simple_tmp_cache_queue.put(domain_name_str)
+            # black_list_simple_tmp_cache[domain_name_str] = ""
             return True
     return False
 
@@ -338,10 +434,12 @@ def check_domain_inSimpleBlackListPolicy(domain_name_str, black_list_chunk):
         for key in black_list_chunk:
             # 缓存域名在新域名里有匹配
             if domain_name_str.endswith(key):
-                # put_element(black_list_simple_tmp_cache_queue, domain_name_str)
-                # put_element(black_list_simple_tmp_policy_queue, key)
-                black_list_simple_tmp_cache[domain_name_str] = ""
-                black_list_simple_tmp_policy[key] = ""
+                if not black_list_simple_tmp_cache_queue.full():
+                    black_list_simple_tmp_cache_queue.put(domain_name_str)
+                if not black_list_simple_tmp_policy_queue.full():
+                    black_list_simple_tmp_policy_queue.put(key)
+                # black_list_simple_tmp_cache[domain_name_str] = ""
+                # black_list_simple_tmp_policy[key] = ""
                 return True
     except Exception as e:
         pass
@@ -353,8 +451,9 @@ def inBlackListPolicyCache(domain_name_str):
     for vistedDomain in black_list_tmp_policy.keys():
         # 缓存域名在新域名里有匹配
         if domain_name_str.endswith(vistedDomain):
-            # put_element(black_list_tmp_cache_queue, domain_name_str)
-            black_list_tmp_cache[domain_name_str] = ""
+            if not black_list_tmp_cache_queue.full():
+                black_list_tmp_cache_queue.put(domain_name_str)
+            # black_list_tmp_cache[domain_name_str] = ""
             return True
     return False
 
@@ -383,8 +482,9 @@ def inSimpleWhiteListPolicyCache(domain_name_str):
     for vistedDomain in white_list_simple_tmp_policy.keys():
         # 缓存域名在新域名里有匹配
         if domain_name_str.endswith(vistedDomain):
-            # put_element(white_list_simple_tmp_cache_queue, domain_name_str)
-            white_list_simple_tmp_cache[domain_name_str] = ""
+            if not white_list_simple_tmp_cache_queue.full():
+                white_list_simple_tmp_cache_queue.put(domain_name_str)
+            # white_list_simple_tmp_cache[domain_name_str] = ""
             return True
     return False
 
@@ -426,10 +526,12 @@ def check_domain_inSimpleWhiteListPolicy(domain_name_str, white_list_chunk):
         for key in white_list_chunk:
             # 新域名在全部规则里有类似域名，更新whiteDomainPolicy
             if domain_name_str.endswith(key):
-                # put_element(white_list_simple_tmp_cache_queue, domain_name_str)
-                white_list_simple_tmp_cache[domain_name_str] = ""
-                # put_element(white_list_simple_tmp_policy_queue, key)
-                white_list_simple_tmp_policy[key] = ""
+                if not white_list_simple_tmp_cache_queue.full():
+                    white_list_simple_tmp_cache_queue.put(domain_name_str)
+                # white_list_simple_tmp_cache[domain_name_str] = ""
+                if not white_list_simple_tmp_policy_queue.full():
+                    white_list_simple_tmp_policy_queue.put(key)
+                # white_list_simple_tmp_policy[key] = ""
                 return True
     except Exception as e:
         pass
@@ -450,8 +552,9 @@ def inWhiteListPolicyCache(domain_name_str):
     for vistedDomain in white_list_tmp_policy.keys():
         # 缓存域名在新域名里有匹配
         if domain_name_str.endswith(vistedDomain):
-            # put_element(white_list_tmp_cache_queue, domain_name_str)
-            white_list_tmp_cache[domain_name_str] = ""
+            if not white_list_tmp_cache_queue.full():
+                white_list_tmp_cache_queue.put(domain_name_str)
+            # white_list_tmp_cache[domain_name_str] = ""
             return True
     return False
 
@@ -494,10 +597,12 @@ def check_domain_inBlackListPolicy(domain_name_str, black_list_chunk):
         for key in black_list_chunk:
             # 缓存域名在新域名里有匹配
             if domain_name_str.endswith(key):
-                # put_element(black_list_tmp_cache_queue, domain_name_str)
-                # put_element(black_list_tmp_policy_queue, key)
-                black_list_tmp_cache[domain_name_str] = ""
-                black_list_tmp_policy[key] = ""
+                if not black_list_tmp_cache_queue.full():
+                    black_list_tmp_cache_queue.put(domain_name_str)
+                if not black_list_tmp_policy_queue.full():
+                    black_list_tmp_policy_queue.put(key)
+                # black_list_tmp_cache[domain_name_str] = ""
+                # black_list_tmp_policy[key] = ""
                 return True
     except Exception as e:
         pass
@@ -541,10 +646,12 @@ def check_domain_inWhiteListPolicy(domain_name_str, white_list_chunk):
         for key in white_list_chunk:
             # 新域名在全部规则里有类似域名，更新whiteDomainPolicy
             if domain_name_str.endswith(key):
-                # put_element(white_list_tmp_cache_queue, domain_name_str)
-                # put_element(white_list_tmp_policy_queue, key)
-                white_list_tmp_cache[domain_name_str] = ""
-                white_list_tmp_policy[key] = ""
+                if not white_list_tmp_cache_queue.full():
+                    white_list_tmp_cache_queue.put(domain_name_str)
+                if not white_list_tmp_policy_queue.full():
+                    white_list_tmp_policy_queue.put(key)
+                # white_list_tmp_cache[domain_name_str] = ""
+                # white_list_tmp_policy[key] = ""
                 return True
     except Exception as e:
         pass
@@ -561,7 +668,7 @@ def stupidThink(domain_name):
         for key in ignore_domain:
             # 一级域名有顶级域名，找二级域名
             if domain.startswith(key):
-                try:#二级域名仍然可能有顶级域名，但很少
+                try:  # 二级域名仍然可能有顶级域名，但很少
                     return sub_domains[-2]
                 except Exception as e:
                     return domain
@@ -670,7 +777,7 @@ def isChinaDomain(data):
     domain_name = dns_msg.q.qname
     domain_name_str = str(domain_name)
     domain_name_str = domain_name_str[:-1]
-    #domain_name_str = stupidThink(domain_name_str)
+    # domain_name_str = stupidThink(domain_name_str)
     ###########################################无脑放行IP检测，排除中国的#######################################
     # if domain_name_str in ipCheckDomian:
     #     return False
@@ -1050,13 +1157,9 @@ def checkAndUpdateSimpleList(isBlack, domain):
     if isBlack:
         if not black_list_simple_policy_queue.full():
             black_list_simple_policy_queue.put(domain)
-        # redis_add_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST, {domain: ''})
-        # updateSimpleBlackListSpData(domain)
     else:
         if not white_list_simple_nameserver_policy_queue.full():
             white_list_simple_nameserver_policy_queue.put(domain)
-        # redis_add_map(REDIS_KEY_DNS_SIMPLE_WHITELIST, {domain: ''})
-        # updateSimpleWhiteListSpData(domain)
 
 
 # 线程数获取
@@ -1231,6 +1334,33 @@ def main():
     timer_thread3 = threading.Thread(target=clearCache,
                                      args=(86400,), daemon=True)
     timer_thread3.start()
+    timer_thread4 = threading.Thread(target=deal_black_list_simple_tmp_cache_queue,
+                                     args=(10,), daemon=True)
+    timer_thread4.start()
+    timer_thread5 = threading.Thread(target=deal_black_list_simple_tmp_policy_queue,
+                                     args=(10,), daemon=True)
+    timer_thread5.start()
+    timer_thread6 = threading.Thread(target=deal_white_list_simple_tmp_cache_queue,
+                                     args=(10,), daemon=True)
+    timer_thread6.start()
+    timer_thread7 = threading.Thread(target=deal_white_list_simple_tmp_policy_queue,
+                                     args=(10,), daemon=True)
+    timer_thread7.start()
+    timer_thread8 = threading.Thread(target=deal_black_list_tmp_cache_queue,
+                                     args=(10,), daemon=True)
+    timer_thread8.start()
+    timer_thread9 = threading.Thread(target=deal_black_list_tmp_policy_queue,
+                                     args=(10,), daemon=True)
+    timer_thread9.start()
+    timer_thread10 = threading.Thread(target=deal_white_list_tmp_cache_queue,
+                                      args=(10,), daemon=True)
+    timer_thread10.start()
+    timer_thread11 = threading.Thread(target=deal_white_list_tmp_policy_queue,
+                                      args=(10,), daemon=True)
+    timer_thread11.start()
+    timer_thread12 = threading.Thread(target=clearCacheFast,
+                                      args=(3613,), daemon=True)
+    timer_thread12.start()
     # 中国dns端口
     china_port = chinadnsport[REDIS_KEY_CHINA_DNS_PORT]
     # 中国dns服务器
@@ -1245,7 +1375,7 @@ def main():
     timeout = dnstimeout[REDIS_KEY_DNS_TIMEOUT]
     # 开始接收客户端的DNS请求
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-        sock.bind(('0.0.0.0', 53))  # 22770  53
+        sock.bind(('0.0.0.0', 22770))  # 22770  53
         # 设置等待时长为30s
         sock.settimeout(timeout)
         # 创建一个UDP socket
