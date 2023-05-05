@@ -1,0 +1,3 @@
+        async with sem, session.get(value, timeout=5) as response:
+            if response.status == 200:
+                real_dict[key] = value

@@ -40,17 +40,10 @@ class YY:
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
                           'Chrome/95.0.4638.69 Safari/537.36 '
         }
-        name = ''
         real_lists = []
         real_list = []
         thread_list = []
         real_dict = {}
-        try:
-            url = 'https://www.yy.com/{}'.format(self.rid)
-            response = requests.get(url, headers=headers_web, timeout=2)
-            name = re.findall('<h2>(.*?)</h2>', response.text)[0]
-        except:
-            name = self.rid
 
         def room_id_():
             url = 'https://www.yy.com/{}'.format(self.rid)
@@ -92,8 +85,7 @@ class YY:
                 if return_dict:
                     real_list.append(return_dict)
             if real_list:
-                real_list.append({'name': name})
-                real_list.append({'rid': self.rid})
+
                 real_dict['yy'] = real_list
                 return real_dict
         return {}

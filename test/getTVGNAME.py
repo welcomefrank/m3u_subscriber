@@ -1,7 +1,6 @@
 import re
 
-
-with open('/test_channels_macau.m3u', 'rb') as f:
+with open('/全国景区源.m3u8', 'rb') as f:
     file_content = f.read()
 dict = ''
 # 使用正则表达式匹配所有的tvg_name标记里的字符串数据
@@ -12,6 +11,6 @@ for i in all_matches:
     if i in dict1.keys():
         continue
     dict1[i] = ''
-    dict += f"'{i}':" + f"'港澳台'" + ','
+    dict += f"'{i}':" + f"'景区'" + ','
 
 print(dict)
