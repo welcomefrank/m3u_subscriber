@@ -128,7 +128,7 @@ def clearAndStoreAtLeast50DataInRedis(redisKey, cacheDict):
     count = 0
     data = {}
     for key in tmpDict.keys():
-        if count > 50:
+        if count > 100:
             break
         updateSpData(key, cacheDict)
         data[key] = ''
