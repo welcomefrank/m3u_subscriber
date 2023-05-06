@@ -8,3 +8,4 @@ aiofiles==23.1.0
 chardet==5.1.0
 cryptography==40.0.1
 multidict==6.0.4
+zhconv==1.4.3
