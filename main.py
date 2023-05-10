@@ -7246,7 +7246,7 @@ def thread_webdav_m3u_killer(second):
         for tsfile, timesec in ts_dict.items():
             if tsfile == mark:
                 continue
-            if now - timesec > TS_ALIVE_TIME * 15:
+            if now - timesec > TS_ALIVE_TIME * 9:
                 removeList.append(tsfile)
         safe_delete_single_ts(removeList)
         # 已经过期的ts文件，真正被删除掉的

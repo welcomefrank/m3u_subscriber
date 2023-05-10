@@ -6,6 +6,7 @@ RUN mkdir -p /app/ini /app/img /app/secret /app/slices
 COPY ./*.py /app/
 COPY ./ini/*.ini /app/ini/
 COPY ./list/*.list /app/secret/
+COPY ./list/*.yml /app/secret/
 COPY ./bitcoin.png /app/img/
 # 将前端文件复制到容器中的 /usr/share/nginx/html 目录
 COPY index.html /usr/share/nginx/html

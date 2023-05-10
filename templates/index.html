@@ -1915,8 +1915,9 @@
     <div id="page31" style="display: none;">
         <h1>webdav直播源</h1>
         <div style="float: left;width: 70%">
-            <h3>后台默认1小时自动执行生成操作,需要在功能开关开启</h3>
-            <h3>如果点播后10秒后没有观看任何数据则自动销毁所有切片数据</h3>
+            <h3>确保docker有充足(内存>一个视频大小),否则docker瞬间内存爆炸</h3>
+            <h3>定时20秒自动删除除去最近一次观看的视频之外的全部切片</h3>
+            <h3>定时5分钟自动删除最近一次观看的视频已经读取的切片</h3>
             <h3>该切片不做任何转码，提高传输效率和保证原画质量</h3>
             <h3>超融合订阅地址:参考m3u格式</h3>
             <h3 class="urllink">webdav-无加密:http://192.168.5.1:22771/secret/webdav.m3u</h3>
@@ -1975,7 +1976,7 @@
                     onclick="removelinksBase('/api/removem3ulinks28')">删除全部子目录
             </button>
             <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">订阅来源:webdav直播子目录 +频道分组名字(举例子:游戏王5DS)
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:webdav直播子目录(不包括视频文件本身) +频道分组名字(举例子:游戏王5DS,这一行配置代表全部游戏王5DS的直播源)
                 </div>
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>

@@ -121,18 +121,18 @@ def redis_del_map(key):
     r.delete(key)
 
 
-# 简易dns黑白名单保留最低限度的50条数据
+# 简易dns黑白名单保留最低限度的1000条数据
 def clearAndStoreAtLeast50DataInRedis(redisKey, cacheDict):
-    cacheDict.clear()
+    # cacheDict.clear()
     tmpDict = redis_get_map(redisKey)
-    count = 0
-    data = {}
-    for key in tmpDict.keys():
-        if count > 100:
-            break
-        updateSpData(key, cacheDict)
-        data[key] = ''
-        count = count + 1
+    # count = 0
+    # data = {}
+    data = dict(tmpDict.items()[:1000])
+    # for key in tmpDict.keys():
+    #     if count > 1000:
+    #         break
+    #     #updateSpData(key, cacheDict)
+    #     count = count + 1
     try:
         redis_del_map(redisKey)
     except Exception as e:
@@ -147,64 +147,64 @@ def deal_black_list_simple_tmp_cache_queue(second):
     global black_list_simple_tmp_cache_queue
     global black_list_simple_tmp_cache
     while True:
-       deal_tmp_cache_policy_queue(black_list_simple_tmp_cache_queue, black_list_simple_tmp_cache)
-       time.sleep(second)
+        deal_tmp_cache_policy_queue(black_list_simple_tmp_cache_queue, black_list_simple_tmp_cache)
+        time.sleep(second)
 
 
 def deal_black_list_simple_tmp_policy_queue(second):
     global black_list_simple_tmp_policy_queue
     global black_list_simple_tmp_policy
     while True:
-       deal_tmp_cache_policy_queue(black_list_simple_tmp_policy_queue, black_list_simple_tmp_policy)
-       time.sleep(second)
+        deal_tmp_cache_policy_queue(black_list_simple_tmp_policy_queue, black_list_simple_tmp_policy)
+        time.sleep(second)
 
 
 def deal_white_list_simple_tmp_cache_queue(second):
     global white_list_simple_tmp_cache_queue
     global white_list_simple_tmp_cache
     while True:
-       deal_tmp_cache_policy_queue(white_list_simple_tmp_cache_queue, white_list_simple_tmp_cache)
-       time.sleep(second)
+        deal_tmp_cache_policy_queue(white_list_simple_tmp_cache_queue, white_list_simple_tmp_cache)
+        time.sleep(second)
 
 
 def deal_white_list_simple_tmp_policy_queue(second):
     global white_list_simple_tmp_policy_queue
     global white_list_simple_tmp_policy
     while True:
-       deal_tmp_cache_policy_queue(white_list_simple_tmp_policy_queue, white_list_simple_tmp_policy)
-       time.sleep(second)
+        deal_tmp_cache_policy_queue(white_list_simple_tmp_policy_queue, white_list_simple_tmp_policy)
+        time.sleep(second)
 
 
 def deal_black_list_tmp_cache_queue(second):
     global black_list_tmp_cache_queue
     global black_list_tmp_cache
     while True:
-       deal_tmp_cache_policy_queue(black_list_tmp_cache_queue, black_list_tmp_cache)
-       time.sleep(second)
+        deal_tmp_cache_policy_queue(black_list_tmp_cache_queue, black_list_tmp_cache)
+        time.sleep(second)
 
 
 def deal_black_list_tmp_policy_queue(second):
     global black_list_tmp_policy_queue
     global black_list_tmp_policy
     while True:
-       deal_tmp_cache_policy_queue(black_list_tmp_policy_queue, black_list_tmp_policy)
-       time.sleep(second)
+        deal_tmp_cache_policy_queue(black_list_tmp_policy_queue, black_list_tmp_policy)
+        time.sleep(second)
 
 
 def deal_white_list_tmp_cache_queue(second):
     global white_list_tmp_cache_queue
     global white_list_tmp_cache
     while True:
-       deal_tmp_cache_policy_queue(white_list_tmp_cache_queue, white_list_tmp_cache)
-       time.sleep(second)
+        deal_tmp_cache_policy_queue(white_list_tmp_cache_queue, white_list_tmp_cache)
+        time.sleep(second)
 
 
 def deal_white_list_tmp_policy_queue(second):
     global white_list_tmp_policy_queue
     global white_list_tmp_policy
     while True:
-       deal_tmp_cache_policy_queue(white_list_tmp_policy_queue, white_list_tmp_policy)
-       time.sleep(second)
+        deal_tmp_cache_policy_queue(white_list_tmp_policy_queue, white_list_tmp_policy)
+        time.sleep(second)
 
 
 def deal_tmp_cache_policy_queue(queue, dict):
@@ -754,17 +754,18 @@ def findBottomDict(domain_name_str, whitelistSpData):
             pass
 
 
-# 添加元素到队列中
-def put_element(q, element):
-    if not q.full():
-        q.put(element)
-        # print(f"元素 {element} 已经添加到队列中")
-    # else:
-    #     print("队列已满，不能添加更多元素")
-
-
 ignore_domain = ['com.', 'cn.', 'org.', 'net.', 'edu.', 'gov.', 'mil.', 'int.', 'biz.', 'info.', 'name.', 'pro.',
-                 'asia.', 'us.', 'uk.', 'jp.']
+                 'asia.', 'us.', 'uk.', 'jp.', 'hk.', 'tw.']
+
+# 不允许在中国大陆备案的顶级域名:
+foreign_domain = ['.eu', '.jp', '.kr', '.tw', '.uk']
+
+
+def isInForeign_domain(domain):
+    for key in foreign_domain:
+        if domain.endswith(key):
+            return True
+    return False
 
 
 # 外国判断  1  1  1  1   0   1   0    0
@@ -784,6 +785,10 @@ def isChinaDomain(data):
     ##########################################中国特色顶级域名，申请必须要经过大陆审批通过，默认全部当成大陆域名#############
     if domain_name_str.endswith(".cn") or domain_name_str.endswith(".中国"):
         return True
+    ##########################################不允许在中国备案使用的顶级域名，默认全部当成外国域名######################
+    if isInForeign_domain(domain_name_str):
+        checkAndUpdateSimpleList(True, domain_name_str)
+        return False
     ###########################################个人日常冲浪的域名分流策略，自己维护##############################
     # 在已经命中的简易外国域名查找，直接丢给5335
     if inSimpleBlackListCache(domain_name_str):
