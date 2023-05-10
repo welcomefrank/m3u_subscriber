@@ -10,21 +10,31 @@ import math
 import os
 import queue
 import re
+import atexit
+import shutil
+import signal
+import subprocess
+import uuid
+from xml.etree.ElementTree import fromstring
+
+# import psutil
 # import subprocess
 import threading
 import hashlib
 import urllib
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
+
 from zhconv import convert
 import aiohttp
 import aiofiles
 import redis
 import requests
 import time
-from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse, quote
 # import yaml
-from flask import Flask, jsonify, request, send_file, render_template, send_from_directory, redirect, after_this_request
+from flask import Flask, jsonify, request, send_file, render_template, send_from_directory, redirect, \
+    after_this_request, Response
 
 import chardet
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -186,19 +196,44 @@ REDIS_KEY_YY_M3U = 'redisKeyYYM3u'
 # YY频道名字,真实m3u8地址
 redisKeyYYM3u = {}
 
+REDIS_KEY_WEBDAV_M3U = 'redisKeyWebdavM3u'
+redisKeyWebDavM3u = {'url': '', 'username': '', 'password': ''}
+
+# webdav直播源真实地址
+REDIS_KEY_WEBDAV_M3U_DICT_RAW = 'redisKeyWebdavM3uDictRaw'
+# webdav名字，真实地址
+true_webdav_m3u_dict_raw = {}
+# webdav路径备份
+REDIS_KEY_WEBDAV_PATH_LIST = 'redisKeyWebdavPathList'
+# 路径，备注
+redisKeyWebDavPathList = {}
+port_live = 22771
+webdav_fake_url = {'url': ''}
+
+
+def update_webdav_fake_url():
+    ip = init_IP()
+    fakeurl = f"http://{ip}:{port_live}/videos/"
+    webdav_fake_url['url'] = fakeurl
+
+
+def getNowWebDavFakeUrl():
+    return webdav_fake_url['url']
+
+
 NORMAL_REDIS_KEY = 'normalRedisKey'
 # 全部有redis备份字典key-普通redis结构，重要且数据量比较少的
 allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_LINK, REDIS_KEY_WHITELIST_IPV4_LINK,
               REDIS_KEY_WHITELIST_IPV6_LINK, REDIS_KEY_PASSWORD_LINK, REDIS_KEY_PROXIES_LINK, REDIS_KEY_PROXIES_TYPE,
               REDIS_KEY_PROXIES_MODEL, REDIS_KEY_PROXIES_MODEL_CHOSEN, REDIS_KEY_PROXIES_SERVER,
               REDIS_KEY_PROXIES_SERVER_CHOSEN, REDIS_KEY_GITEE, REDIS_KEY_GITHUB,
-              REDIS_KEY_SECRET_PASS_NOW, REDIS_KEY_WEBDAV, REDIS_KEY_FILE_NAME,
+              REDIS_KEY_SECRET_PASS_NOW, REDIS_KEY_WEBDAV, REDIS_KEY_FILE_NAME, REDIS_KEY_WEBDAV_M3U,
               REDIS_KEY_FUNCTION_DICT, REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS]
 
 # 数据巨大的redis配置,一键导出时单独导出每个配置
 hugeDataList = [REDIS_KEY_BILIBILI, REDIS_KEY_DNS_SIMPLE_WHITELIST, REDIS_KEY_DNS_SIMPLE_BLACKLIST, REDIS_KEY_YOUTUBE,
                 REDIS_KEY_M3U_WHITELIST_RANK, REDIS_KEY_M3U_BLACKLIST, REDIS_KEY_M3U_WHITELIST, REDIS_KEY_HUYA,
-                REDIS_KEY_YY]
+                REDIS_KEY_YY, REDIS_KEY_WEBDAV_PATH_LIST]
 
 SPECIAL_REDIS_KEY = 'specialRedisKey'
 specialRedisKey = [REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME,
@@ -363,6 +398,362 @@ def serve_files6(filename):
         return response
 
     return redirect(url)
+
+
+# 切片后的目录，此处需要替换为真实值
+SLICES_DIR = "/app/slices"
+# 切片异常目录
+SLICES_DIR_ERR = "/app/slicesErr"
+
+# 保存正在运行的ffmpeg进程列表
+ffmpeg_processes = {}
+
+
+def cleanupExit():
+    global ffmpeg_processes
+    try:
+        for paths, process in ffmpeg_processes.items():
+            try:
+                os.kill(process.pid, signal.SIGTERM)
+            except Exception as e:
+                pass
+        # 等待一段时间，让进程有机会终止
+        time.sleep(5)
+        for paths, process in ffmpeg_processes.items():
+            try:
+                os.kill(process.pid, signal.SIGKILL)
+            except Exception as e:
+                pass
+        ffmpeg_processes.clear()
+    except Exception as e:
+        print(e)
+        pass
+
+
+# 注册一个回调函数，在应用程序退出时杀死所有正在运行的ffmpeg进程
+def cleanup(uuid):
+    # uuid,进程id
+    global ffmpeg_processes
+    try:
+        pid = -999
+        for paths, process in ffmpeg_processes.items():
+            if uuid == paths:
+                pid = process
+                continue
+            try:
+                os.kill(process.pid, signal.SIGTERM)
+            except Exception as e:
+                pass
+        # 等待一段时间，让进程有机会终止
+        time.sleep(5)
+        for paths, process in ffmpeg_processes.items():
+            if uuid == paths:
+                continue
+            try:
+                os.kill(process.pid, signal.SIGKILL)
+            except Exception as e:
+                pass
+        if pid != -999:
+            ffmpeg_processes = {key: value for key, value in ffmpeg_processes.items() if key == uuid}
+    except Exception as e:
+        print(e)
+        pass
+
+
+# 确保销毁ffmpeg
+atexit.register(cleanupExit)
+recordPath = {'past': 'nope'}
+
+
+# 看完一个ts就删除一个，删除已经看过超过60秒的
+def safe_delete_single_ts(tsfies):
+    # 已经过期的ts文件
+    if len(tsfies) == 0:
+        return
+    if os.path.exists(SLICES_DIR):
+        errPathList = []
+        for removePath in tsfies:
+            if os.path.exists(removePath):
+                try:
+                    os.remove(removePath)
+                except Exception as e:
+                    # 文件删不掉，移到异常文件夹干掉
+                    if os.path.exists(removePath):
+                        errPathList.append(removePath)
+                    pass
+        dealRemoveErrTsPath(errPathList)
+        # 最终还是有文件没有移动成功，这部分异常数据还是存活了
+        if len(errPathList) > 0:
+            # 真正被删除掉的ts文件=已经过期的ts文件总文件-没有成功删除的文件
+            result = [item for item in tsfies if item not in errPathList]
+            # 已经过期的ts文件，真正被删除掉的
+            tsfies.clear()
+            tsfies.extend(result)
+
+
+# 尽可能安全地删除切片
+def safe_delete_ts(uuid):
+    errPathList = []
+    tmpAllRemoveList = []
+    try:
+        # 新的切片产生，删除全部其他切片
+        if os.path.exists(SLICES_DIR):
+            # 目录下全部文件
+            removePaths = os.listdir(SLICES_DIR)
+            for filename in removePaths:
+                # 不是以uuid开始的文件，包括m3u8和ts文件
+                if not filename.startswith(uuid):
+                    removePath = os.path.join(SLICES_DIR, filename)
+                    try:
+                        os.remove(removePath)
+                    except Exception as e:
+                        # 文件删不掉，移到异常文件夹干掉
+                        if os.path.exists(removePath):
+                            errPathList.append(removePath)
+                            tmpAllRemoveList.append(removePath)
+                        pass
+            if len(tmpAllRemoveList) > 0:
+                # 不是uuid相关的文件，没有被完全删除掉
+                dealRemoveErrTsPath(errPathList)
+                # 最终还是有文件没有移动成功，这部分数据还是存活了
+                if len(errPathList) > 0:
+                    # 真正被删除掉的ts,m3u8文件=总删除文件-没有成功删除的文件
+                    result = [item for item in tmpAllRemoveList if item not in errPathList]
+                    # 已经过期的ts文件，真正被删除掉的
+                    if len(result) > 0:
+                        # 真正被删除掉的ts文件，从字典里删除
+                        for key in result:
+                            try:
+                                del ts_dict[key]
+                            except Exception as e:
+                                pass
+    except Exception as e:
+        pass
+
+
+def dealRemoveErrTsPath(errPathList):
+    # 没有成功删除的文件
+    if len(errPathList) > 0:
+        # 没有异常文件夹则建立
+        if not os.path.isdir(SLICES_DIR_ERR):
+            try:
+                os.makedirs(SLICES_DIR_ERR)
+            except Exception as e:
+                pass
+        list = []
+        for errFile in errPathList:
+            # 把异常文件移到异常文件夹
+            try:
+                shutil.move(errFile, SLICES_DIR_ERR)
+            except Exception as e:
+                list.append(errFile)
+                pass
+        # 删除异常文件夹
+        deletePathAndRebuild()
+        # 最终还是有文件没有移动成功，这部分数据还是存活了
+        if len(list) > 0:
+            errPathList.clear()
+            errPathList.extend(list)
+
+
+def checkAndRemovePastData(uuid):
+    global recordPath
+    # 新的请求文件不是相同的，神父换碟了，终止ffmpeg,清除路径下全部数据
+    oldname = recordPath['past']
+    if oldname != uuid:
+        try:
+            # 关闭除新切片外的全部进程
+            cleanup(uuid)
+            # 新的切片产生，删除全部其他切片
+            safe_delete_ts(uuid)
+        except Exception as e:
+            pass
+    recordPath['past'] = uuid
+
+
+# 删除异常文件夹
+def deletePathAndRebuild():
+    try:
+        if os.path.isdir(SLICES_DIR_ERR):
+            shutil.rmtree(SLICES_DIR_ERR)
+        os.makedirs(SLICES_DIR_ERR)
+    except Exception as e:
+        print(e)
+        pass
+
+
+slice_path_fail_default = os.path.join('/app/secret', f"none.ts")
+# mp4
+headers_default = {'Content-Type': 'application/vnd.apple.mpegurl'}
+# mkv
+headers_default_mkv = {'Content-Type': 'video/x-matroska'}
+# avi
+headers_default_avi = {'Content-Type': 'video/x-msvideo'}
+default_video_prefix = 'http://127.0.0.1:5000/videos/'
+default_video_prefix_encode = default_video_prefix.encode()
+default_video_prefix_fail = 'http://127.0.0.1:5000/videosfail/'
+# default_video_prefix_encode_fail = default_video_prefix_fail.encode()
+fail_m3u8 = f'#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-ALLOW-CACHE:YES\n#EXT-X-TARGETDURATION:19\n#EXTINF:18.160000,\n {default_video_prefix_fail}none.ts\n#EXT-X-ENDLIST\n'.encode()
+
+
+# bug:ffmpeg写m3u8和读取它会产生竞争
+@app.route('/videos/<path:path>.m3u8')
+def video_m3u8(path):
+    global ffmpeg_processes
+    if path not in true_webdav_m3u_dict_raw.keys():
+        # if path not in VIDEO_MAPPING.keys():
+        return "Video not found", 404
+    slices_dir = os.environ.get('SLICES_DIR', '/app/slices')
+    if path not in ffmpeg_processes.keys():
+        # 使用ffmpeg命令行工具对视频进行实时切片，并生成M3U8格式的播放列表文件
+        slices_path = os.path.join(slices_dir,
+                                   f"{path}_%05d.ts")
+        if not os.path.isfile(slices_path % 1):
+            credentials = f"{redisKeyWebDavM3u['username']}:{redisKeyWebDavM3u['password']}"
+            encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
+            hls_url = getNowWebDavFakeUrl()
+            #hls_url = default_video_prefix
+            cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c copy -map 0 -f segment -segment_list {os.path.join(slices_dir, path)}.m3u8 -segment_time 10 -hls_base_url {hls_url} {slices_path}"
+            process = subprocess.Popen(cmd, shell=True)
+            ffmpeg_processes[path] = process
+            checkAndRemovePastData(path)
+    start_time = time.time()  # 获取当前时间戳
+    #isSuccess = False
+    while time.time() - start_time < 10:
+        try:
+            # 读取M3U8播放列表文件并返回给客户端
+            with open(os.path.join(slices_dir, f"{path}.m3u8"), "rb") as f:
+                m3u8_data = f.read()
+            if len(m3u8_data) > 0:
+                #isSuccess = True
+                break
+        except Exception as e:
+            print(e)
+            continue
+    # if not isSuccess:
+    #     return Response(fail_m3u8, headers=headers_default)
+    return Response(m3u8_data, headers=headers_default)
+
+
+# 上一次切片记录时间
+# 切片名字,时间戳，超过1分钟的切片全部删除
+# mark 是特殊的，记录上一次访问ts时间
+mark = 'ppap202359'
+pastTs = {}
+ts_dict = {mark: 0.0}
+
+
+# ts前进一次，除了切片和第一次找不到是强制归0
+def check_ts_jump(path):
+    # 第一次找不到
+    if 'past' in pastTs.keys():
+        arr = pastTs['past'].split('_')
+        arr2 = path.split('_')
+        # 换片,从0开始
+        if arr[0] != arr2[0]:
+            lenNumber = len(arr2[1])
+            i = 0
+            str11 = arr2[0]
+            str11 += '_'
+            while i < lenNumber:
+                i += 1
+                str11 += '0'
+            return str11
+        oldNum = int(arr[1])
+        nowNum = int(arr2[1])
+        result = nowNum - oldNum
+        # 正常叠加
+        if result == 1:
+            return path
+        # 回跳\后跳、重复
+        else:
+            trueNum = str(oldNum + 1)
+            lenNumber = len(arr[1])
+            left = lenNumber - len(trueNum)
+            i = 0
+            str11 = arr[0]
+            str11 += '_'
+            while i < left:
+                i += 1
+                str11 += '0'
+            str11 += trueNum
+            return str11
+    else:
+        # 强制从0开始
+        arr2 = path.split('_')
+        lenNumber = len(arr2[1])
+        i = 0
+        str11 = arr2[0]
+        str11 += '_'
+        while i < lenNumber:
+            i += 1
+            str11 += '0'
+        return str11
+
+
+lock = threading.Lock()
+
+
+# 客户端读表，依据顺序读取ts,
+# 读取失败-跳
+# 多次请求相同ts-平1
+# 读取完毕-重新拉取-回读+跳
+
+# 解决办法:服务器记录ts序号，只增不减
+# 锁记录修改
+# 有开头，中间读条没有，跳
+@app.route('/videos/<path:path>.ts')
+def video_ts(path):
+    with lock:
+        # ts前进一次，除了切片和第一次找不到是强制归0
+        path2 = check_ts_jump(path)
+        slice_path = os.path.join(SLICES_DIR, f"{path2}.ts")
+        now = time.time()  # 获取当前时间戳
+        # 检查切片文件是否存在，如果不存在则返回404错误
+        while True:
+            if os.path.isfile(slice_path):
+                break
+                # video_ts(path2)
+        # return video_ts_fail(path)
+        # return video_ts(path2)
+        # 使用Flask的send_file函数将切片文件作为流推送给客户端
+        while time.time() - now < 300:
+            try:
+                # bug预防：判断文件存在但是不确定有没有线程占用，所以多次读取文件判断大小，如果不判断直接发送会导致异常ts流被客户端直接通过造成跳帧现象
+                # 读取M3U8播放列表文件并返回给客户端
+                with open(slice_path, "rb") as f1:
+                    ts_data1 = f1.read()
+                if len(ts_data1) == 0:
+                    continue
+                time.sleep(1)
+                with open(slice_path, "rb") as f2:
+                    ts_data2 = f2.read()
+                if ts_data1 == ts_data2:
+                    time.sleep(1)
+                    with open(slice_path, "rb") as f3:
+                        ts_data3 = f3.read()
+                    if ts_data3 == ts_data2:
+                        break
+            except Exception as e:
+                print(e)
+                continue
+        now = time.time()
+        # 记录当前记录的步骤ts
+        pastTs['past'] = path2
+        ts_dict[slice_path] = now
+        # ts成功时间戳记录
+        ts_dict[mark] = now
+        return send_file(slice_path, mimetype='video/MP2T')
+
+
+@app.route('/videosfail/<path:path>.ts')
+def video_ts_fail(path):
+    slice_path = os.path.join(secret_path, f"{path}.ts")
+    # 检查切片文件是否存在，如果不存在则返回404错误
+    if not os.path.isfile(slice_path):
+        return "Slice not found", 404
+    # 使用Flask的send_file函数将切片文件作为流推送给客户端
+    return send_file(slice_path, mimetype='video/MP2T')
 
 
 ##############################################################bilibili############################################
@@ -721,6 +1112,7 @@ def check_file(m3u_dict):
         path4 = f"{secret_path}bilibili.m3u"
         path5 = f"{secret_path}huya.m3u"
         path6 = f"{secret_path}YY.m3u"
+        path7 = f"{secret_path}webdav.m3u"
         source = ''
         if os.path.exists(path3):
             source += copyAndRename(path3).decode()
@@ -733,6 +1125,9 @@ def check_file(m3u_dict):
         if os.path.exists(path6):
             source += '\n'
             source += copyAndRename(path6).decode()
+        if os.path.exists(path7):
+            source += '\n'
+            source += copyAndRename(path7).decode()
         with open(path, 'wb') as fdst:
             fdst.write(source.encode('utf-8'))
         path2 = f"{secret_path}{getFileNameByTagName('healthM3u')}.m3u"
@@ -748,6 +1143,8 @@ def check_file(m3u_dict):
                 source2 += copyAndRename(path5).decode()
             if os.path.exists(path6):
                 source2 += copyAndRename(path6).decode()
+            if os.path.exists(path7):
+                source2 += copyAndRename(path7).decode()
             with open(path2, 'wb') as fdst:
                 fdst.write(source2.encode('utf-8'))
             # 异步缓慢检测出有效链接
@@ -1552,6 +1949,10 @@ def init_db():
     init_pass('m3u')
     initReloadCacheForSpecial()
     initReloadCacheForNormal()
+    init_webdav_m3u_True_Data()
+    update_webdav_fake_url()
+    uuid = recordPath['past']
+    safe_delete_ts(uuid)
 
 
 def init_function_dict():
@@ -2620,7 +3021,9 @@ CACHE_KEY_TO_GLOBAL_VAR = {
     REDIS_KEY_YOUTUBE: 'redisKeyYoutube',
     REDIS_KEY_BILIBILI: 'redisKeyBilili',
     REDIS_KEY_HUYA: 'redisKeyHuya',
-    REDIS_KEY_YY: 'redisKeyYY'
+    REDIS_KEY_YY: 'redisKeyYY',
+    REDIS_KEY_WEBDAV_M3U: 'redisKeyWebDavM3u',
+    REDIS_KEY_WEBDAV_PATH_LIST: 'redisKeyWebDavPathList'
 }
 
 
@@ -3406,10 +3809,12 @@ def init_extra_dns_server():
 
 def initReloadCacheForNormal():
     for redisKey in allListArr:
-        if redisKey in REDIS_KEY_FUNCTION_DICT:
+        if redisKey == REDIS_KEY_FUNCTION_DICT:
             init_function_dict()
-        elif redisKey in REDIS_KEY_FILE_NAME:
+        elif redisKey == REDIS_KEY_FILE_NAME:
             init_file_name()
+        elif redisKey == REDIS_KEY_WEBDAV_M3U:
+            init_webdav_m3u()
     for redisKey in hugeDataList:
         if redisKey in REDIS_KEY_YOUTUBE:
             try:
@@ -3457,6 +3862,15 @@ def initReloadCacheForNormal():
                 dict3 = redis_get_map(REDIS_KEY_YY_M3U)
                 if dict3:
                     redisKeyYYM3u.update(dict3)
+            except Exception as e:
+                pass
+        elif redisKey in REDIS_KEY_WEBDAV_PATH_LIST:
+            try:
+                global redisKeyWebDavPathList
+                redisKeyWebDavPathList.clear()
+                dict = redis_get_map(REDIS_KEY_WEBDAV_PATH_LIST)
+                if dict:
+                    redisKeyWebDavPathList.update(dict)
             except Exception as e:
                 pass
 
@@ -3723,7 +4137,6 @@ def init_m3u_whitelist():
     dictRank = redis_get_map(REDIS_KEY_M3U_WHITELIST_RANK)
     if not dict or len(dict) == 0:
         dict = {"央視": "央视", "央视": "央视", "中央": "央视", "CCTV": "央视", "cctv": "央视",
-                "CGTN": "央视", "環球電視": "央视", "环球电视": "央视",
                 "東森": "港澳台", "香港電視娛樂": "港澳台", "香港电视娱乐": "港澳台", "hoy tv": "港澳台",
                 "ATV A1臺": "港澳台", "ATV A1台": "港澳台", "ATV WORLD": "港澳台",
                 "Channel V HD": "港澳台", "Discovery Kids": "港澳台", "HOY TV": "港澳台", "ITV Granada": "港澳台",
@@ -3853,7 +4266,252 @@ def init_m3u_whitelist():
                 "衛視電影": "港澳台", "卫视电影": "港澳台", "鏡新聞": "港澳台", "镜新闻": "港澳台",
                 "靖天卡通": "港澳台", "靖天國際": "港澳台", "靖天国际": "港澳台", "龍祥電影": "港澳台",
                 "龙祥电影": "港澳台", "龍華偶像": "港澳台", "龙华偶像": "港澳台", "龍華戲劇": "港澳台",
-                "龙华戏剧": "港澳台", "龍華洋片": "港澳台", "龙华洋片": "港澳台"}
+                "龙华戏剧": "港澳台", "龍華洋片": "港澳台", "龙华洋片": "港澳台", "美國宇航局": "美利坚合众国",
+                "美国宇航局": "美利坚合众国", "美國購物": "美利坚合众国",
+                "美国购物": "美利坚合众国", "FOX 體育新聞": "体育", "FOX 体育新闻": "体育", "美國歷史": "美利坚合众国",
+                "美国历史": "美利坚合众国", "紅牛運動": "体育", "红牛运动": "体育", "美國1": "美利坚合众国",
+                "美国1": "美利坚合众国", "美國之音": "美利坚合众国", "美国之音": "美利坚合众国", "redbull tv": "体育",
+                "普洱科教": "电视台", "州科教": "电视台", "經濟科教": "电视台", "经济科教": "电视台",
+                "長城精品": "纪录片", "长城精品": "纪录片", "綿陽科技": "电视台", "绵阳科技": "电视台",
+                " Fox Sports Racing": "体育", "2016 EURO 2": "体育", "A BOLA TV 1 PT": "体育", "A1 Sports": "体育",
+                "ASTRO Arena 2": "体育", "Abu Dhabi Sport 2 UAE": "体育", "Abu Dhabi Sports 1": "体育",
+                "Abu Dhabi Sports 2": "体育", "Abu Dhabi Sports 5": "体育", "All Sports": "体育",
+                "All Sports TV": "体育", "Arryadia TV": "体育", "Astro Supersports 1": "体育",
+                "Astro Supersports 2": "体育",
+                "Astro Supersports 3": "体育", "Astro Supersports 4": "体育", "Astro Supersports 5": "体育",
+                "BAHRAIN_SPORTS": "体育", "BEIN SPORT 1 HD ": "体育", "BEIN SPORT 2 HD ": "体育",
+                "BEIN SPORT 5 HD ": "体育", "BEIN SPORT Ar10": "体育", "BESTV超級體育": "体育", "BESTV超级体育": "体育",
+                "BT Sport 1": "体育", "BT Sport 2": "体育", "BT Sport 3": "体育", "BT Sport 4": "体育",
+                "BT Sport ESPN": "体育", "BT Sports 2 HD": "体育", "Bally Sports": "体育", "Band Sports": "体育",
+                "BeIN Sports 1": "体育", "BeIN Sports 2": "体育", "BeIN Sports3 EN": "体育",
+                "Bein Sport 3 France": "体育", "Bein Sport HD 1 Qatar (Arabic)": "体育",
+                "Bein Sports 3 France (English)": "体育", "Bein Sports 5 France (English)": "体育",
+                "Bein Sports HD": "体育", "Bein Sports HD 1 France": "体育", "Brodilo TV HD": "体育", "CCTV16": "体育",
+                "CCTV5": "体育", "CCTV5+": "体育", "CCTV央視檯球": "体育", "CCTV央视台球": "体育",
+                "CCTV風雲足球": "体育", "CCTV风云足球": "体育", "CCTV高爾夫網球": "体育", "CCTV高尔夫网球": "体育",
+                "Canal 4 (El Salvador)": "体育", "Canal Esport3": "体育", "Claro Sports": "体育", "DD Sports": "体育",
+                "Diema Sport 1-2": "体育", "Dubai Racing 2 TV": "体育",
+                "Dubai Racing TV": "体育", "Dubai Sport 1": "体育", "ESPN 3": "体育", "ESPN NEWS": "体育",
+                "ESPN U": "体育", "EURO SPORT 1 HD": "体育", "EUROSPORT 1 Portugal": "体育",
+                "EuroSport 2 HD UK": "体育", "EuroSport Deutschland": "体育", "Eurosport 2": "体育",
+                "Eurosport2 HD UK": "体育", "Eurosports 1 HD UK": "体育", "FOX Sports 2": "体育",
+                "FOX Sports 3": "体育", "FS1": "体育", "Fight Box HD": "体育", "Fight Sports": "体育",
+                "FightBox TV": "体育", "Fox Sports 1": "体育", "Fox Sports 1 USA": "体育", "Fox Sports Turk": "体育",
+                "GOLF": "体育", "Goan_TV": "体育", "Golf Channel": "体育", "HTV Thể thao": "体育",
+                "HUB Sports2": "体育", "HUBPREMIER EFL 2": "体育", "IB Sports TV": "体育", "ITV": "体育",
+                "ITV 4 UK": "体育", "J SPORTS 1": "体育", "J SPORTS 2": "体育", "J SPORTS 4": "体育",
+                "KBSN LIFE": "体育", "KSA Sports": "体育", "Kompas TV": "体育", "Equipe": "体育",
+                "Liga De Campeones 2": "体育", "MBC Sport 1": "体育", "MCOT HD": "体育", "MLB": "体育",
+                "MOTORVISION HD": "体育", "MUTV": "体育", "Marca TV": "体育", "Meridiano Televisión": "体育",
+                "Milan Channel": "体育", "Mitele Deportes": "体育", "Motorsz TV": "体育", "Movistar Deportes": "体育",
+                "N SPORT+": "体育", "NBA HD": "体育", "NBA Premium": "体育", "NBA TV": "体育", "NBC Sport": "体育",
+                "NBCSN": "体育", "NBT HD": "体育", "NESN": "体育", "NEWTV武搏世界": "体育", "NEWTV精品體育": "体育",
+                "NEWTV精品体育": "体育", "NEWTV超級體育": "体育", "NEWTV超级体育": "体育", "NFL": "体育",
+                "NFL REDZONE": "体育", "NOVA SPORT": "体育", "NPO Sport": "体育", "NTV CAMBODIA": "体育",
+                "Nautical Channel Russia": "体育", "ORANGE SPORT": "体育", "OSN Fight HD UAE": "体育",
+                "PFC O Canal Do Futebol": "体育", "PPV 1 (LIVE EVENT)": "体育", "PPV 3": "体育", "PX TV": "体育",
+                "Pac12": "体育", "Persiana Game & Tech": "体育", "Pocker Central": "体育", "Polsat Sport PL": "体育",
+                "Premier Sport": "体育", "Premier Sports": "体育", "Premium Calcio Italia": "体育",
+                "Pro Wrestling Channel": "体育", "RDS 2 HD": "体育", "RMC Sport France": "体育",
+                "RTL Nitro Deutschland": "体育", "RTSH Sport HD": "体育", "Rai Sport 2 SD": "体育",
+                "Real Madrid TV": "体育", "Red Bull TV": "体育", "Russian Extreme": "体育", "S SPORT TV": "体育",
+                "SBS Sports": "体育", "SCTV15 SPORT": "体育", "SETANTA SPORTS+": "体育", "SKY Bundesliga 1": "体育",
+                "SKY Sports Arena": "体育", "SKY Sports Football": "体育", "SKY Sports MIX": "体育",
+                "SKYNET SPORTS HD": "体育", "SPORT 5 LIVE": "体育", "SPORT 5+ LIVE": "体育", "SPORT MAX": "体育",
+                "SPORT TV 3 PT": "体育", "SPOTV 1": "体育", "SPOTV2": "体育", "STAR SPORTS SELECT 1": "体育",
+                "Samurai Fighting TV": "体育", "Setanta": "体育", "Setanta Sports HD": "体育", "Sky Calcio": "体育",
+                "Sky Sport 24 HD Italia": "体育", "Sky Sport F1 HD Italia": "体育", "Sky Sports Action": "体育",
+                "Sky Sports F1": "体育", "Sky Sports Golf": "体育", "Sky Sports Main Event": "体育",
+                "Sky Sports NFL": "体育", "Sky Sports News HQ": "体育", "Sky Sports Premier League": "体育",
+                "Sky Sports Racing": "体育", "Sony Ten2": "体育", "Sony Ten3": "体育", "SporTV 1": "体育",
+                "Sport - San Marino RTV": "体育", "Sport 1": "体育", "Sport 1 HD": "体育",
+                "Sport 1 Select HD Netherlands": "体育", "Sport Italia": "体育", "Sport Klub 2 HD Srbija": "体育",
+                "Sport Klub 2 Srbija": "体育", "Sport Klub 3 HD Srbija": "体育", "Sport Plus": "体育",
+                "Sport TV 1": "体育", "Sport TV 2": "体育", "Sport TV 3": "体育", "Sport TV 4": "体育",
+                "Sport TV1": "体育", "Sport TV3": "体育", "Sporting TV": "体育", "Sports Network": "体育",
+                "SportsNet 1": "体育", "Sportsnet West": "体育", "Stadium4 Thai": "体育", "Star Sport 1": "体育",
+                "Sukan RTM": "体育", "Super Sport 3 HD": "体育", "SuperSport Cricket": "体育", "SuperTennis TV": "体育",
+                "Supersport Football": "体育", "TDP Teledeporte": "体育", "TF1 HD": "体育", "TFX": "体育",
+                "TIDE SPORTS": "体育", "TSN 1": "体育", "TSN 2": "体育", "TSN 3": "体育", "TSN 4": "体育",
+                "TV 2 Sport": "体育", "TV 2 Sportskanalen": "体育", "TV Globo": "体育", "TV TOUR": "体育",
+                "TV Urbana": "体育", "TVA SPORT": "体育", "TVCG 2": "体育", "TVMax": "体育",
+                "TVU Esporte Brasil": "体育", "Tele Rebelde": "体育", "Telemetro canal 13, Panamá": "体育",
+                "Telemundo": "体育", "Telemundo 48 El Paso": "体育", "Telenord": "体育", "Tempo TV": "体育",
+                "Tennis": "体育", "Tivibu Spor Türkiye": "体育", "Trace Sport Stars": "体育", "Trace Sports": "体育",
+                "Tring Sport 2 Albania": "体育", "Tsn Livigno": "体育", "Tv Luna Sport": "体育", "TyC Sports": "体育",
+                "Türkmen Sport": "体育", "UFC TV": "体育", "Unbeaten Esports": "体育", "Univisión TDN Mexico": "体育",
+                "Usee sports": "体育", "ViaSat Sport Россия": "体育", "Viasat Motor Sweden": "体育",
+                "Viasat Sport HD Sweden": "体育", "WWE HD": "体育", "WWE Network": "体育", "Win Sports": "体育",
+                "World Fishing Network": "体育", "XPER TV Costa Rica": "体育", "XSport Ukraine": "体育",
+                "Yas Sports": "体育", "a Spor TUR": "体育", "adsport 1": "体育", "adsport 2": "体育",
+                "beIN SPORTS France": "体育", "beIN Sports 2 ID": "体育", "beIN Sports 3 ID": "体育",
+                "beIN Sports MENA": "体育", "iDMAN TV Türkiye": "体育", "İdman Azərbaycan TV": "体育",
+                "МАТЧ! БОЕЦ": "体育", "Матч ТВ": "体育", "Матч!": "体育", "НТВ Плюс Теннис Россия": "体育",
+                "Перший Avtomobilniy": "体育", "Спорт Россия": "体育", "Телеканал Старт": "体育",
+                "Телеканал Футбол 1": "体育", "五星體育": "体育", "五星体育": "体育", "先鋒乒羽": "体育",
+                "先锋乒羽": "体育", "勁爆體育": "体育", "劲爆体育": "体育", "北京冬奧紀實": "体育",
+                "北京冬奥纪实": "体育", "北京體育": "体育", "北京体育": "体育", "北京體育休閒": "体育",
+                "北京体育休闲": "体育", "噠啵賽事": "体育", "哒啵赛事": "体育", "四海釣魚": "体育", "四海钓鱼": "体育",
+                "天元圍棋": "体育", "天元围棋": "体育", "天津體育": "体育", "天津体育": "体育", "山東體育": "体育",
+                "山东体育": "体育", "廣東體育": "体育", "广东体育": "体育", "快樂垂釣": "体育", "快乐垂钓": "体育",
+                "武漢文體": "体育", "武汉文体": "体育", "武術世界": "体育", "武术世界": "体育", "江蘇體育休閒": "体育",
+                "江苏体育休闲": "体育", "洛陽新聞綜合": "体育", "洛阳新闻综合": "体育", "精彩體育": "体育",
+                "精彩体育": "体育", "遊戲風雲": "游戏频道", "游戏风云": "游戏频道", "運動健身": "体育",
+                "运动健身": "体育", "陝西體育休閒": "体育", "陕西体育休闲": "体育", "電競天堂": "体育",
+                "电竞天堂": "体育", "體育賽事": "体育", "体育赛事": "体育", "高爾夫": "体育", "高尔夫": "体育",
+                "魅力足球": "体育", "FOXNews": "美利坚合众国", "Ion Plus": "美利坚合众国", "ION Plus": "美利坚合众国",
+                "美國中文": "美利坚合众国", "美国中文": "美利坚合众国", "美國狗狗寵物": "美利坚合众国",
+                "美国狗狗宠物": "美利坚合众国", "BlazeTV": "美利坚合众国", "Seattle Channel": "美利坚合众国",
+                "美國新聞": "美利坚合众国", "美国新闻": "美利坚合众国", "CBS News": "美利坚合众国",
+                "TBS": "美利坚合众国", "NBC": "美利坚合众国", "Hallmark Movies": "美利坚合众国",
+                "Disney XD": "美利坚合众国", "AMC US": "美利坚合众国", "HGTV": "美利坚合众国", "tru TV": "美利坚合众国",
+                "Fox 5 WNYW": "美利坚合众国", "ABC HD": "美利坚合众国", "My9NJ": "美利坚合众国",
+                "Live Well Network": "美利坚合众国", "Gulli": "美利坚合众国", "Tiji TV": "美利坚合众国",
+                "WPIX-TV": "美利坚合众国", "MOTORTREND": "美利坚合众国", "BBC America": "美利坚合众国",
+                "THIRTEEN": "美利坚合众国", "WLIW21": "美利坚合众国", "NJTV": "美利坚合众国", "MeTV": "美利坚合众国",
+                "SBN": "美利坚合众国", "WMBC Digital Television": "美利坚合众国", "Univision": "美利坚合众国",
+                "nba": "美利坚合众国", "NBA": "美利坚合众国", "fox news": "美利坚合众国", "FOX News": "美利坚合众国",
+                ".sci-fi": "美利坚合众国", "UniMÁS": "美利坚合众国", "Cartoons_90": "美利坚合众国",
+                "Cartoons Short": "美利坚合众国", "Cartoons Big": "美利坚合众国", "CineMan": "美利坚合众国",
+                "USA": "美利坚合众国", "BCU Кинозал Premiere": "美利坚合众国", "TNT": "美利坚合众国",
+                "NBC NEWS": "美利坚合众国", "SKY SPORT": "体育", "Auto Motor Sport": "体育", "sky sport": "体育",
+                "sky Sport": "体育", "BT SPORT": "体育", "sportv": "体育", "fight sport": "体育", "Sportitalia": "体育",
+                "sportitalia": "体育", "elta sport": "体育", "Sport 5": "体育", "claro sport": "体育", "xsport": "体育",
+                "sporting": "体育", "TV3 sport": "体育", "Trace Sport": "体育", "SPORT 1": "体育", "sport 3": "体育",
+                "sport 4k": "体育", "edgesport": "体育", "sport club": "体育", "sport tv": "体育", "j sport": "体育",
+                "viasat sport": "体育", "sport 5": "体育", "QAZsport_live": "体育", "SPORT 5": "体育",
+                "SPORT 2": "体育", "Alfa Sport": "体育", "tring sport": "体育", "wwe": "体育", "WWE": "体育",
+                "Sportv": "体育", "diema sport": "体育", "Edge Sport": "体育", "supersport": "体育", "sport ru": "体育",
+                "Sport+": "体育", "Esport3": "体育", "Sport En France": "体育", "sport en": "体育", "sports": "体育",
+                "Pluto TV SPORT": "体育", "NBC News": "体育", "ssc sport": "体育", "SporTV": "体育",
+                "bein sport": "体育", "Sports": "体育", "SPORT TV": "体育", "FR_RMC_Sport": "体育", "EDGEsport": "体育",
+                "Box Nation": "体育", "Brodilo TV": "体育", "CBC Sport": "体育", "cbc Sport": "体育", "檯球": "体育",
+                "台球": "体育", "央視撞球": "体育", "央视台球": "体育", "風雲足球": "体育", "风云足球": "体育",
+                "高爾夫網球": "体育", "高尔夫网球": "体育", "CDN Deportes": "体育",
+                "CDO PREMIUM SANTIAGO CHILE LATAM": "体育", "SPORTS": "体育", "k+ sport": "体育", "digi sport": "体育",
+                "Eurosport": "体育", "Sport 3": "体育", "cdo premium": "体育", "CSI Web Tv": "体育",
+                "Campo Televisión": "体育", "Canal 4": "体育", "canal 4": "体育", "Canal+ Sport": "体育",
+                "canal+ sport": "体育", "Chelsea TV": "体育", "chelsea tv": "体育", "DAZN F1": "体育",
+                "dazn f1": "体育", "DIGISPORT": "体育", "DMC Sport": "体育", "NFL NETWORK": "美利坚合众国",
+                "WWE NETWORK": "体育", "A&E": "美利坚合众国", "Dazn 1": "体育", "AMC": "美利坚合众国",
+                "BBC AMERICA": "美利坚合众国", "BET": "美利坚合众国", "dazn 1": "体育", "BRAVO": "美利坚合众国",
+                "USA NETWORK": "美利坚合众国", "CNBC": "美利坚合众国", "dazn 01": "体育", "NHL Network": "美利坚合众国",
+                "5USA": "美利坚合众国", "CBS SPORTS": "体育", "dazn 2": "体育", "FOX SPORTS": "体育",
+                "MSG US": "美利坚合众国", "MSG 2 US": "美利坚合众国", "dazn 3": "体育", "dazn 4": "体育",
+                "deportv": "体育", "DeporTV": "体育", "Diema Sport": "体育", "Dubai Racing": "体育",
+                "dubai racing": "体育", "Dubai Sport": "体育", "dubai sport": "体育", "EDGE Sport": "体育",
+                "edge sport": "体育", "EURO SPORT": "体育", "edge sportᴴᴰ": "体育", "ESL Gaming tv": "体育",
+                "gaming tv": "体育", "ESPN": "体育", "espn": "体育", "eurosport": "体育", "EUROSPORT": "体育",
+                "Equipe 21": "体育", "equipe 21": "体育", "Esports Max": "体育", "esports max": "体育",
+                "EuroSport": "体育", "FOX Deportes": "体育", "fox deportes": "体育", "FOX SP506": "体育",
+                "FOX 5 Atlanta GA": "体育", "WAGA-TV": "体育", "fox sport": "体育", "Fast&FunBox": "体育",
+                "funbox": "体育", "fast&fun box": "体育", "Fenerbahce TV": "体育", "fenerbahçe tv": "体育",
+                "Ion Television": "美利坚合众国", "NYCTV Life": "美利坚合众国", "TENNIS HD": "美利坚合众国",
+                "CINEMAXX MORE MAXX": "美利坚合众国", "CINEMAX THRILLERMAX": "美利坚合众国", "fight box": "体育",
+                "Fight Box": "体育", "Fight Channel": "体育", "channel fight": "体育", "fightbox": "体育",
+                "FightBox": "体育", "Football Thai": "体育", "Football UK": "体育", "CINEMAX OUTER MAX": "美利坚合众国",
+                "CINEMAX MOVIEMAX": "美利坚合众国", "on football": "体育", "CINEMAX ACTION MAX": "美利坚合众国",
+                "MTV Classic": "美利坚合众国", "football focus": "体育", "football fhd": "体育", "gol tv": "体育",
+                "GOLTV": "体育", "goltv": "体育", "Game Show Network": "体育", "Gameplay Roblox": "体育",
+                "gameplay: roblox": "体育", "roblox": "体育", "Gamer.tv": "体育", "Espn News": "美利坚合众国",
+                "ESPN 2": "美利坚合众国", "ESPN USA": "美利坚合众国", "Discovery Channel": "美利坚合众国",
+                "MAVTV": "美利坚合众国", "布蘭奇電視": "美利坚合众国", "布兰奇电视": "美利坚合众国",
+                "美國l": "美利坚合众国", "美国l": "美利坚合众国", "美國中央臺": "美利坚合众国",
+                "美国中央台": "美利坚合众国", "IN: Harvest TV USA": "美利坚合众国",
+                "LeSEA Broadcasting Network": "美利坚合众国", "US: USA Network": "美利坚合众国",
+                "CBS New York": "美利坚合众国", "ABC News": "美利坚合众国", "AFG: ATN USA": "美利坚合众国",
+                "usa fight network": "美利坚合众国", "E! Entertaiment USA": "美利坚合众国", "USA Today": "美利坚合众国",
+                "usa espn": "美利坚合众国", "UK: 5 USA": "美利坚合众国", "CMC-USA": "美利坚合众国",
+                "usa disney": "美利坚合众国", "usa network": "美利坚合众国", "usa ufc": "美利坚合众国",
+                "usa wwe": "体育", "usa mtv": "美利坚合众国", "usa crime": "美利坚合众国", "usa cnbc": "美利坚合众国",
+                "GoUSA TV": "美利坚合众国", "Harvest TV USA": "美利坚合众国", "jltv usa": "美利坚合众国",
+                "Best Movies HD (USA)": "美利坚合众国", "usa news": "美利坚合众国", "Go USA": "美利坚合众国",
+                "usa american heroes": "美利坚合众国", "usa tcm": "美利坚合众国",
+                "lesea broadcasting network (usa)": "美利坚合众国", "usa c-span": "美利坚合众国",
+                "usa hbo": "美利坚合众国", "cnn usa": "美利坚合众国", "CNN": "美利坚合众国", "usa": "美利坚合众国",
+                "american": "美利坚合众国", "Gunma TV": "日本台", "American": "美利坚合众国", "cnn": "美利坚合众国",
+                "CNNj": "日本台", "FUJI TV": "日本台", "fuji tv": "日本台", "Golf Network": "体育",
+                "golazo network": "体育", "TOKYO MX": "日本台", "Tokyo MX": "日本台", "tokyo mx": "日本台",
+                "Weather News": "日本台", "weathernews": "日本台",
+                "WeatherNews": "日本台", "NHK": "日本台", "TV Tokyo": "日本台", "Star 1": "日本台",
+                "Star 2": "日本台", "Nippon TV": "日本台", "MBS": "日本台", "Animax": "日本台", "QVC Japan": "日本台",
+                "ANIMAX": "日本台", "animax": "日本台", "nhk": "日本台", "qvc - japan": "日本台", "qvc japan": "日本台",
+                "朝日": "日本台", "aniplus": "日本台", "JSTV": "日本台", "directv sport": "体育",
+                "WeatherSpy": "日本台", "dTV(Japan)": "日本台", "A BOLA TV": "体育", "A-sport": "体育",
+                "astro supersport": "体育", "Automoto": "体育", "BEIN SPORT": "体育", "bein sports": "体育",
+                "ziggo sport": "体育", "sharjjah sport": "体育", "mysports 1": "体育", "AS TV Spain": "体育",
+                "Arena Sport": "体育", "arena sport": "体育", "Argentina - TyC": "体育", "Astro Supersports": "体育",
+                "NHK BS": "日本台", "nhk world": "国际", "STAR CHANNEL": "日本台", "star channe": "日本台",
+                "Samurai Fighting": "日本台", "samurai x": "日本台", "euro star": "日本台", "star tv": "日本台",
+                "tv asahi": "日本台", "U-NEXT": "日本台", "Degrassi The Next Generation": "日本台",
+                "tv tokyo": "日本台", "Aniplus": "日本台", "BS TBS": "日本台", "Jupiter Shop Channel": "日本台",
+                "KIDS STATION": "日本台", "Kansai TV": "日本台", "kanshi tv": "日本台", "Lala TV": "日本台",
+                "lana tv": "日本台", "MBS JAPAN": "日本台", "Mondo TV": "日本台", "MONDO TV": "日本台",
+                "Fuji TV": "日本台", "TV Asahi": "日本台", "テレビ東京": "日本台", "テレビ东京": "日本台",
+                "BS Fuji": "日本台", "bs-tbs": "日本台", "BS Asahi": "日本台", "BS Tokyo": "日本台",
+                "WOWOW Prime": "日本台", "WOWOWO 電影": "日本台", "WOWOWO 电影": "日本台", "雲遊日本": "日本台",
+                "云游日本": "日本台", "日本女子摔角": "日本台", "TBS NEWS": "日本台", "日本テレビ": "日本台",
+                "WOWOWライブ": "日本台", "WOWOWプライム": "日本台", "J Sports": "体育", "Animal": "自然", "日本購物": "日本台",
+                "日本购物": "日本台", "Disney Channel Japan": "日本台", "JAPAN3": "日本台", "JAPAN5": "日本台",
+                "JAPAN6": "日本台", "JAPAN7": "日本台", "JAPAN8": "日本台", "JAPAN9": "日本台", "日本News24": "日本台",
+                "日本映畫": "日本台", "日本映画": "日本台", "GSTV": "日本台", "WOWOWシネマ": "日本台",
+                "BS12 TwellV": "日本台", "BS朝日": "日本台", "超級體育": "体育", "超级体育": "体育", "BT Sport": "体育",
+                "bt sport": "体育", "スターチャンネル": "日本台", "BSアニマックス": "日本台", "日-J Sports": "体育",
+                "釣りビジョン": "日本台", "钓りビジョン": "日本台", "フジテレビ": "日本台", "東映チャンネル": "日本台",
+                "东映チャンネル": "日本台", "チャンネルNECO": "日本台", "ムービープラス": "日本台", "スカイA": "日本台", "GAORA": "日本台",
+                "日テレジータス": "日本台", "ゴルフネットワーク": "日本台", "時代劇専門チャンネル": "日本台", "时代剧専门チャンネル": "日本台",
+                "ファミリー劇場": "日本台", "ファミリー剧场": "日本台", "ホームドラマチャンネル": "日本台", "チャンネル銀河": "日本台",
+                "チャンネル银河": "日本台", "スーパー!ドラマTV": "日本台", "LaLaTV": "日本台", "Music ON TV": "日本台",
+                "歌謡ポップスチャンネル": "日本台", "歌谣ポップスチャンネル": "日本台", "キッズステーション": "日本台", "日テレNEWS24": "日本台",
+                "囲碁・將棋チャンネル": "日本台", "囲碁・将棋チャンネル": "日本台", "Shop Channel": "日本台", "MX Live": "日本台",
+                "ウェザーニュース": "日本台", "群馬テレビ": "日本台", "群马テレビ": "日本台", "漫步日本": "日本台",
+                "中國氣象": "纪录片", "中国气象": "纪录片",
+                "衛視": "卫视", "卫视": "卫视", "CGTN": "央视", "環球電視": "央视", "环球电视": "央视", "華數": "华数",
+                "华数": "华数", "wasu.tv": "华数", "CIBN": "CIBN", "/cibn": "CIBN", "NewTv": "NewTv", "NEWTV": "NewTV",
+                "/newtv": "NewTV", "百視通": "百视通", "百视通": "百视通", "百事通": "百视通", "BesTV": "百视通",
+                "NewTV": "NewTV", "Cinevault 80": "美利坚合众国", "BESTV": "百视通", "BestTv": "百视通",
+                "/bestv": "百视通", ".bestv": "百视通", "新聞": "电视台", "新闻": "电视台", "體育": "体育",
+                "体育": "体育", "動漫": "动漫", "动漫": "动漫", "NASA": "科技", "豆瓣": "影视", "電影": "影视",
+                "电影": "影视", "動畫": "动画", "动画": "动画", "運動": "体育", "运动": "体育", "卡通": "卡通",
+                "影院": "影视", "足球": "体育", "劇場": "剧场", "剧场": "剧场", "東方": "", "东方": "",
+                "紀實": "纪录片", "纪实": "纪录片", "電競": "游戏频道", "电竞": "游戏频道", "教育": "教育",
+                "自然": "自然", "動物": "自然", "动物": "自然", "NATURE": "自然", "成龍": "明星", "成龙": "明星",
+                "李連杰": "明星", "李连杰": "明星", "周星馳": "明星", "周星驰": "明星", "吳孟達": "明星",
+                "吴孟达": "明星", "劉德華": "明星", "刘德华": "明星", "周潤發": "明星", "周润发": "明星",
+                "洪金寶": "明星", "洪金宝": "明星", "黃渤": "明星", "黄渤": "明星", "林正英": "明星", "七龍珠": "动漫",
+                "七龙珠": "动漫", "海綿寶寶": "动漫", "海绵宝宝": "动漫", "貓和老鼠": "动漫", "猫和老鼠": "动漫",
+                "網球王子": "动漫", "网球王子": "动漫", "蠟筆小新": "动漫", "蜡笔小新": "动漫", "海賊王": "动漫",
+                "海贼王": "动漫", "中華小當家": "动漫", "中华小当家": "动漫", "四驅兄弟": "动漫", "四驱兄弟": "动漫",
+                "哆啦A夢": "动漫", "哆啦A梦": "动漫", "櫻桃小丸子": "动漫", "樱桃小丸子": "动漫", "柯南": "动漫",
+                "犬夜叉": "动漫", "亂馬": "动漫", "乱马": "动漫", "童年": "", "高達": "动漫", "高达": "动漫",
+                "守護甜心": "动漫", "守护甜心": "动漫", "開心超人": "动漫", "开心超人": "动漫", "開心寶貝": "动漫",
+                "开心宝贝": "动漫", "百變小櫻": "动漫", "百变小樱": "动漫", "咱們裸熊": "动漫", "咱们裸熊": "动漫",
+                "遊戲王": "动漫", "游戏王": "动漫", "三國演義": "剧场", "三国演义": "剧场", "連續劇": "剧场",
+                "连续剧": "剧场", "音樂": "音乐", "音乐": "音乐", "綜合": "电视台", "综合": "电视台", "財經": "电视台",
+                "财经": "电视台", "經濟": "电视台", "经济": "电视台", "美食": "美食", "資訊": "电视台",
+                "资讯": "电视台", "旅遊": "电视台", "旅游": "电视台", "Fashion4K": "时尚", "黑莓": "其他",
+                "綜藝": "电视台", "综艺": "电视台", "都市": "电视台", "看天下": "其他", "咪咕": "咪咕", "諜戰": "剧场",
+                "谍战": "剧场", "華語": "其他", "华语": "其他", "影視": "影视", "影视": "影视", "科教": "电视台",
+                "生活": "电视台", "discovery": "探索发现", "娛樂": "其他", "娱乐": "其他", "電視": "电视台",
+                "电视": "电视台", "紀錄": "纪录片", "纪录": "纪录片", "外語": "外语", "外语": "外语", "車迷": "时尚",
+                "车迷": "时尚", "留學": "留学", "留学": "留学", "新聞頻道": "电视台", "新闻频道": "电视台",
+                "靚裝": "时尚", "靓装": "时尚", "戲曲": "戏曲", "戏曲": "戏曲", "電視臺": "电视台", "电视台": "电视台",
+                "綜合頻道": "电视台", "综合频道": "电视台", "法制": "电视台", "數碼": "电视台", "数码": "电视台",
+                "汽車": "时尚", "汽车": "时尚", "軍旅": "影视", "军旅": "影视", "古裝": "影视", "古装": "影视",
+                "喜劇": "影视", "喜剧": "影视", "驚悚": "影视", "惊悚": "影视", "懸疑": "影视", "悬疑": "影视",
+                "科幻": "影视", "全球大片": "影视", "詠春": "影视", "咏春": "影视", "黑幫": "影视", "黑帮": "影视",
+                "古墓": "影视", "警匪": "影视", "少兒": "少儿", "少儿": "少儿", "課堂": "教育", "课堂": "教育",
+                "政務": "电视台", "政务": "电视台", "民生": "电视台", "農村": "电视台", "农村": "电视台",
+                "人文": "电视台", "幸福彩": "电视台", "新視覺": "科技", "新视觉": "科技", "金色頻道": "其他",
+                "金色频道": "其他", "新華英文": "国际", "新华英文": "国际", "垂釣": "体育", "垂钓": "体育",
+                "NHK WORLD": "国际", "時代": "其他", "时代": "其他", "休閒": "其他", "休闲": "其他",
+                "ANN News FHD": "日本台", "兵器": "兵器", "band news": "日本台", "純享": "纪录片", "纯享": "纪录片",
+                "ann_news": "日本台", "SiTV": "其他", "CHC": "影视", "nhk-hd": "国际", "BRTV": "其他",
+                "Lifetime": "其他", "nhk hd": "国际", "GINX": "其他", "Rollor": "其他", "Generic": "国际",
+                "GlobalTrekker": "其他", "LUXE TV": "其他", "Insight": "国际", "Evenement": "其他",
+                "Clarity": "美利坚合众国", "hbo": "美利坚合众国", "TRAVELXP": "其他", "ODISEA": "其他",
+                "MUZZIK": "其他", "SKY HIGH": "美利坚合众国", "Liberty": "其他"
+                }
         redis_add_map(REDIS_KEY_M3U_WHITELIST, dict)
         m3u_whitlist = dict.copy()
     else:
@@ -3975,6 +4633,22 @@ def init_file_name():
         file_name_dict = dict.copy()
     else:
         redis_add_map(REDIS_KEY_FILE_NAME, file_name_dict_default)
+
+
+def init_webdav_m3u():
+    dict = redis_get_map(REDIS_KEY_WEBDAV_M3U)
+    if dict:
+        global redisKeyWebDavM3u
+        redisKeyWebDavM3u.clear()
+        redisKeyWebDavM3u = dict.copy()
+
+
+def init_webdav_m3u_True_Data():
+    dict2 = redis_get_map(REDIS_KEY_WEBDAV_M3U_DICT_RAW)
+    if dict2:
+        global true_webdav_m3u_dict_raw
+        true_webdav_m3u_dict_raw.clear()
+        true_webdav_m3u_dict_raw = dict2.copy()
 
 
 def getFileNameByTagName(tagname):
@@ -4205,6 +4879,18 @@ def upload_json_file27():
     return upload_json(request, REDIS_KEY_YY, f"{secret_path}tmp_data27.json")
 
 
+# 上传webdav直播源账号密码json文件
+@app.route('/api/upload_json_file28', methods=['POST'])
+def upload_json_file28():
+    return upload_json(request, REDIS_KEY_WEBDAV_M3U, f"{secret_path}tmp_data28.json")
+
+
+# 上传webdav直播源子目录json文件
+@app.route('/api/upload_json_file282', methods=['POST'])
+def upload_json_file282():
+    return upload_json(request, REDIS_KEY_WEBDAV_PATH_LIST, f"{secret_path}tmp_data29.json")
+
+
 # 上传节点后端服务器json文件
 @app.route('/api/upload_json_file10', methods=['POST'])
 def upload_json_file10():
@@ -4424,6 +5110,14 @@ def deletewm3u27():
     return dellist(request, REDIS_KEY_YY)
 
 
+# 删除webdav直播源路径
+@app.route('/api/deletewm3u28', methods=['POST'])
+def deletewm3u28():
+    deleteurl = request.json.get('deleteurl')
+    del redisKeyWebDavPathList[deleteurl]
+    return dellist(request, REDIS_KEY_WEBDAV_PATH_LIST)
+
+
 # 添加DNS简易黑名单
 @app.route('/api/addnewm3u13', methods=['POST'])
 def addnewm3u13():
@@ -4469,6 +5163,13 @@ def getall26():
 def getall27():
     global redisKeyYY
     return returnDictCache(REDIS_KEY_YY, redisKeyYY)
+
+
+# 拉取全部webdav直播源全部子路径
+@app.route('/api/getall28', methods=['GET'])
+def getall28():
+    global redisKeyWebDavPathList
+    return returnDictCache(REDIS_KEY_WEBDAV_PATH_LIST, redisKeyWebDavPathList)
 
 
 def returnDictCache(redisKey, cacheDict):
@@ -4527,6 +5228,7 @@ def changeIP():
         data = getMasterIp()
     redis_add(REDIS_KEY_IP, data)
     ip[REDIS_KEY_IP] = data
+    update_webdav_fake_url()
     return "数据已经保存"
 
 
@@ -4617,6 +5319,20 @@ def download_json_file26():
 def download_json_file27():
     return download_json_file_base(REDIS_KEY_YY,
                                    f"{secret_path}temp_YY_m3u.json")
+
+
+# 导出WEBDAV直播源账号密码配置
+@app.route('/api/download_json_file28', methods=['GET'])
+def download_json_file28():
+    return download_json_file_base(REDIS_KEY_WEBDAV_M3U,
+                                   f"{secret_path}temp_WEBDAV_m3u.json")
+
+
+# 导出WEBDAV直播源子路径配置
+@app.route('/api/download_json_file282', methods=['GET'])
+def download_json_file282():
+    return download_json_file_base(REDIS_KEY_WEBDAV_PATH_LIST,
+                                   f"{secret_path}temp_WEBDAV_m3u_path.json")
 
 
 # 导出m3u黑名单配置
@@ -4768,6 +5484,16 @@ def addnewm3u27():
     return addlist(request, REDIS_KEY_YY)
 
 
+# 添加webdav直播源路径
+@app.route('/api/addnewm3u28', methods=['POST'])
+def addnewm3u28():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    global redisKeyWebDavPathList
+    redisKeyWebDavPathList[addurl] = name
+    return addlist(request, REDIS_KEY_WEBDAV_PATH_LIST)
+
+
 # 添加M3U白名单分组优先级
 @app.route('/api/addnewm3u16', methods=['POST'])
 def addnewm3u16():
@@ -4832,7 +5558,7 @@ def checkAndUpdateM3uRank(group, rank):
             for key, value in m3u_whitlist_rank.items():
                 num = int(value)
                 maxnow = max(num, maxnow)
-            maxnow=maxnow+1
+            maxnow = maxnow + 1
             updateDict[group] = str(maxnow)
             redis_add_map(REDIS_KEY_M3U_WHITELIST_RANK, updateDict)
             m3u_whitlist_rank[group] = str(maxnow)
@@ -4956,6 +5682,10 @@ def getSyncAccountData():
         global redisKeyWebDav
         num = init_gitee(cacheKey, REDIS_KEY_WEBDAV, redisKeyWebDav)
         return jsonify({'password': num})
+    elif type == 'm3u':
+        global redisKeyWebDavM3u
+        num = init_gitee(cacheKey, REDIS_KEY_WEBDAV_M3U, redisKeyWebDavM3u)
+        return jsonify({'password': num})
 
 
 # 修改同步账户数据    gitee-bbs github-pps webdav-lls
@@ -4973,6 +5703,9 @@ def changeSyncData():
     elif type == 'lls':
         global redisKeyWebDav
         update_gitee(cacheKey, value, REDIS_KEY_WEBDAV, redisKeyWebDav)
+    elif type == 'm3u':
+        global redisKeyWebDavM3u
+        update_gitee(cacheKey, value, REDIS_KEY_WEBDAV_M3U, redisKeyWebDavM3u)
     return "数据已经保存"
 
 
@@ -5747,12 +6480,11 @@ def chaoronghe25():
         if len(m3u_dict) == 0:
             return "empty"
         ip = init_IP()
-        port = 22771
         global redisKeyBililiM3u
         global redisKeyBilili
         redisKeyBililiM3uFake = {}
         # fakeurl:192.168.5.1:22771/bilibili?id=xxxxx
-        fakeurl = f"http://{ip}:{port}/bilibili/"
+        fakeurl = f"http://{ip}:{port_live}/bilibili/"
         for url, id in m3u_dict.items():
             name = redisKeyBilili[id]
             link = f'#EXTINF:-1 group-title="Bilibili"  tvg-name="{name}",{name}\n'
@@ -5777,12 +6509,11 @@ def chaoronghe26():
         if len(m3u_dict) == 0:
             return "empty"
         ip = init_IP()
-        port = 22771
         global redisKeyHuyaM3u
         global redisKeyHuya
         redisKeyHuyaM3uFake = {}
         # fakeurl:192.168.5.1:22771/huya?id=xxxxx
-        fakeurl = f"http://{ip}:{port}/huya/"
+        fakeurl = f"http://{ip}:{port_live}/huya/"
         for url, id in m3u_dict.items():
             name = redisKeyHuya[id]
             link = f'#EXTINF:-1 group-title="Huya"  tvg-name="{name}",{name}\n'
@@ -5807,12 +6538,11 @@ def chaoronghe27():
         if len(m3u_dict) == 0:
             return "empty"
         ip = init_IP()
-        port = 22771
         global redisKeyYYM3u
         global redisKeyYY
         redisKeyYYM3uFake = {}
         # fakeurl:192.168.5.1:22771/YY?id=xxxxx
-        fakeurl = f"http://{ip}:{port}/YY/"
+        fakeurl = f"http://{ip}:{port_live}/YY/"
         for url, id in m3u_dict.items():
             name = redisKeyYY[id]
             link = f'#EXTINF:-1 group-title="YY"  tvg-name="{name}",{name}\n'
@@ -5821,6 +6551,127 @@ def chaoronghe27():
         # 同步方法写出全部配置
         distribute_data(redisKeyYYM3uFake, f"{secret_path}YY.m3u", 10)
         redis_add_map(REDIS_KEY_YY_M3U, redisKeyYYM3u)
+        return "result"
+    except Exception as e:
+        return "empty"
+
+
+def getWebDavFileName(filePath):
+    arr = filePath.split('/')
+    if len(arr) > 1:
+        path = arr[-2]
+        name = arr[-1]
+        arr = name.split('.')
+        namestr = ''
+        for i in range(len(arr) - 1):
+            namestr += arr[i]
+        if namestr.isdigit():
+            return path + "_" + name
+        return name
+    return filePath
+
+
+def process_child(fake_webdav_m3u_dict, url, true_webdav_m3u_dict_raw_tmp, child_list_chunk, fakeurl,
+                  redisKeyWebDavPathList):
+    groupName = redisKeyWebDavPathList[url]
+    for child in child_list_chunk:
+        href = child.find('{DAV:}href').text
+        if not href.endswith('/'):  # Process only files (not directories)
+            file_pathA = '/'.join(href.split('/')[-2:])  # Get the file path from the href
+            # Decode any URL-encoded characters in the file name
+            file_path = urllib.parse.unquote(file_pathA)
+            if not file_path.lower().endswith((".mp4", ".mkv", ".avi", '.ts', '.mov', '.fly', '.mpg', '.wmv', '.m4v',
+                                               '.mpeg', '.3gp', '.rmvb', '.rm')):
+                # return None
+                continue
+            name = getWebDavFileName(file_path)
+            link = f'#EXTINF:-1 group-title="{groupName}"  tvg-name="{name}",{name}\n'
+            # http://127.0.0.1:5000/videos/video1.mp4.m3u8
+            str_id = str(uuid.uuid4())
+            fake_webdav_m3u_dict[f'{fakeurl}{str_id}.m3u8'] = link
+            # fake_webdav_m3u_dict[f'{default_video_prefix}{str_id}.m3u8'] = link
+            # video1.mp4=
+            finalPath = url
+            finalPath = finalPath.split('/dav')[0] + urllib.parse.unquote(href)
+            # url编码，跳过:和/，可以解决大部分转移字符的问题
+            true_webdav_m3u_dict_raw_tmp[str_id] = quote(finalPath, safe=':/')
+
+
+async def deal_mutil_webdav_path_m3u(session, url, fakeurl, fake_webdav_m3u_dict, true_webdav_m3u_dict_raw_tmp,
+                                     auth_header, redisKeyWebDavPathList):
+    try:
+        async with session.request('PROPFIND', url, auth=auth_header, timeout=10) as response:
+            res = await response.text()
+        root = fromstring(res)
+        childs = root.findall('{DAV:}response')
+        length = len(childs)
+        trueThreadNum = min(length, 100)
+        # 计算每个线程处理的数据大小
+        chunk_size = length // trueThreadNum
+        left = length - chunk_size * trueThreadNum
+        finalindex = trueThreadNum - 1
+        with concurrent.futures.ThreadPoolExecutor(max_workers=trueThreadNum) as executor:
+            for i in range(trueThreadNum):
+                start_index = i * chunk_size
+                if i == finalindex:
+                    end_index = min(start_index + chunk_size + left, length)
+                else:
+                    end_index = min(start_index + chunk_size, length)
+                black_list_chunk = childs[start_index:end_index]
+                executor.submit(process_child, fake_webdav_m3u_dict, url, true_webdav_m3u_dict_raw_tmp,
+                                black_list_chunk, fakeurl, redisKeyWebDavPathList)
+        executor.shutdown(wait=True)
+    except Exception as e:
+        return
+
+
+async def download_files28(fake_webdav_m3u_dict, true_webdav_m3u_dict_raw_tmp):
+    username = redisKeyWebDavM3u['username']
+    password = redisKeyWebDavM3u['password']
+    auth_header = aiohttp.BasicAuth(login=username, password=password)
+    fakeurl = getNowWebDavFakeUrl()
+    #fakeurl = default_video_prefix
+    # http://127.0.0.1:5000/videos/video1.mp4.m3u8
+    global redisKeyWebDavPathList
+    urls = redisKeyWebDavPathList.keys()
+
+    try:
+        # sem = asyncio.Semaphore(100)  # 限制TCP连接的数量为100个
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for url in urls:
+                task = asyncio.ensure_future(
+                    deal_mutil_webdav_path_m3u(session, url, fakeurl, fake_webdav_m3u_dict,
+                                               true_webdav_m3u_dict_raw_tmp, auth_header, redisKeyWebDavPathList))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        print(f"Failed to fetch files. Error: {e}")
+
+
+# 生成全部webdav直播源
+@app.route('/api/chaoronghe28', methods=['GET'])
+def chaoronghe28():
+    try:
+
+        fake_webdav_m3u_dict = {}
+        # webdav名字，真实地址
+        global true_webdav_m3u_dict_raw
+        true_webdav_m3u_dict_raw_tmp = {}
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(download_files28(fake_webdav_m3u_dict, true_webdav_m3u_dict_raw_tmp))
+        if len(fake_webdav_m3u_dict) == 0:
+            return "empty"
+
+        if len(true_webdav_m3u_dict_raw_tmp.keys()) > 0:
+            true_webdav_m3u_dict_raw.clear()
+            true_webdav_m3u_dict_raw.update(true_webdav_m3u_dict_raw_tmp)
+            redis_del_map(REDIS_KEY_WEBDAV_M3U_DICT_RAW)
+            redis_add_map(REDIS_KEY_WEBDAV_M3U_DICT_RAW, true_webdav_m3u_dict_raw)
+        # 同步方法写出全部配置
+        distribute_data(fake_webdav_m3u_dict, f"{secret_path}webdav.m3u", 10)
         return "result"
     except Exception as e:
         return "empty"
@@ -5836,12 +6687,11 @@ def chaoronghe24():
         if len(m3u_dict) == 0:
             return "empty"
         ip = init_IP()
-        port = 22771
         global redisKeyYoutubeM3u
         global redisKeyYoutube
         redisKeyYoutubeM3uFake = {}
         # fakeurl:192.168.5.1:22771/youtube?id=xxxxx
-        fakeurl = f"http://{ip}:{port}/youtube/"
+        fakeurl = f"http://{ip}:{port_live}/youtube/"
         for url, id in m3u_dict.items():
             name = redisKeyYoutube[id]
             link = f'#EXTINF:-1 group-title="Youtube Live"  tvg-name="{name}",{name}\n'
@@ -6129,6 +6979,14 @@ def removem3ulinks27():
     return "success"
 
 
+# 删除全部webdav直播源
+@app.route('/api/removem3ulinks28', methods=['GET'])
+def removem3ulinks28():
+    redisKeyWebDavPathList.clear()
+    redis_del_map(REDIS_KEY_WEBDAV_PATH_LIST)
+    return "success"
+
+
 # 删除全部简易DNS白名单
 @app.route('/api/removem3ulinks12', methods=['GET'])
 def removem3ulinks12():
@@ -6367,6 +7225,41 @@ def thread_recall_chaoronghe8(second):
         time.sleep(second)
 
 
+# ts文件有效时间长度
+TS_ALIVE_TIME = 20
+
+
+def thread_webdav_m3u_killer(second):
+    while True:
+        now = time.time()
+        # 最近一次ts时间
+        lastTsTime = ts_dict[mark]
+        # 最近一次uuid
+        uuid = recordPath['past']
+        # 超过1分钟没有人访问切片，干掉最近访问uuid之外所有切片数据
+        if now - lastTsTime > TS_ALIVE_TIME and uuid != 'nope':
+            cleanup(uuid)
+            # 没人看推流了，安全起见，删除全部其他切片
+            safe_delete_ts(uuid)
+        # 干掉当前正在观看的视频里已经访问过的ts文件，特征是超过1分钟
+        removeList = []
+        for tsfile, timesec in ts_dict.items():
+            if tsfile == mark:
+                continue
+            if now - timesec > TS_ALIVE_TIME * 15:
+                removeList.append(tsfile)
+        safe_delete_single_ts(removeList)
+        # 已经过期的ts文件，真正被删除掉的
+        if len(removeList) > 0:
+            # 真正被删除掉的ts文件，从字典里删除
+            for key in removeList:
+                try:
+                    del ts_dict[key]
+                except Exception as e:
+                    pass
+        time.sleep(second)
+
+
 def main():
     init_db()
     timer_thread1 = threading.Thread(target=executeM3u, args=(7200,), daemon=True)
@@ -6391,6 +7284,8 @@ def main():
     timer_thread10.start()
     timer_thread11 = threading.Thread(target=executeYoutube, args=(3600,), daemon=True)
     timer_thread11.start()
+    timer_thread12 = threading.Thread(target=thread_webdav_m3u_killer, args=(10,), daemon=True)
+    timer_thread12.start()
     # 启动工作线程消费上传数据至gitee
     t = threading.Thread(target=worker_gitee, daemon=True)
     t.start()

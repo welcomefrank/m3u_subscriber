@@ -387,6 +387,10 @@
         <input type="radio" name="page" id="page30">
         <span>YY直播源</span>
     </label>
+    <label>
+        <input type="radio" name="page" id="page31">
+        <span>webdav直播源</span>
+    </label>
 </div>
 <div id="choice">
     <div id="page1" style="display: block;">
@@ -1908,6 +1912,79 @@
             </table>
         </div>
     </div>
+    <div id="page31" style="display: none;">
+        <h1>webdav直播源</h1>
+        <div style="float: left;width: 70%">
+            <h3>后台默认1小时自动执行生成操作,需要在功能开关开启</h3>
+            <h3>如果点播后10秒后没有观看任何数据则自动销毁所有切片数据</h3>
+            <h3>该切片不做任何转码，提高传输效率和保证原画质量</h3>
+            <h3>超融合订阅地址:参考m3u格式</h3>
+            <h3 class="urllink">webdav-无加密:http://192.168.5.1:22771/secret/webdav.m3u</h3>
+            <h3>上传文件导入webdav账号</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn28" class="uploadjsonbtn" style="width: 100%"></input>
+            </div>
+            <div>
+                <button class="button stepflag" onclick="execute28()" style="width: 100%">生成webdav超融合订阅
+                </button>
+            </div>
+            <div>
+                <button id="download-json-btn28" class="button download-json-btn" style="width: 100%">
+                    导出webdav账号备份
+                </button>
+            </div>
+
+            <div style="display: flex;width: 100%;">
+                webdav用户名:username
+            </div>
+            <div style="width:100%">
+                <input type="text" id="webdavUsernameM3u" class="stubboninput" placeholder="ppap"/>
+                <button onclick="changeSyncData('username', 'm3u', 'webdavUsernameM3u', webdavUsernameM3u)" class="stubbonsave">
+                    修改
+                </button>
+            </div>
+            <div style="display: flex;width: 100%;">
+                webdav密码:password
+            </div>
+            <div style="width:100%">
+                <input type="text" id="webdavPassM3u" class="stubboninput" placeholder="123456"/>
+                <button onclick="changeSyncData('password', 'm3u', 'webdavPassM3u', webdavPassM3u)" class="stubbonsave">
+                    修改
+                </button>
+            </div>
+            <br>
+            <div>
+                <button id="download-json-btn28-2" class="button download-json-btn" style="width: 100%">
+                    导出webdav子目录备份
+                </button>
+            </div>
+            <h3>上传文件导入webdav子目录数据</h3>
+            <div>
+                <input type="file" id="upload-json-btn282" class="uploadjsonbtn" style="width: 100%"></input>
+            </div>
+            <div style="width: 97%;">
+                <input type="text" id="searchInput28" placeholder="搜索框" class="searchbox"
+                       style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row28" class="addNewSubscriber" style="width:100%">新增子目录</button>
+            </div>
+            <button id="removem3ulinks28" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks28')">删除全部子目录
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:webdav直播子目录 +频道分组名字(举例子:游戏王5DS)
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table28" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -2047,6 +2124,12 @@
     // 输入框显示webdav账户地址
     const webdavIp = document.getElementById('webdavIp');
 
+        // 输入框显示webdav账号用户名
+    const webdavUsernameM3u = document.getElementById('webdavUsernameM3u');
+    // 输入框显示webdav密码
+    const webdavPassM3u = document.getElementById('webdavPassM3u');
+
+
     const allM3u = document.getElementById('allM3u');
     const allM3uSecret = document.getElementById('allM3uSecret');
     const aliveM3u = document.getElementById('aliveM3u');
@@ -2143,6 +2226,13 @@
     const inputTable27 = document.getElementById('input-table27');
     const downloadBtn27 = document.getElementById('download-json-btn27');
 
+    const fileInput28 = document.getElementById('upload-json-btn28');
+    const downloadBtn28 = document.getElementById('download-json-btn28');
+    const addRowButton28 = document.getElementById('add-row28');
+    const inputTable28 = document.getElementById('input-table28');
+    const downloadBtn282 = document.getElementById('download-json-btn28-2');
+    const fileInput282 = document.getElementById('upload-json-btn282');
+
     // 输入框显示中国DNS端口
     const chinaDnsPort = document.getElementById('chinaDnsPort');
 
@@ -2204,6 +2294,8 @@
     const searchInput26 = document.getElementById('searchInput26');
         // 获取页面元素-YY直播源
     const searchInput27 = document.getElementById('searchInput27');
+            // 获取页面元素-webdav直播源
+    const searchInput28 = document.getElementById('searchInput28');
 
     searchAddListener2(searchInput18,inputTable18)
     searchAddListener2(searchInput17,inputTable17)
@@ -2237,6 +2329,8 @@
     searchAddListener(searchInput26,inputTable26)
         // 给YY直播源搜索框绑定'oninput'事件
     searchAddListener(searchInput27,inputTable27)
+            // 给webdav直播源搜索框绑定'oninput'事件
+    searchAddListener(searchInput28,inputTable28)
     // 给简易dns白名单搜索框绑定'oninput'事件
     searchAddListener(searchInput4,inputTable12)
     // 给m3u白名单搜索框绑定'oninput'事件
@@ -2466,10 +2560,10 @@
     }
 
     function getSyncData(cacheKey, type, id, idVar) {
-        var cachevalue = sessionStorage.getItem(id);
-        if (cachevalue && cachevalue !== '') {
-            idVar.value = cachevalue;
-        } else {
+        //var cachevalue = sessionStorage.getItem(id);
+        //if (cachevalue && cachevalue !== '') {
+            ///idVar.value = cachevalue;
+       // } else {
             PostDataByAsk2AndReturn('/api/getSyncAccountData', cacheKey, type)
                 .then(function (returnValue) {
                     idVar.value = returnValue;
@@ -2478,14 +2572,14 @@
                 .catch(function (error) {
                     console.log(error);
                 });
-        }
+       // }
     }
 
     function changeSyncData(cacheKey, type, id, idVar) {
         PostDataByAsk3AndReturn('/api/changeSyncData', cacheKey, type,idVar.value)
             .then(function (returnValue) {
                 //idVar.value = returnValue;
-                sessionStorage.setItem(id, idVar.value);
+                //sessionStorage.setItem(id, idVar.value);
             })
             .catch(function (error) {
                 console.log(error);
@@ -2916,6 +3010,11 @@
         reloadBase('/api/getall27',  inputTable27)
     }
 
+            //webdav直播源-从数据库拉取关键字列表数据
+    function reloadWebdavM3U() {
+        reloadBase('/api/getall28',  inputTable28)
+    }
+
     //加密订阅密码历史记录-从数据库拉取关键字列表数据
     function reloadHistorySubscribePassList() {
         reloadBase('/api/getall14',  inputTable14)
@@ -3154,6 +3253,11 @@
         saveInputValuebase(inputValue, name, '/api/addnewm3u27')
     }
 
+            //webdav配置
+    function saveInputValue28(inputValue, name) {
+        saveInputValuebase(inputValue, name, '/api/addnewm3u28')
+    }
+
     //永久列表-保留输入行数据
     function savem3uInputValue(url, info) {
         saveInputValuebase(url, info, '/api/addm3udata')
@@ -3287,6 +3391,10 @@
     function deleteInputRow27(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u27')
     }
+            //删除webdav直播源
+    function deleteInputRow28(row, inputValue) {
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u28')
+    }
     //删除加密订阅密码历史记录
     function deleteInputRow14(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u14')
@@ -3367,6 +3475,8 @@
     inputableAddEventListener(inputTable26,  'saveInputValue26', 'deleteInputRow26')
         //YY直播源
     inputableAddEventListener(inputTable27,  'saveInputValue27', 'deleteInputRow27')
+            //webdav直播源
+    inputableAddEventListener(inputTable28,  'saveInputValue28', 'deleteInputRow28')
     //简易DNS黑名单
     inputableAddEventListener(inputTable13,  'saveInputValue13', 'deleteInputRow13')
     //简易DNS白名单
@@ -3464,6 +3574,10 @@
     fileInputAddEventListenerBase(fileInput26, '/api/upload_json_file26')
         //YY直播源-导入json配置
     fileInputAddEventListenerBase(fileInput27, '/api/upload_json_file27')
+            //webdav直播源账号-导入json配置
+    fileInputAddEventListenerBase(fileInput28, '/api/upload_json_file28')
+                //webdav直播源子目录-导入json配置
+    fileInputAddEventListenerBase(fileInput282, '/api/upload_json_file282')
     //网络下载配置加密上传-导入json配置
     fileInputAddEventListenerBase(fileInput17, '/api/upload_json_file17')
     //m3u白名单分组优先级-导入json配置
@@ -3841,6 +3955,10 @@
             reloadHuyaM3U()
         }else if (selectedPage === pages[29].id) {
             reloadYYM3U()
+        }else if (selectedPage === pages[30].id) {
+            getSyncData('username', 'm3u', 'webdavUsernameM3u', webdavUsernameM3u)
+            getSyncData('password', 'm3u', 'webdavPassM3u', webdavPassM3u)
+            reloadWebdavM3U()
         }
         if (selectedPage !== pages[1].id) {
             window.removeEventListener('scroll', handleScroll);
@@ -3902,6 +4020,10 @@
     downloadBtnAddEventListenerBase(downloadBtn26, '/api/download_json_file26', 'temp_huya_m3u.json')
         // YY直播源-导出订阅json配置
     downloadBtnAddEventListenerBase(downloadBtn27, '/api/download_json_file27', 'temp_YY_m3u.json')
+            // WEBDAV直播源账号密码-导出订阅json配置
+    downloadBtnAddEventListenerBase(downloadBtn28, '/api/download_json_file28', 'temp_WEBDAV_m3u.json')
+                // WEBDAV直播源子目录-导出订阅json配置
+    downloadBtnAddEventListenerBase(downloadBtn282, '/api/download_json_file282', 'temp_WEBDAV_m3u_path.json')
     // 下载加密上传-导出订阅json配置
     downloadBtnAddEventListenerBase(downloadBtn17, '/api/download_json_file17', 'temp_downloadAndSecretUpload.json')
     // M3U白名单分组优先级-导出订阅json配置
@@ -3976,6 +4098,8 @@
     addRowButtonAddEventListener(addRowButton26, inputTable26)
         //YY直播源-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton27, inputTable27)
+            //webdav直播源-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton28, inputTable28)
     //DNS简易白名单-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton12, inputTable12)
     //M3U白名单-关键字-只添加一行列表，不存储数据
@@ -4142,6 +4266,10 @@
         executeBase('/api/chaoronghe27')
     }
 
+               //超融合-webdav直播源生成
+    function execute28() {
+        executeBase('/api/chaoronghe28')
+    }
 
     function executeBase(requestPath) {
         // 获取按钮
