@@ -4,3 +4,6 @@
 
         async with sem, session.get(huya_room_url, headers=cim_headers_huya, params=param, timeout=20) as response:
             res = await response.text()
+
+
+            except asyncio.TimeoutError:

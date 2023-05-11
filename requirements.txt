@@ -9,3 +9,5 @@ chardet==5.1.0
 cryptography==40.0.1
 multidict==6.0.4
 zhconv==1.4.3
+PyExecJS==1.5.1
+m3u8==3.5.0

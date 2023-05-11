@@ -391,6 +391,10 @@
         <input type="radio" name="page" id="page31">
         <span>webdav直播源</span>
     </label>
+    <label>
+        <input type="radio" name="page" id="page32">
+        <span>Douyu直播源</span>
+    </label>
 </div>
 <div id="choice">
     <div id="page1" style="display: block;">
@@ -1320,7 +1324,7 @@
             </div>
             <div class="grid-item">
                 <button id="switch35" class="switchfunctionbutton" onclick="toggleSwitch('switch35')">已关闭</button>
-                <input class="toggletext" type="text" value="youtube-定时器">
+                <input class="toggletext" type="text" value="项目直播源-定时器">
             </div>
         </div>
     </div>
@@ -1986,6 +1990,49 @@
             </table>
         </div>
     </div>
+
+    <div id="page32" style="display: none;">
+        <h1>Douyu直播源</h1>
+        <div style="float: left;width: 70%">
+            <h3>后台默认1小时自动执行生成操作,需要在功能开关开启</h3>
+            <h3>超融合哔哩哔哩订阅地址:参考m3u格式</h3>
+            <h3 class="urllink">douyu-无加密:http://192.168.5.1:22771/secret/douyu.m3u</h3>
+            <h3>上传文件导入合并Douyu频道</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn29" class="uploadjsonbtn" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row29" class="addNewSubscriber" style="width:100%">新增Douyu直播频道</button>
+            </div>
+            <div>
+                <button class="button stepflag" onclick="execute29()" style="width: 100%">生成Douyu超融合订阅
+                </button>
+            </div>
+            <div>
+                <button id="download-json-btn29" class="button download-json-btn" style="width: 100%">
+                    导出Douyu直播频道备份
+                </button>
+            </div>
+            <div style="width: 97%;">
+                <input type="text" id="searchInput29" placeholder="搜索框" class="searchbox"
+                       style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks29" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks29')">删除全部订阅
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:Douyu直播ID+频道名字
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table29" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -2217,6 +2264,13 @@
     const inputTable25 = document.getElementById('input-table25');
     const downloadBtn25 = document.getElementById('download-json-btn25');
 
+
+
+    const fileInput29 = document.getElementById('upload-json-btn29');
+    const addRowButton29 = document.getElementById('add-row29');
+    const inputTable29 = document.getElementById('input-table29');
+    const downloadBtn29 = document.getElementById('download-json-btn29');
+
     const fileInput26 = document.getElementById('upload-json-btn26');
     const addRowButton26 = document.getElementById('add-row26');
     const inputTable26 = document.getElementById('input-table26');
@@ -2233,6 +2287,7 @@
     const inputTable28 = document.getElementById('input-table28');
     const downloadBtn282 = document.getElementById('download-json-btn28-2');
     const fileInput282 = document.getElementById('upload-json-btn282');
+
 
     // 输入框显示中国DNS端口
     const chinaDnsPort = document.getElementById('chinaDnsPort');
@@ -2297,6 +2352,8 @@
     const searchInput27 = document.getElementById('searchInput27');
             // 获取页面元素-webdav直播源
     const searchInput28 = document.getElementById('searchInput28');
+        // 获取页面元素-douyu直播源
+    const searchInput29 = document.getElementById('searchInput29');
 
     searchAddListener2(searchInput18,inputTable18)
     searchAddListener2(searchInput17,inputTable17)
@@ -2326,6 +2383,8 @@
     searchAddListener(searchInput24,inputTable24)
     // 给bilibili直播源搜索框绑定'oninput'事件
     searchAddListener(searchInput25,inputTable25)
+        // 给douyu直播源搜索框绑定'oninput'事件
+    searchAddListener(searchInput29,inputTable29)
     // 给huya直播源搜索框绑定'oninput'事件
     searchAddListener(searchInput26,inputTable26)
         // 给YY直播源搜索框绑定'oninput'事件
@@ -2498,7 +2557,7 @@
             var tagnamefile = parts2[2]
             var parts3 = tagnamefile.split(".")
             var tagname = parts3[0]
-            if (tagname==='youtube' ||tagname==='bilibili'||tagname==='huya'||tagname==='YY' ){
+            if (tagname==='youtube' ||tagname==='bilibili'||tagname==='huya'||tagname==='YY'||tagname==='douyu'||tagname==='webdav' ){
                 elements[i].innerHTML = prefix + "//" + newIp + suffix2 + "/" + tagname + "." + parts3[1];
                 continue
             }
@@ -3001,6 +3060,11 @@
         reloadBase('/api/getall25',  inputTable25)
     }
 
+        //douyu直播源-从数据库拉取关键字列表数据
+    function reloadDouyuM3U() {
+        reloadBase('/api/getall29',  inputTable29)
+    }
+
     //huya直播源-从数据库拉取关键字列表数据
     function reloadHuyaM3U() {
         reloadBase('/api/getall26',  inputTable26)
@@ -3244,6 +3308,12 @@
     function saveInputValue25(inputValue, name) {
         saveInputValuebase(inputValue, name, '/api/addnewm3u25')
     }
+
+        //douyu配置
+    function saveInputValue29(inputValue, name) {
+        saveInputValuebase(inputValue, name, '/api/addnewm3u29')
+    }
+
     //huya配置
     function saveInputValue26(inputValue, name) {
         saveInputValuebase(inputValue, name, '/api/addnewm3u26')
@@ -3384,6 +3454,10 @@
     function deleteInputRow25(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u25')
     }
+        //删除douyu直播源
+    function deleteInputRow29(row, inputValue) {
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u29')
+    }
     //删除huya直播源
     function deleteInputRow26(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u26')
@@ -3472,6 +3546,8 @@
     inputableAddEventListener(inputTable24,  'saveInputValue24', 'deleteInputRow24')
     //bilibili直播源
     inputableAddEventListener(inputTable25,  'saveInputValue25', 'deleteInputRow25')
+        //douyu直播源
+    inputableAddEventListener(inputTable29,  'saveInputValue29', 'deleteInputRow29')
     //huya直播源
     inputableAddEventListener(inputTable26,  'saveInputValue26', 'deleteInputRow26')
         //YY直播源
@@ -3571,6 +3647,8 @@
     fileInputAddEventListenerBase(fileInput24, '/api/upload_json_file24')
     //bilibili直播源-导入json配置
     fileInputAddEventListenerBase(fileInput25, '/api/upload_json_file25')
+        //douyu直播源-导入json配置
+    fileInputAddEventListenerBase(fileInput29, '/api/upload_json_file29')
     //huya直播源-导入json配置
     fileInputAddEventListenerBase(fileInput26, '/api/upload_json_file26')
         //YY直播源-导入json配置
@@ -3960,7 +4038,10 @@
             getSyncData('username', 'm3u', 'webdavUsernameM3u', webdavUsernameM3u)
             getSyncData('password', 'm3u', 'webdavPassM3u', webdavPassM3u)
             reloadWebdavM3U()
+        } else if (selectedPage === pages[31].id) {
+            reloadDouyuM3U()
         }
+
         if (selectedPage !== pages[1].id) {
             window.removeEventListener('scroll', handleScroll);
         }
@@ -4017,6 +4098,8 @@
     downloadBtnAddEventListenerBase(downloadBtn24, '/api/download_json_file24', 'temp_youtube_m3u.json')
     // bilibili直播源-导出订阅json配置
     downloadBtnAddEventListenerBase(downloadBtn25, '/api/download_json_file25', 'temp_bilibili_m3u.json')
+        // douyu直播源-导出订阅json配置
+    downloadBtnAddEventListenerBase(downloadBtn29, '/api/download_json_file29', 'temp_douyu_m3u.json')
     // huya直播源-导出订阅json配置
     downloadBtnAddEventListenerBase(downloadBtn26, '/api/download_json_file26', 'temp_huya_m3u.json')
         // YY直播源-导出订阅json配置
@@ -4095,6 +4178,8 @@
     addRowButtonAddEventListener(addRowButton24, inputTable24)
     //bilibili直播源-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton25, inputTable25)
+        //douyu直播源-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton29, inputTable29)
     //huya直播源-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton26, inputTable26)
         //YY直播源-只添加一行列表，不存储数据
@@ -4255,6 +4340,11 @@
     //超融合-bilibili直播源生成
     function execute25() {
         executeBase('/api/chaoronghe25')
+    }
+
+        //超融合-douyu直播源生成
+    function execute29() {
+        executeBase('/api/chaoronghe29')
     }
 
        //超融合-huya直播源生成
