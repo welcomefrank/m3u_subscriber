@@ -123,16 +123,15 @@ def redis_del_map(key):
 
 # 简易dns黑白名单保留最低限度的1000条数据
 def clearAndStoreAtLeast50DataInRedis(redisKey, cacheDict):
-    # cacheDict.clear()
     tmpDict = redis_get_map(redisKey)
-    # count = 0
-    # data = {}
+    cacheDict.clear()
+    count = 0
     data = dict(tmpDict.items()[:1000])
-    # for key in tmpDict.keys():
-    #     if count > 1000:
-    #         break
-    #     #updateSpData(key, cacheDict)
-    #     count = count + 1
+    for key in tmpDict.keys():
+        if count > 1000:
+            break
+        updateSpData(key, cacheDict)
+        count = count + 1
     try:
         redis_del_map(redisKey)
     except Exception as e:
@@ -785,10 +784,10 @@ def isChinaDomain(data):
     ##########################################中国特色顶级域名，申请必须要经过大陆审批通过，默认全部当成大陆域名#############
     if domain_name_str.endswith(".cn") or domain_name_str.endswith(".中国"):
         return True
-    ##########################################不允许在中国备案使用的顶级域名，默认全部当成外国域名######################
-    if isInForeign_domain(domain_name_str):
-        checkAndUpdateSimpleList(True, domain_name_str)
-        return False
+    ##########################################不允许在中国备案使用的顶级域名######################
+    # if isInForeign_domain(domain_name_str):
+    #     checkAndUpdateSimpleList(True, domain_name_str)
+    #     return False
     ###########################################个人日常冲浪的域名分流策略，自己维护##############################
     # 在已经命中的简易外国域名查找，直接丢给5335
     if inSimpleBlackListCache(domain_name_str):

@@ -151,16 +151,16 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'whitelistDirectRule': 'whitelistDirectRule', 'blacklistProxyRule': 'blacklistProxyRule',
                   'simpleOpenclashFallBackFilterDomain': 'simpleOpenclashFallBackFilterDomain',
                   'simpleblacklistProxyRule': 'simpleblacklistProxyRule', 'simpleDnsmasq': 'simpleDnsmasq',
-                  'simplewhitelistProxyRule': 'simplewhitelistProxyRule'}
+                  'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30'}
 
 # 单独导入导出使用一个配置,需特殊处理:{{url:{pass,name}}}
 # 下载网络配置并且加密后上传:url+加密密钥+加密文件名字
 REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME = 'downloadAndSecretUploadUrlPasswordAndName'
-downAndSecUploadUrlPassAndName = {'key1': {'password': '', 'secretName': 'dffwfwef.txt'}}
+downAndSecUploadUrlPassAndName = {}
 
 # 下载加密网络配置并且解密还原成源文件:加密url+加密密钥+源文件名字
 REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME = 'downloadAndDeSecretUrlPasswordAndName'
-downAndDeSecUrlPassAndName = {'key1': {'password': '', 'secretName': 'dhfkfgkf.ini'}}
+downAndDeSecUrlPassAndName = {}
 
 # youtube直播源
 REDIS_KEY_YOUTUBE = 'redisKeyYoutube'
@@ -610,10 +610,6 @@ def deletePathAndRebuild():
 slice_path_fail_default = os.path.join('/app/secret', f"none.ts")
 # mp4
 headers_default = {'Content-Type': 'application/vnd.apple.mpegurl'}
-# mkv
-headers_default_mkv = {'Content-Type': 'video/x-matroska'}
-# avi
-headers_default_avi = {'Content-Type': 'video/x-msvideo'}
 default_video_prefix = 'http://127.0.0.1:5000/videos/'
 default_video_prefix_encode = default_video_prefix.encode()
 default_video_prefix_fail = 'http://127.0.0.1:5000/videosfail/'
@@ -782,24 +778,19 @@ def video_ts_fail(path):
 
 
 ##############################################################bilibili############################################
-async def pingM3u(session, value, real_dict, key, sem):
+async def pingM3u(session, value, real_dict, key, sem, mintimeout, maxTimeout):
     try:
-        async with sem, session.get(value, timeout=5) as response:
+        async with sem, session.get(value, timeout=mintimeout) as response:
             if response.status == 200:
                 real_dict[key] = value
     except asyncio.TimeoutError:
-        async with sem, session.get(value, timeout=15) as response:
-            if response.status == 200:
-                real_dict[key] = value
+        try:
+            async with sem, session.get(value, timeout=maxTimeout) as response:
+                if response.status == 200:
+                    real_dict[key] = value
+        except Exception as e:
+            pass
     except Exception as e:
-        # try:
-        #     async with aiohttp.ClientSession() as session2:
-        #         async with session2.get(value, timeout=15) as response2:
-        #             if response2.status == 200:
-        #                 real_dict[key] = value
-        # except Exception as e:
-        #     print(e)
-        #     pass
         pass
 
 
@@ -1991,8 +1982,7 @@ def init_db():
     initReloadCacheForNormal()
     init_webdav_m3u_True_Data()
     update_webdav_fake_url()
-    uuid = recordPath['past']
-    safe_delete_ts(uuid)
+    safe_delete_ts('nope')
 
 
 def init_function_dict():
@@ -4680,7 +4670,7 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'whitelistDirectRule': 'whitelistDirectRule', 'blacklistProxyRule': 'blacklistProxyRule',
                           'simpleOpenclashFallBackFilterDomain': 'simpleOpenclashFallBackFilterDomain',
                           'simpleblacklistProxyRule': 'simpleblacklistProxyRule', 'simpleDnsmasq': 'simpleDnsmasq',
-                          'simplewhitelistProxyRule': 'simplewhitelistProxyRule'}
+                          'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30'}
 
 
 def init_file_name():
@@ -6196,14 +6186,14 @@ def chaoronghe10():
         return "empty"
 
 
-async def download_file5_single(ids):
+async def download_file5_single(ids, mintimeout, maxTimeout):
     m3u_dict = {}
     try:
-        sem = asyncio.Semaphore(200)  # 限制TCP连接的数量为100个
+        sem = asyncio.Semaphore(1000)  # 限制TCP连接的数量为100个
         async with aiohttp.ClientSession() as session:
             tasks = []
             for id in ids:
-                task = asyncio.ensure_future(grab2(session, id, m3u_dict, sem))
+                task = asyncio.ensure_future(grab2(session, id, m3u_dict, sem, mintimeout, maxTimeout))
                 tasks.append(task)
             await asyncio.gather(*tasks)
     except (aiohttp.ClientError, asyncio.TimeoutError) as e:
@@ -6214,11 +6204,13 @@ async def download_file5_single(ids):
 async def download_files5():
     global redisKeyBilili
     ids = redisKeyBilili.keys()
-    m3u_dict = await download_file5_single(ids)
+    mintimeout = int(getFileNameByTagName('minTimeout'))
+    maxTimeout = int(getFileNameByTagName('maxTimeout'))
+    m3u_dict = await download_file5_single(ids, mintimeout, maxTimeout)
     left_dict = {k: v for k, v in redisKeyBilili.items() if k not in m3u_dict}
     if len(left_dict) == 0:
         return m3u_dict
-    m3u_dict2 = await download_file5_single(left_dict.keys())
+    m3u_dict2 = await download_file5_single(left_dict.keys(), mintimeout, maxTimeout)
     if len(m3u_dict2) > 0:
         m3u_dict.update(m3u_dict2)
     return m3u_dict
@@ -6227,14 +6219,14 @@ async def download_files5():
 SIGNAL_FULL_ALIVE = 'allAlive'
 
 
-async def download_files10_single(ids):
+async def download_files10_single(ids, mintimeout, maxTimeout):
     m3u_dict = {}
     try:
-        sem = asyncio.Semaphore(200)  # 限制TCP连接的数量为100个
+        sem = asyncio.Semaphore(1000)  # 限制TCP连接的数量为100个
         async with aiohttp.ClientSession() as session:
             tasks = []
             for id in ids:
-                task = asyncio.ensure_future(grab10(session, id, m3u_dict, sem))
+                task = asyncio.ensure_future(grab10(session, id, m3u_dict, sem, mintimeout, maxTimeout))
                 tasks.append(task)
             await asyncio.gather(*tasks)
     except (aiohttp.ClientError, asyncio.TimeoutError) as e:
@@ -6245,24 +6237,26 @@ async def download_files10_single(ids):
 async def download_files10():
     global redisKeyDouyu
     ids = redisKeyDouyu.keys()
-    m3u_dict = await download_files10_single(ids)
+    mintimeout = int(getFileNameByTagName('minTimeout'))
+    maxTimeout = int(getFileNameByTagName('maxTimeout'))
+    m3u_dict = await download_files10_single(ids, mintimeout, maxTimeout)
     left_dict = {k: v for k, v in redisKeyDouyu.items() if k not in m3u_dict}
     if len(left_dict) == 0:
         return m3u_dict
-    m3u_dict2 = await download_files10_single(left_dict.keys())
+    m3u_dict2 = await download_files10_single(left_dict.keys(), mintimeout, maxTimeout)
     if len(m3u_dict2) > 0:
         m3u_dict.update(m3u_dict2)
     return m3u_dict
 
 
-async def download_files6_single(ids):
+async def download_files6_single(ids, mintimeout, maxTimeout):
     m3u_dict = {}
     try:
-        sem = asyncio.Semaphore(200)  # 限制TCP连接的数量为100个
+        sem = asyncio.Semaphore(1000)  # 限制TCP连接的数量为100个
         async with aiohttp.ClientSession() as session:
             tasks = []
             for id in ids:
-                task = asyncio.ensure_future(grab3(session, id, m3u_dict, sem))
+                task = asyncio.ensure_future(grab3(session, id, m3u_dict, sem, mintimeout, maxTimeout))
                 tasks.append(task)
             await asyncio.gather(*tasks)
     except (aiohttp.ClientError, asyncio.TimeoutError) as e:
@@ -6273,24 +6267,26 @@ async def download_files6_single(ids):
 async def download_files6():
     global redisKeyHuya
     ids = redisKeyHuya.keys()
-    m3u_dict = await download_files6_single(ids)
+    mintimeout = int(getFileNameByTagName('minTimeout'))
+    maxTimeout = int(getFileNameByTagName('maxTimeout'))
+    m3u_dict = await download_files6_single(ids, mintimeout, maxTimeout)
     left_dict = {k: v for k, v in redisKeyHuya.items() if k not in m3u_dict}
     if len(left_dict) == 0:
         return m3u_dict
-    m3u_dict2 = await download_files6_single(left_dict.keys())
+    m3u_dict2 = await download_files6_single(left_dict.keys(), mintimeout, maxTimeout)
     if len(m3u_dict2) > 0:
         m3u_dict.update(m3u_dict2)
     return m3u_dict
 
 
-async def download_files7_single(ids):
+async def download_files7_single(ids, mintimeout, maxTimeout):
     m3u_dict = {}
     try:
-        sem = asyncio.Semaphore(200)  # 限制TCP连接的数量为100个
+        sem = asyncio.Semaphore(1000)  # 限制TCP连接的数量为100个
         async with aiohttp.ClientSession() as session:
             tasks = []
             for id in ids:
-                task = asyncio.ensure_future(grab4(session, id, m3u_dict, sem))
+                task = asyncio.ensure_future(grab4(session, id, m3u_dict, sem, mintimeout, maxTimeout))
                 tasks.append(task)
             await asyncio.gather(*tasks)
     except (aiohttp.ClientError, asyncio.TimeoutError) as e:
@@ -6301,11 +6297,13 @@ async def download_files7_single(ids):
 async def download_files7():
     global redisKeyYY
     ids = redisKeyYY.keys()
-    m3u_dict = await download_files7_single(ids)
+    mintimeout = int(getFileNameByTagName('minTimeout'))
+    maxTimeout = int(getFileNameByTagName('maxTimeout'))
+    m3u_dict = await download_files7_single(ids, mintimeout, maxTimeout)
     left_dict = {k: v for k, v in redisKeyYY.items() if k not in m3u_dict}
     if len(left_dict) == 0:
         return m3u_dict
-    m3u_dict2 = await download_files7_single(left_dict.keys())
+    m3u_dict2 = await download_files7_single(left_dict.keys(), mintimeout, maxTimeout)
     if len(m3u_dict2) > 0:
         m3u_dict.update(m3u_dict2)
     return m3u_dict
@@ -6324,16 +6322,18 @@ cim_headers = CIMultiDict(bili_header)
 biliurl = 'https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo'
 
 
-async def grab2(session, id, m3u_dict, sem):
+async def grab2(session, id, m3u_dict, sem, mintimeout, maxTimeout):
     try:
         param = {
             'id': id
         }
         try:
-            async with sem, session.get(bilibili_real_url, headers=cim_headers, params=param, timeout=5) as response:
+            async with sem, session.get(bilibili_real_url, headers=cim_headers, params=param,
+                                        timeout=mintimeout) as response:
                 res = await response.json()
         except asyncio.TimeoutError:
-            async with sem, session.get(bilibili_real_url, headers=cim_headers, params=param, timeout=15) as response:
+            async with sem, session.get(bilibili_real_url, headers=cim_headers, params=param,
+                                        timeout=maxTimeout) as response:
                 res = await response.json()
         if '不存在' in res['msg']:
             return
@@ -6351,12 +6351,10 @@ async def grab2(session, id, m3u_dict, sem):
             'ptype': 8,
         }
         try:
-            async with sem, session.get(biliurl, headers=cim_headers, params=param2, timeout=5) as response2:
-                # async with sem, session.get(biliurl, headers=cim_headers, params=param2, timeout=20) as response2:
+            async with sem, session.get(biliurl, headers=cim_headers, params=param2, timeout=mintimeout) as response2:
                 res = await response2.json()
         except asyncio.TimeoutError:
-            async with sem, session.get(biliurl, headers=cim_headers, params=param2, timeout=15) as response2:
-                # async with sem, session.get(biliurl, headers=cim_headers, params=param2, timeout=20) as response2:
+            async with sem, session.get(biliurl, headers=cim_headers, params=param2, timeout=maxTimeout) as response2:
                 res = await response2.json()
         stream_info = res['data']['playurl_info']['playurl']['stream']
         accept_qn = stream_info[0]['format'][0]['codec'][0]['accept_qn']
@@ -6388,7 +6386,7 @@ async def grab2(session, id, m3u_dict, sem):
             tasks = []
             for real_ in real_lists:
                 for key, value in real_.items():
-                    task = asyncio.ensure_future(pingM3u(session, value, real_dict, key, sem))
+                    task = asyncio.ensure_future(pingM3u(session, value, real_dict, key, sem, mintimeout, maxTimeout))
                     tasks.append(task)
             await asyncio.gather(*tasks)
             if real_dict:
@@ -6413,7 +6411,7 @@ async def grab2(session, id, m3u_dict, sem):
 did = '10000000000000000000000000001501'
 
 
-async def get_pre(rid, session, rate_list, t13, sem):
+async def get_pre(rid, session, rate_list, t13, sem, mintimeout, maxTimeout):
     url = 'https://playweb.douyucdn.cn/lapi/live/hlsH5Preview/' + rid
     data = {
         'rid': rid,
@@ -6426,10 +6424,12 @@ async def get_pre(rid, session, rate_list, t13, sem):
         'auth': auth
     }
     try:
-        async with sem, session.post(url, headers=headers, data=data, timeout=5) as response:
+        async with sem, session.post(url, headers=headers, data=data, timeout=mintimeout) as response:
             res = await response.json()
     except asyncio.TimeoutError:
-        async with sem, session.post(url, headers=headers, data=data, timeout=15) as response:
+        t13 = str(int((time.time() * 1000)))
+        headers['time'] = t13
+        async with sem, session.post(url, headers=headers, data=data, timeout=maxTimeout) as response:
             res = await response.json()
     error = res['error']
     data = res['data']
@@ -6446,7 +6446,7 @@ async def get_pre(rid, session, rate_list, t13, sem):
     return error, key
 
 
-async def get_js(id, res, did, t10, session, rate_list, sem):
+async def get_js(id, res, did, t10, session, rate_list, sem, mintimeout, maxTimeout):
     result = re.search(
         r'(function ub98484234.*)\s(var.*)', res).group()
     func_ub9 = re.sub(r'eval.*;}', 'strc;}', result)
@@ -6467,41 +6467,55 @@ async def get_js(id, res, did, t10, session, rate_list, sem):
 
     url = 'https://m.douyu.com/api/room/ratestream'
     try:
-        async with sem, session.post(url, params=params, timeout=5) as response:
-            res = await response.text()
+        async with sem, session.post(url, params=params, timeout=mintimeout) as response:
+            res2 = await response.text()
     except asyncio.TimeoutError:
-        async with sem, session.post(url, params=params, timeout=15) as response:
-            res = await response.text()
-    json_ = json.loads(res)
+        t10 = str(int(time.time()))
+        rb2 = hashlib.md5((id + did + t10 + v).encode('utf-8')).hexdigest()
+        func_sign2 = re.sub(r'return rt;}\);?', 'return rt;}', res)
+        func_sign2 = func_sign2.replace('(function (', 'function sign(')
+        func_sign2 = func_sign2.replace(
+            'CryptoJS.MD5(cb).toString()', '"' + rb2 + '"')
+        js2 = execjs.compile(func_sign2)
+        params2 = js2.call('sign', id, did, t10)
+        params2 += '&ver=219032101&rid={}&rate=-1'.format(id)
+        async with sem, session.post(url, params=params2, timeout=maxTimeout) as response:
+            res2 = await response.text()
+    json_ = json.loads(res2)
     try:
         for i in json_['data']['settings']:
             rate_list.append(i)
     except:
         pass
     key = re.search(
-        r'(\d{1,8}[0-9a-zA-Z]+)_?\d{0,4}(.m3u8|/playlist)', res).group(1)
+        r'(\d{1,8}[0-9a-zA-Z]+)_?\d{0,4}(.m3u8|/playlist)', res2).group(1)
     return key
 
 
-async def grab10(session, id, m3u_dict, sem):
+async def grab10(session, id, m3u_dict, sem, mintimeout, maxTimeout):
     try:
         arr = []
         rate_list = []
-        t10 = str(int(time.time()))
-        t13 = str(int((time.time() * 1000)))
         huya_room_url = 'https://m.douyu.com/{}'.format(id)
         try:
-            async with sem, session.get(huya_room_url, timeout=5) as response:
+            async with sem, session.get(huya_room_url, timeout=mintimeout) as response:
                 res = await response.text()
         except asyncio.TimeoutError:
-            async with sem, session.get(huya_room_url, timeout=15) as response:
+            async with sem, session.get(huya_room_url, timeout=maxTimeout) as response:
                 res = await response.text()
         result = re.search(r'rid":(\d{1,8}),"vipId', res)
         if result:
-            rid = result.group(1)
+            try:
+                rid = result.group(1)
+            except Exception as e:
+                return
         else:
             return
-        error, key = await get_pre(rid, session, rate_list, t13, sem)
+        t13 = str(int((time.time() * 1000)))
+        try:
+            error, key = await get_pre(rid, session, rate_list, t13, sem, mintimeout, maxTimeout)
+        except Exception as e:
+            return
         if error == 0:
             pass
         elif error == 102:
@@ -6509,12 +6523,17 @@ async def grab10(session, id, m3u_dict, sem):
         elif error == 104:
             return
         else:
-            key = await get_js(rid, res, did, t10, session, rate_list, sem)
+            t10 = str(int(time.time()))
+            try:
+                key = await get_js(rid, res, did, t10, session, rate_list, sem, mintimeout, maxTimeout)
+            except Exception as e:
+                return
         real_lists = []
         real_dict = {}
         if not rate_list:
-            rate_list = [{'name': '蓝光', 'rate': 0, 'high_bit': 1}, {'name': '超清', 'rate': 3, 'high_bit': 0},
-                         {'name': '高清', 'rate': 2, 'high_bit': 0}]
+            # rate_list = [{'name': '蓝光', 'rate': 0, 'high_bit': 1}, {'name': '超清', 'rate': 3, 'high_bit': 0},
+            #              {'name': '高清', 'rate': 2, 'high_bit': 0}]
+            rate_list = [{'name': '蓝光', 'rate': 0, 'high_bit': 1}]
         for rate in rate_list:
             flyName = "{}_flv".format(rate['name'])
             m3u8Name = "{}_m3u8".format(rate['name'])
@@ -6560,7 +6579,7 @@ async def grab10(session, id, m3u_dict, sem):
             tasks = []
             for real_ in real_lists:
                 for key, value in real_.items():
-                    task = asyncio.ensure_future(pingM3u(session, value, real_dict, key, sem))
+                    task = asyncio.ensure_future(pingM3u(session, value, real_dict, key, sem, mintimeout, maxTimeout))
                     tasks.append(task)
             await asyncio.gather(*tasks)
             if real_dict:
@@ -6622,44 +6641,44 @@ headers_YY = {
 }
 
 
-async def room_id_(session, id, sem):
+async def room_id_(session, id, sem, mintimeout, maxTimeout):
     url = 'https://www.yy.com/{}'.format(id)
     try:
-        async with sem, session.get(url, headers=headers_web_YY, timeout=5) as response:
+        async with sem, session.get(url, headers=headers_web_YY, timeout=mintimeout) as response:
             if response.status == 200:
                 room_id = re.findall('ssid : "(\d+)', response.text)[0]
                 return room_id
     except asyncio.TimeoutError:
-        async with sem, session.get(url, headers=headers_web_YY, timeout=15) as response:
+        async with sem, session.get(url, headers=headers_web_YY, timeout=maxTimeout) as response:
             if response.status == 200:
                 room_id = re.findall('ssid : "(\d+)', response.text)[0]
                 return room_id
 
 
-async def fetch_room_url(session, room_url, headers, sem):
+async def fetch_room_url(session, room_url, headers, sem, mintimeout, maxTimeout):
     try:
-        async with sem, session.get(room_url, headers=headers, timeout=5) as response:
+        async with sem, session.get(room_url, headers=headers, timeout=mintimeout) as response:
             if response.status == 200:
                 return await response.text()
             else:
                 return None
     except asyncio.TimeoutError:
-        async with sem, session.get(room_url, headers=headers, timeout=15) as response:
+        async with sem, session.get(room_url, headers=headers, timeout=maxTimeout) as response:
             if response.status == 200:
                 return await response.text()
             else:
                 return None
 
 
-async def fetch_real_url(session, url, headers, sem):
+async def fetch_real_url(session, url, headers, sem, mintimeout, maxTimeout):
     try:
-        async with sem, session.get(url, headers=headers, timeout=5) as response:
+        async with sem, session.get(url, headers=headers, timeout=mintimeout) as response:
             if response.status == 200:
                 return await response.text()
             else:
                 return None
     except asyncio.TimeoutError:
-        async with sem, session.get(url, headers=headers, timeout=15) as response:
+        async with sem, session.get(url, headers=headers, timeout=maxTimeout) as response:
             if response.status == 200:
                 return await response.text()
             else:
@@ -6669,18 +6688,21 @@ async def fetch_real_url(session, url, headers, sem):
 cim_headers_YY = CIMultiDict(headers_YY)
 
 
-async def grab4(session, id, m3u_dict, sem):
+async def grab4(session, id, m3u_dict, sem, mintimeout, maxTimeout):
     try:
         headers_YY['referer'] = f'https://wap.yy.com/mobileweb/{id}'
         real_lists = []
         real_dict = {}
         arr = []
         room_url = f'https://interface.yy.com/hls/new/get/{id}/{id}/1200?source=wapyy&callback='
-        res_text = await fetch_room_url(session, room_url, headers_YY, sem)
+        res_text = await fetch_room_url(session, room_url, headers_YY, sem, mintimeout, maxTimeout)
         if not res_text:
-            room_id = await room_id_(session, id, sem)
+            try:
+                room_id = await room_id_(session, id, sem, mintimeout, maxTimeout)
+            except Exception as e:
+                return
             room_url = f'https://interface.yy.com/hls/new/get/{room_id}/{room_id}/1200?source=wapyy&callback='
-            res_text = await fetch_room_url(session, room_url, headers_YY, sem)
+            res_text = await fetch_room_url(session, room_url, headers_YY, sem, mintimeout, maxTimeout)
         if res_text:
             data = json.loads(res_text[1:-1])
             if data.get('hls', 0):
@@ -6688,7 +6710,9 @@ async def grab4(session, id, m3u_dict, sem):
                 xv = data['video']
                 xv = re.sub(r'_0_\d+_0', '_0_0_0', xv)
                 url = f'https://interface.yy.com/hls/get/stream/15013/{xv}/15013/{xa}?source=h5player&type=m3u8'
-                res_json = await  fetch_real_url(session, url, cim_headers_YY, sem)
+                res_json = await  fetch_real_url(session, url, cim_headers_YY, sem, mintimeout, maxTimeout)
+                if not res_json:
+                    return
                 res_json = json.loads(res_json)
                 # 取画质最高的
                 if res_json and res_json.get('hls', 0):
@@ -6699,7 +6723,8 @@ async def grab4(session, id, m3u_dict, sem):
                 tasks = []
                 for real_ in real_lists:
                     for key, value in real_.items():
-                        task = asyncio.ensure_future(pingM3u(session, value, real_dict, key, sem))
+                        task = asyncio.ensure_future(
+                            pingM3u(session, value, real_dict, key, sem, mintimeout, maxTimeout))
                         tasks.append(task)
                 await asyncio.gather(*tasks)
                 if real_dict:
@@ -6722,7 +6747,7 @@ async def grab4(session, id, m3u_dict, sem):
         print(f"YY An error occurred while processing {id}. Error: {e}")
 
 
-async def grab3(session, id, m3u_dict, sem):
+async def grab3(session, id, m3u_dict, sem, mintimeout, maxTimeout):
     try:
         param = {
             'id': id
@@ -6732,10 +6757,12 @@ async def grab3(session, id, m3u_dict, sem):
         arr = []
         huya_room_url = 'https://m.huya.com/{}'.format(id)
         try:
-            async with sem, session.get(huya_room_url, headers=cim_headers_huya, params=param, timeout=5) as response:
+            async with sem, session.get(huya_room_url, headers=cim_headers_huya, params=param,
+                                        timeout=mintimeout) as response:
                 res = await response.text()
         except asyncio.TimeoutError:
-            async with sem, session.get(huya_room_url, headers=cim_headers_huya, params=param, timeout=15) as response:
+            async with sem, session.get(huya_room_url, headers=cim_headers_huya, params=param,
+                                        timeout=maxTimeout) as response:
                 res = await response.text()
         liveLineUrl = re.findall(r'"liveLineUrl":"([\s\S]*?)",', res)[0]
         liveline = base64.b64decode(liveLineUrl).decode('utf-8')
@@ -6746,11 +6773,11 @@ async def grab3(session, id, m3u_dict, sem):
                 liveline = huya_live(liveline)
                 real_url = ("https:" + liveline).replace("hls", "flv").replace("m3u8", "flv").replace(
                     '&ctype=tars_mobile', '')
-                rate = [10000]
+                rate = [10000, 8000, 4000]
                 # rate = [10000, 8000, 4000, 2000, 500]
                 arr.append(f'flv_10000')
-                # arr.append(f'flv_8000')
-                # arr.append(f'flv_4000')
+                arr.append(f'flv_8000')
+                arr.append(f'flv_4000')
                 # arr.append(f'flv_2000')
                 # arr.append(f'flv_500')
                 for ratio in range(len(rate) - 1, -1, -1):
@@ -6766,7 +6793,8 @@ async def grab3(session, id, m3u_dict, sem):
                 tasks = []
                 for real_ in real_lists:
                     for key, value in real_.items():
-                        task = asyncio.ensure_future(pingM3u(session, value, real_dict, key, sem))
+                        task = asyncio.ensure_future(
+                            pingM3u(session, value, real_dict, key, sem, mintimeout, maxTimeout))
                         tasks.append(task)
                 await asyncio.gather(*tasks)
                 if real_dict:
@@ -6789,14 +6817,14 @@ async def grab3(session, id, m3u_dict, sem):
         print(f"huya An error occurred while processing {id}. Error: {e}")
 
 
-async def download_files4_single(ids):
+async def download_files4_single(ids, mintimeout, maxTimeout):
     m3u_dict = {}
     try:
-        sem = asyncio.Semaphore(200)  # 限制TCP连接的数量为100个
+        sem = asyncio.Semaphore(1000)  # 限制TCP连接的数量为100个
         async with aiohttp.ClientSession() as session:
             tasks = []
             for id in ids:
-                task = asyncio.ensure_future(grab(session, id, m3u_dict, sem))
+                task = asyncio.ensure_future(grab(session, id, m3u_dict, sem, mintimeout, maxTimeout))
                 tasks.append(task)
             await asyncio.gather(*tasks)
     except (aiohttp.ClientError, asyncio.TimeoutError) as e:
@@ -6806,12 +6834,14 @@ async def download_files4_single(ids):
 
 async def download_files4():
     global redisKeyYoutube
+    mintimeout = int(getFileNameByTagName('minTimeout'))
+    maxTimeout = int(getFileNameByTagName('maxTimeout'))
     ids = redisKeyYoutube.keys()
-    m3u_dict = await download_files4_single(ids)
+    m3u_dict = await download_files4_single(ids, mintimeout, maxTimeout)
     left_dict = {k: v for k, v in redisKeyYoutube.items() if k not in m3u_dict}
     if len(left_dict) == 0:
         return m3u_dict
-    m3u_dict2 = await download_files4_single(left_dict.keys())
+    m3u_dict2 = await download_files4_single(left_dict.keys(), mintimeout, maxTimeout)
     if len(m3u_dict2) > 0:
         m3u_dict.update(m3u_dict2)
     return m3u_dict
@@ -6820,12 +6850,12 @@ async def download_files4():
 youtubeUrl = 'https://www.youtube.com/watch?v='
 
 
-async def get_resolution(session, liveurl, sem):
+async def get_resolution(session, liveurl, sem, mintimeout, maxTimeout):
     try:
-        async with sem, session.get(liveurl, timeout=5) as response:
+        async with sem, session.get(liveurl, timeout=mintimeout) as response:
             playlist_text = await response.text()
     except asyncio.TimeoutError:
-        async with sem, session.get(liveurl, timeout=15) as response:
+        async with sem, session.get(liveurl, timeout=maxTimeout) as response:
             playlist_text = await response.text()
     playlist = m3u8.loads(playlist_text)
     playlists = playlist.playlists
@@ -6840,19 +6870,19 @@ async def get_resolution(session, liveurl, sem):
     return highest_resolution
 
 
-async def grab(session, id, m3u_dict, sem):
+async def grab(session, id, m3u_dict, sem, mintimeout, maxTimeout):
     try:
         url = youtubeUrl + id
         try:
-            async with sem, session.get(url, timeout=5) as response:
+            async with sem, session.get(url, timeout=mintimeout) as response:
                 content = await response.text()
                 if '.m3u8' not in content:
-                    async with sem, session.get(url, timeout=15) as response2:
+                    async with sem, session.get(url, timeout=maxTimeout) as response2:
                         content = await response2.text()
                         if '.m3u8' not in content:
                             return
         except asyncio.TimeoutError:
-            async with sem, session.get(url, timeout=15) as response:
+            async with sem, session.get(url, timeout=maxTimeout) as response:
                 content = await response.text()
                 if '.m3u8' not in content:
                     return
@@ -6866,7 +6896,7 @@ async def grab(session, id, m3u_dict, sem):
                 start = link.find('https://')
                 end = link.find('.m3u8') + 5
 
-                resolution = await get_resolution(session, link[start: end], sem)
+                resolution = await get_resolution(session, link[start: end], sem, mintimeout, maxTimeout)
                 if resolution and resolution > highest_resolution:
                     highest_quality_link = link[start: end]
                     highest_resolution = resolution
@@ -7480,6 +7510,18 @@ def removem3ulinks28():
     return "success"
 
 
+# 删除全部webdav直播源切片
+@app.route('/api/removem3ulinks282', methods=['GET'])
+def removem3ulinks282():
+    try:
+        cleanup('nope')
+        # 没人看推流了，安全起见，删除全部其他切片
+        safe_delete_ts('nope')
+    except:
+        pass
+    return "success"
+
+
 # 删除全部简易DNS白名单
 @app.route('/api/removem3ulinks12', methods=['GET'])
 def removem3ulinks12():
@@ -7730,16 +7772,16 @@ def thread_webdav_m3u_killer(second):
         # 最近一次uuid
         uuid = recordPath['past']
         # 超过1分钟没有人访问切片，干掉最近访问uuid之外所有切片数据
-        if now - lastTsTime > TS_ALIVE_TIME and uuid != 'nope':
+        if (now - lastTsTime) > (TS_ALIVE_TIME * 18) and uuid != 'nope':
             cleanup(uuid)
             # 没人看推流了，安全起见，删除全部其他切片
             safe_delete_ts(uuid)
-        # 干掉当前正在观看的视频里已经访问过的ts文件，特征是超过1分钟
+        # 干掉当前正在观看的视频里已经访问过的ts文件，特征是超过2分钟
         removeList = []
         for tsfile, timesec in ts_dict.items():
             if tsfile == mark:
                 continue
-            if now - timesec > TS_ALIVE_TIME * 9:
+            if (now - timesec) > (TS_ALIVE_TIME * 15):
                 removeList.append(tsfile)
         safe_delete_single_ts(removeList)
         # 已经过期的ts文件，真正被删除掉的

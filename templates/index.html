@@ -333,7 +333,7 @@
     </label>
     <label>
         <input type="radio" name="page" id="page17">
-        <span>主机ip</span>
+        <span>系统配置</span>
     </label>
     <label>
         <input type="radio" name="page" id="page18">
@@ -542,13 +542,11 @@
         <div style="float: left;width: 70%">
             <h3>后台默认24小时自动执行生成操作</h3>
             <h3>超融合白名单订阅地址:参考M3U格式</h3>
-            <h3 class="urllink">停止生成adguardhome:http://192.168.5.1:22771/secret/B.txt</h3>
             <h3 class="urllink">dnsmasq-无加密:http://192.168.5.1:22771/secret/whiteListDnsmasq.conf</h3>
             <h3 class="urllink">dnsmasq-加密:http://192.168.5.1:22771/url/whiteListDnsmasqSecret.txt</h3>
             <h3 class="urllink">whitelist-无加密:http://192.168.5.1:22771/secret/whiteListDomian.txt</h3>
             <h3 class="urllink">whitelist-加密:http://192.168.5.1:22771/url/whiteListDomianSecret.txt</h3>
             <h3 class="urllink">whitelist-openclash第三方直连规则-无加密:http://192.168.5.1:22771/secret/whitelistDirectRule.txt</h3>
-            <h3 class="urllink">停止生成domain:http://192.168.5.1:22771/secret/WhiteDomain.txt</h3>
             <h3 >上传文件导入合并白名单订阅</h3>
         </div>
         <div style="width:100%">
@@ -586,7 +584,6 @@
         <div style="float: left;width: 70%">
             <h3>后台默认24小时自动执行生成操作</h3>
             <h3>超融合Adguardhome黑名单订阅地址:</h3>
-            <h3 class="urllink">停止生成:http://192.168.5.1:22771/secret/C.txt</h3>
             <h3 class="urllink">黑名单-OP-无加密:http://192.168.5.1:22771/secret/openclashFallbackFilterDomain.conf</h3>
             <h3 class="urllink">黑名单-OP-加密:http://192.168.5.1:22771/url/openclashFallbackFilterDomainSecret.txt</h3>
             <h3 class="urllink">黑名单-无加密:http://192.168.5.1:22771/secret/blackListDomain.txt</h3>
@@ -1166,13 +1163,28 @@
         </div>
     </div>
     <div id="page17" style="display: none;">
-        <h1>主机ip</h1>
+        <h1>系统配置</h1>
         <div style="float: left;width: 70%">
             <h3>设置主机ip，动态改变下载链接,ip如果不对可以自己调整</h3>
         </div>
         <div style="width:100%">
             <input type="text" id="iptext" class="stubboninput"/>
             <button id="changeip" onclick="changeIP()" class="stubbonsave">修改</button>
+        </div>
+
+        <div style="display: flex;width: 100%;">
+            斗鱼、哔哩哔哩、虎牙、YY、Youtube直播源超时最小值(秒)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="minTimeout" class="stubboninput" placeholder="minTimeout"/>
+            <button onclick="changeFileName('minTimeout', 'minTimeout', minTimeout)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            斗鱼、哔哩哔哩、虎牙、YY、Youtube直播源超时最大值(秒)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="maxTimeout" class="stubboninput" placeholder="maxTimeout"/>
+            <button onclick="changeFileName('maxTimeout', 'maxTimeout', maxTimeout)" class="stubbonsave">修改</button>
         </div>
     </div>
     <div id="page18" style="display: none;">
@@ -1979,6 +1991,11 @@
             <button id="removem3ulinks28" class="button removeallSubscriber"
                     onclick="removelinksBase('/api/removem3ulinks28')">删除全部子目录
             </button>
+            <br>
+            <button style="margin-right:5px " id="removem3ulinks282" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks282')">删除全部切片
+            </button>
+            <br>
             <div style="display: flex;width: 100%;">
                 <div class="notice" style="display: flex;width: 80%;">订阅来源:webdav直播子目录(不包括视频文件本身) +频道分组名字(举例子:游戏王5DS,这一行配置代表全部游戏王5DS的直播源)
                 </div>
@@ -2177,6 +2194,8 @@
     // 输入框显示webdav密码
     const webdavPassM3u = document.getElementById('webdavPassM3u');
 
+    const minTimeout = document.getElementById('minTimeout');
+    const maxTimeout = document.getElementById('maxTimeout');
 
     const allM3u = document.getElementById('allM3u');
     const allM3uSecret = document.getElementById('allM3uSecret');
@@ -3940,6 +3959,9 @@
             getSyncData('agreement', 'lls', 'webdavAgreement', webdavAgreement)
         } else if (selectedPage === pages[15].id) {
             reloadM3uWhiteList()
+        } else if (selectedPage === pages[16].id) {
+            getFileName('minTimeout', 'minTimeout', minTimeout)
+            getFileName('maxTimeout', 'maxTimeout', maxTimeout)
         } else if (selectedPage === pages[17].id) {
             //生成有效M3U
             reloadFunctionOpenButton('switch')
