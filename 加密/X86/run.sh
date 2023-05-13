@@ -2,9 +2,9 @@
 # 启动Redis服务器
 redis-server /etc/redis/redis.conf &
 # 启动Python DNS服务进程
-./dns.exe &
+/app/dns.exe &
 # 启动主Python应用程序进程
-./main.exe &
+/app/main.exe &
 # 启动Nginx
 nginx -g 'daemon off;'
 # just keep this script running

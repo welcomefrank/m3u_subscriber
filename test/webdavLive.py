@@ -3,7 +3,7 @@ import urllib
 import requests
 from xml.etree import ElementTree
 
-url = 'http://192.168.5.1:5244/dav/阿里云盘'
+url = 'https://pan.ichuguang.com/'
 username = 'pi'
 password = 'wanjun310'
 encoded_url = urllib.parse.quote(url, safe=':/')
