@@ -1218,15 +1218,6 @@
                     class="stubbonsave">修改
             </button>
         </div>
-        <div style="display: flex;width: 100%;">
-            webdav/alist直播源检查单个切片文件是否存在最大检测时长(秒)
-        </div>
-        <div style="width:100%">
-            <input type="text" id="maxTimeoutTsAlive" class="stubboninput" placeholder="30"/>
-            <button onclick="changeFileName('maxTimeoutTsAlive', 'maxTimeoutTsAlive', maxTimeoutTsAlive)"
-                    class="stubbonsave">修改
-            </button>
-        </div>
 
         <div style="display: flex;width: 100%;">
             webdav/alist直播源检查单个切片文件是否没有被占用(正在写入)最大检测时长(秒)
@@ -2304,7 +2295,6 @@
     const maxTimeoutIgnoreLastUUID = document.getElementById('maxTimeoutIgnoreLastUUID');
     const maxTimeoutIgnoreAllUUID = document.getElementById('maxTimeoutIgnoreAllUUID');
     const maxTimeoutTsSeen = document.getElementById('maxTimeoutTsSeen');
-    const maxTimeoutTsAlive = document.getElementById('maxTimeoutTsAlive');
     const maxTimeoutTsFree = document.getElementById('maxTimeoutTsFree');
     const maxTimeoutM3u8Free = document.getElementById('maxTimeoutM3u8Free');
 
@@ -4105,11 +4095,8 @@
             getFileName('maxTimeoutIgnoreLastUUID', 'maxTimeoutIgnoreLastUUID', maxTimeoutIgnoreLastUUID)
             getFileName('maxTimeoutIgnoreAllUUID', 'maxTimeoutIgnoreAllUUID', maxTimeoutIgnoreAllUUID)
             getFileName('maxTimeoutTsSeen', 'maxTimeoutTsSeen', maxTimeoutTsSeen)
-            getFileName('maxTimeoutTsAlive', 'maxTimeoutTsAlive', maxTimeoutTsAlive)
             getFileName('maxTimeoutTsFree', 'maxTimeoutTsFree', maxTimeoutTsFree)
             getFileName('maxTimeoutM3u8Free', 'maxTimeoutM3u8Free', maxTimeoutM3u8Free)
-
-
         } else if (selectedPage === pages[17].id) {
             //生成有效M3U
             reloadFunctionOpenButton('switch')
