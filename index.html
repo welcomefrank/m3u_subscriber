@@ -395,6 +395,10 @@
         <input type="radio" name="page" id="page32">
         <span>Douyu直播源</span>
     </label>
+    <label>
+        <input type="radio" name="page" id="page33">
+        <span>Alist直播源</span>
+    </label>
 </div>
 <div id="choice">
     <div id="page1" style="display: block;">
@@ -1185,6 +1189,63 @@
         <div style="width:100%">
             <input type="text" id="maxTimeout" class="stubboninput" placeholder="maxTimeout"/>
             <button onclick="changeFileName('maxTimeout', 'maxTimeout', maxTimeout)" class="stubbonsave">修改</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            webdav/alist直播超过时限没有人访问切片数据，干掉最近访问uuid之外所有切片数据(秒)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="maxTimeoutIgnoreLastUUID" class="stubboninput" placeholder="300"/>
+            <button onclick="changeFileName('maxTimeoutIgnoreLastUUID', 'maxTimeoutIgnoreLastUUID', maxTimeoutIgnoreLastUUID)"
+                    class="stubbonsave">修改
+            </button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            webdav/alist直播超过时限没有人访问切片数据，干掉全部切片数据(秒)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="maxTimeoutIgnoreAllUUID" class="stubboninput" placeholder="3600"/>
+            <button onclick="changeFileName('maxTimeoutIgnoreAllUUID', 'maxTimeoutIgnoreAllUUID', maxTimeoutIgnoreAllUUID)"
+                    class="stubbonsave">修改
+            </button>
+        </div>
+
+        <div style="display: flex;width: 100%;">
+            webdav/alist直播源已经看过的切片数据保留时间(秒)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="maxTimeoutTsSeen" class="stubboninput" placeholder="300"/>
+            <button onclick="changeFileName('maxTimeoutTsSeen', 'maxTimeoutTsSeen', maxTimeoutTsSeen)"
+                    class="stubbonsave">修改
+            </button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            webdav/alist直播源检查单个切片文件是否存在最大检测时长(秒)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="maxTimeoutTsAlive" class="stubboninput" placeholder="30"/>
+            <button onclick="changeFileName('maxTimeoutTsAlive', 'maxTimeoutTsAlive', maxTimeoutTsAlive)"
+                    class="stubbonsave">修改
+            </button>
+        </div>
+
+        <div style="display: flex;width: 100%;">
+            webdav/alist直播源检查单个切片文件是否没有被占用(正在写入)最大检测时长(秒)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="maxTimeoutTsFree" class="stubboninput" placeholder="300"/>
+            <button onclick="changeFileName('maxTimeoutTsFree', 'maxTimeoutTsFree', maxTimeoutTsFree)"
+                    class="stubbonsave">修改
+            </button>
+        </div>
+
+        <div style="display: flex;width: 100%;">
+            webdav/alist直播源检查单个直播源m3u8文件是否没有被占用(正在写入)最大检测时长(秒)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="maxTimeoutM3u8Free" class="stubboninput" placeholder="300"/>
+            <button onclick="changeFileName('maxTimeoutM3u8Free', 'maxTimeoutM3u8Free', maxTimeoutM3u8Free)"
+                    class="stubbonsave">修改
+            </button>
         </div>
     </div>
     <div id="page18" style="display: none;">
@@ -2008,6 +2069,7 @@
         </div>
     </div>
 
+
     <div id="page32" style="display: none;">
         <h1>Douyu直播源</h1>
         <div style="float: left;width: 70%">
@@ -2045,6 +2107,49 @@
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
             <table id="input-table29" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="page33" style="display: none;">
+        <h1>Alist直播源</h1>
+        <div style="float: left;width: 70%">
+            <h3>暂时不开启定时任务</h3>
+            <h3>超融合Alist订阅地址:参考m3u格式</h3>
+            <h3 class="urllink">alist-无加密:http://192.168.5.1:22771/secret/alist.m3u</h3>
+            <h3>上传文件导入合并Alist订阅</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn30" class="uploadjsonbtn" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row30" class="addNewSubscriber" style="width:100%">新增Alist直播频道</button>
+            </div>
+            <div>
+                <button class="button stepflag" onclick="execute30()" style="width: 100%">生成Alist超融合订阅
+                </button>
+            </div>
+            <div>
+                <button id="download-json-btn30" class="button download-json-btn" style="width: 100%">
+                    导出Alist订阅备份
+                </button>
+            </div>
+            <div style="width: 97%;">
+                <input type="text" id="searchInput30" placeholder="搜索框" class="searchbox"
+                       style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks30" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks30')">删除全部订阅
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:Alist网址+网址备注
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table30" style="width:100%">
                 <tbody style="width:100%">
                 </tbody>
             </table>
@@ -2196,6 +2301,14 @@
 
     const minTimeout = document.getElementById('minTimeout');
     const maxTimeout = document.getElementById('maxTimeout');
+    const maxTimeoutIgnoreLastUUID = document.getElementById('maxTimeoutIgnoreLastUUID');
+    const maxTimeoutIgnoreAllUUID = document.getElementById('maxTimeoutIgnoreAllUUID');
+    const maxTimeoutTsSeen = document.getElementById('maxTimeoutTsSeen');
+    const maxTimeoutTsAlive = document.getElementById('maxTimeoutTsAlive');
+    const maxTimeoutTsFree = document.getElementById('maxTimeoutTsFree');
+    const maxTimeoutM3u8Free = document.getElementById('maxTimeoutM3u8Free');
+
+
 
     const allM3u = document.getElementById('allM3u');
     const allM3uSecret = document.getElementById('allM3uSecret');
@@ -2290,6 +2403,11 @@
     const inputTable29 = document.getElementById('input-table29');
     const downloadBtn29 = document.getElementById('download-json-btn29');
 
+    const fileInput30 = document.getElementById('upload-json-btn30');
+    const addRowButton30 = document.getElementById('add-row30');
+    const inputTable30 = document.getElementById('input-table30');
+    const downloadBtn30 = document.getElementById('download-json-btn30');
+
     const fileInput26 = document.getElementById('upload-json-btn26');
     const addRowButton26 = document.getElementById('add-row26');
     const inputTable26 = document.getElementById('input-table26');
@@ -2373,6 +2491,8 @@
     const searchInput28 = document.getElementById('searchInput28');
         // 获取页面元素-douyu直播源
     const searchInput29 = document.getElementById('searchInput29');
+            // 获取页面元素-alist直播源
+    const searchInput30 = document.getElementById('searchInput30');
 
     searchAddListener2(searchInput18,inputTable18)
     searchAddListener2(searchInput17,inputTable17)
@@ -2403,7 +2523,9 @@
     // 给bilibili直播源搜索框绑定'oninput'事件
     searchAddListener(searchInput25,inputTable25)
         // 给douyu直播源搜索框绑定'oninput'事件
-    searchAddListener(searchInput29,inputTable29)
+   searchAddListener(searchInput29,inputTable29)
+            // 给alist直播源搜索框绑定'oninput'事件
+   searchAddListener(searchInput30,inputTable30)
     // 给huya直播源搜索框绑定'oninput'事件
     searchAddListener(searchInput26,inputTable26)
         // 给YY直播源搜索框绑定'oninput'事件
@@ -2576,7 +2698,7 @@
             var tagnamefile = parts2[2]
             var parts3 = tagnamefile.split(".")
             var tagname = parts3[0]
-            if (tagname==='youtube' ||tagname==='bilibili'||tagname==='huya'||tagname==='YY'||tagname==='douyu'||tagname==='webdav' ){
+            if (tagname==='youtube' ||tagname==='bilibili'||tagname==='huya'||tagname==='YY'||tagname==='douyu'||tagname==='webdav'||tagname==='alist' ){
                 elements[i].innerHTML = prefix + "//" + newIp + suffix2 + "/" + tagname + "." + parts3[1];
                 continue
             }
@@ -3084,6 +3206,11 @@
         reloadBase('/api/getall29',  inputTable29)
     }
 
+            //alist直播源-从数据库拉取关键字列表数据
+    function reloadAlistM3U() {
+        reloadBase('/api/getall30',  inputTable30)
+    }
+
     //huya直播源-从数据库拉取关键字列表数据
     function reloadHuyaM3U() {
         reloadBase('/api/getall26',  inputTable26)
@@ -3333,6 +3460,11 @@
         saveInputValuebase(inputValue, name, '/api/addnewm3u29')
     }
 
+            //alist配置
+    function saveInputValue30(inputValue, name) {
+        saveInputValuebase(inputValue, name, '/api/addnewm3u30')
+    }
+
     //huya配置
     function saveInputValue26(inputValue, name) {
         saveInputValuebase(inputValue, name, '/api/addnewm3u26')
@@ -3477,6 +3609,10 @@
     function deleteInputRow29(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u29')
     }
+            //删除alist直播源
+    function deleteInputRow30(row, inputValue) {
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u30')
+    }
     //删除huya直播源
     function deleteInputRow26(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u26')
@@ -3567,6 +3703,8 @@
     inputableAddEventListener(inputTable25,  'saveInputValue25', 'deleteInputRow25')
         //douyu直播源
     inputableAddEventListener(inputTable29,  'saveInputValue29', 'deleteInputRow29')
+            //alist直播源
+    inputableAddEventListener(inputTable30,  'saveInputValue30', 'deleteInputRow30')
     //huya直播源
     inputableAddEventListener(inputTable26,  'saveInputValue26', 'deleteInputRow26')
         //YY直播源
@@ -3668,6 +3806,8 @@
     fileInputAddEventListenerBase(fileInput25, '/api/upload_json_file25')
         //douyu直播源-导入json配置
     fileInputAddEventListenerBase(fileInput29, '/api/upload_json_file29')
+            //alist直播源-导入json配置
+    fileInputAddEventListenerBase(fileInput30, '/api/upload_json_file30')
     //huya直播源-导入json配置
     fileInputAddEventListenerBase(fileInput26, '/api/upload_json_file26')
         //YY直播源-导入json配置
@@ -3962,6 +4102,14 @@
         } else if (selectedPage === pages[16].id) {
             getFileName('minTimeout', 'minTimeout', minTimeout)
             getFileName('maxTimeout', 'maxTimeout', maxTimeout)
+            getFileName('maxTimeoutIgnoreLastUUID', 'maxTimeoutIgnoreLastUUID', maxTimeoutIgnoreLastUUID)
+            getFileName('maxTimeoutIgnoreAllUUID', 'maxTimeoutIgnoreAllUUID', maxTimeoutIgnoreAllUUID)
+            getFileName('maxTimeoutTsSeen', 'maxTimeoutTsSeen', maxTimeoutTsSeen)
+            getFileName('maxTimeoutTsAlive', 'maxTimeoutTsAlive', maxTimeoutTsAlive)
+            getFileName('maxTimeoutTsFree', 'maxTimeoutTsFree', maxTimeoutTsFree)
+            getFileName('maxTimeoutM3u8Free', 'maxTimeoutM3u8Free', maxTimeoutM3u8Free)
+
+
         } else if (selectedPage === pages[17].id) {
             //生成有效M3U
             reloadFunctionOpenButton('switch')
@@ -4060,10 +4208,13 @@
             getSyncData('username', 'm3u', 'webdavUsernameM3u', webdavUsernameM3u)
             getSyncData('password', 'm3u', 'webdavPassM3u', webdavPassM3u)
             reloadWebdavM3U()
-        } else if (selectedPage === pages[31].id) {
+        }
+        else if (selectedPage === pages[31].id) {
             reloadDouyuM3U()
         }
-
+        else if (selectedPage === pages[32].id) {
+            reloadAlistM3U()
+        }
         if (selectedPage !== pages[1].id) {
             window.removeEventListener('scroll', handleScroll);
         }
@@ -4122,6 +4273,8 @@
     downloadBtnAddEventListenerBase(downloadBtn25, '/api/download_json_file25', 'temp_bilibili_m3u.json')
         // douyu直播源-导出订阅json配置
     downloadBtnAddEventListenerBase(downloadBtn29, '/api/download_json_file29', 'temp_douyu_m3u.json')
+            // alist直播源-导出订阅json配置
+    downloadBtnAddEventListenerBase(downloadBtn30, '/api/download_json_file30', 'temp_alist_m3u.json')
     // huya直播源-导出订阅json配置
     downloadBtnAddEventListenerBase(downloadBtn26, '/api/download_json_file26', 'temp_huya_m3u.json')
         // YY直播源-导出订阅json配置
@@ -4202,6 +4355,8 @@
     addRowButtonAddEventListener(addRowButton25, inputTable25)
         //douyu直播源-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton29, inputTable29)
+            //alist直播源-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton30, inputTable30)
     //huya直播源-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton26, inputTable26)
         //YY直播源-只添加一行列表，不存储数据
@@ -4367,6 +4522,11 @@
         //超融合-douyu直播源生成
     function execute29() {
         executeBase('/api/chaoronghe29')
+    }
+
+            //超融合-alist直播源生成
+    function execute30() {
+        executeBase('/api/chaoronghe30')
     }
 
        //超融合-huya直播源生成

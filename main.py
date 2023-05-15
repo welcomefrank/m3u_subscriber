@@ -1,6 +1,7 @@
 import abc
 import asyncio
 import base64
+import multiprocessing
 import secrets
 import string
 import concurrent
@@ -36,7 +37,7 @@ import time
 from urllib.parse import urlparse, quote
 # import yaml
 from flask import Flask, jsonify, request, send_file, render_template, send_from_directory, redirect, \
-    after_this_request, Response
+    after_this_request, Response, current_app
 
 import chardet
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -151,7 +152,9 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'whitelistDirectRule': 'whitelistDirectRule', 'blacklistProxyRule': 'blacklistProxyRule',
                   'simpleOpenclashFallBackFilterDomain': 'simpleOpenclashFallBackFilterDomain',
                   'simpleblacklistProxyRule': 'simpleblacklistProxyRule', 'simpleDnsmasq': 'simpleDnsmasq',
-                  'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30'}
+                  'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
+                  'maxTimeoutIgnoreLastUUID': '300', 'maxTimeoutIgnoreAllUUID': '3600', 'maxTimeoutTsSeen': '300'
+    , 'maxTimeoutTsAlive': '30', 'maxTimeoutTsFree': '300', 'maxTimeoutM3u8Free': '300'}
 
 # 单独导入导出使用一个配置,需特殊处理:{{url:{pass,name}}}
 # 下载网络配置并且加密后上传:url+加密密钥+加密文件名字
@@ -189,6 +192,19 @@ REDIS_KEY_DOUYU_M3U = 'redisKeyDouyuM3u'
 # douyu频道名字,真实m3u8地址
 redisKeyDouyuM3u = {}
 
+# alist直播源
+REDIS_KEY_ALIST = 'redisKeyAlist'
+# alist直播源网站地址，网站名字
+redisKeyAlist = {}
+# alist真实m3u8地址
+REDIS_KEY_Alist_M3U = 'redisKeyAlistM3u'
+# alist uuid,真实m3u8地址
+redisKeyAlistM3u = {}
+# alist视频格式
+REDIS_KEY_Alist_M3U_TYPE = 'redisKeyAlistM3uType'
+# alist uuid,视频格式
+redisKeyAlistM3uType = {}
+
 # huya直播源
 REDIS_KEY_HUYA = 'redisKeyHuya'
 # huya直播源地址，频道名字
@@ -212,8 +228,13 @@ redisKeyWebDavM3u = {'url': '', 'username': '', 'password': ''}
 
 # webdav直播源真实地址
 REDIS_KEY_WEBDAV_M3U_DICT_RAW = 'redisKeyWebdavM3uDictRaw'
-# webdav名字，真实地址
+# uuid,真实url
 true_webdav_m3u_dict_raw = {}
+# webdav视频格式
+REDIS_KEY_webdav_M3U_TYPE = 'redisKeyWebdavM3uType'
+# webdav uuid,视频格式
+redisKeyWebdavM3uType = {}
+
 # webdav路径备份
 REDIS_KEY_WEBDAV_PATH_LIST = 'redisKeyWebdavPathList'
 # 路径，备注
@@ -244,7 +265,7 @@ allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_
 # 数据巨大的redis配置,一键导出时单独导出每个配置
 hugeDataList = [REDIS_KEY_BILIBILI, REDIS_KEY_DNS_SIMPLE_WHITELIST, REDIS_KEY_DNS_SIMPLE_BLACKLIST, REDIS_KEY_YOUTUBE,
                 REDIS_KEY_M3U_WHITELIST_RANK, REDIS_KEY_M3U_BLACKLIST, REDIS_KEY_M3U_WHITELIST, REDIS_KEY_HUYA,
-                REDIS_KEY_YY, REDIS_KEY_WEBDAV_PATH_LIST, REDIS_KEY_DOUYU]
+                REDIS_KEY_YY, REDIS_KEY_WEBDAV_PATH_LIST, REDIS_KEY_DOUYU, REDIS_KEY_ALIST]
 
 SPECIAL_REDIS_KEY = 'specialRedisKey'
 specialRedisKey = [REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME,
@@ -433,56 +454,48 @@ SLICES_DIR_ERR = "/app/slicesErr"
 # 保存正在运行的ffmpeg进程列表
 ffmpeg_processes = {}
 
+# 创建一个共享变量用于存储ffmpeg进程对象
+ffmpeg_process = subprocess.Popen(['ffmpeg', '-i', 'input.mp4', 'output.mp4'])
 
-def cleanupExit():
-    global ffmpeg_processes
+
+def start_ffmpeg(cmd):
+    global ffmpeg_process
     try:
-        for paths, process in ffmpeg_processes.items():
+        # 启动ffmpeg进程并将其存储到共享字典中
+        ffmpeg_process = subprocess.Popen(cmd, stdin=subprocess.PIPE, shell=True)
+    except Exception as e:
+        print(e)
+        stop_ffmpeg()
+        pass
+
+
+def stop_ffmpeg():
+    global ffmpeg_process
+    try:
+        if ffmpeg_process:
+            # 强制结束任务
+            ffmpeg_process.stdin.write(b'q')
+            # 杀掉进程，不一定成功
+            ffmpeg_process.kill()
             try:
-                os.kill(process.pid, signal.SIGTERM)
+                # 立即杀死进程
+                os.kill(ffmpeg_process.pid, signal.SIGKILL)
             except Exception as e:
                 pass
-        # 等待一段时间，让进程有机会终止
-        time.sleep(5)
-        for paths, process in ffmpeg_processes.items():
-            try:
-                os.kill(process.pid, signal.SIGKILL)
-            except Exception as e:
-                pass
-        ffmpeg_processes.clear()
     except Exception as e:
         print(e)
         pass
+
+
+def cleanupExit():
+    stop_ffmpeg()
 
 
 # 注册一个回调函数，在应用程序退出时杀死所有正在运行的ffmpeg进程
 def cleanup(uuid):
-    # uuid,进程id
     global ffmpeg_processes
-    try:
-        pid = -999
-        for paths, process in ffmpeg_processes.items():
-            if uuid == paths:
-                pid = process
-                continue
-            try:
-                os.kill(process.pid, signal.SIGTERM)
-            except Exception as e:
-                pass
-        # 等待一段时间，让进程有机会终止
-        time.sleep(5)
-        for paths, process in ffmpeg_processes.items():
-            if uuid == paths:
-                continue
-            try:
-                os.kill(process.pid, signal.SIGKILL)
-            except Exception as e:
-                pass
-        if pid != -999:
-            ffmpeg_processes = {key: value for key, value in ffmpeg_processes.items() if key == uuid}
-    except Exception as e:
-        print(e)
-        pass
+    stop_ffmpeg()
+    ffmpeg_processes = {key: value for key, value in ffmpeg_processes.items() if key == uuid}
 
 
 # 确保销毁ffmpeg
@@ -593,7 +606,7 @@ def checkAndRemovePastData(uuid):
             safe_delete_ts(uuid)
         except Exception as e:
             pass
-    recordPath['past'] = uuid
+        recordPath['past'] = uuid
 
 
 # 删除异常文件夹
@@ -603,13 +616,90 @@ def deletePathAndRebuild():
             shutil.rmtree(SLICES_DIR_ERR)
         os.makedirs(SLICES_DIR_ERR)
     except Exception as e:
-        print(e)
+        # print(e)
         pass
 
 
 slice_path_fail_default = os.path.join('/app/secret', f"none.ts")
 # mp4
-headers_default = {'Content-Type': 'application/vnd.apple.mpegurl'}
+headers_default = {'Content-Type': 'application/vnd.apple.mpegurl',
+
+                   'Expect': '100-continue',
+                   'Connection': 'Keep-Alive'
+                   }
+headers_default_mp4 = {
+    'Content-Type': 'video/mp4',
+    'Transfer-Encoding': 'chunked',
+    'Expect': '100-continue',
+    'Connection': 'Keep-Alive',
+}
+headers_default_mkv = {
+    'Content-Type': 'video/x-matroska',
+    'Transfer-Encoding': 'chunked',
+    'Expect': '100-continue',
+    'Connection': 'Keep-Alive',
+}
+headers_default_avi = {
+    'Content-Type': 'video/x-msvideo',
+    'Transfer-Encoding': 'chunked',
+    'Expect': '100-continue',
+    'Connection': 'Keep-Alive',
+}
+headers_default_rmvb = {
+    'Content-Type': 'application/vnd.rn-realmedia-vbr',
+    'Transfer-Encoding': 'chunked',
+    'Expect': '100-continue',
+    'Connection': 'Keep-Alive',
+}
+headers_default_rm = {
+    'Content-Type': 'application/vnd.rn-realmedia',
+    'Transfer-Encoding': 'chunked',
+    'Expect': '100-continue',
+    'Connection': 'Keep-Alive',
+}
+headers_default_mov = {
+    'Content-Type': 'video/quicktime',
+    'Transfer-Encoding': 'chunked',
+    'Expect': '100-continue',
+    'Connection': 'Keep-Alive',
+}
+headers_default_mpg = {
+    'Content-Type': 'video/mpeg',
+    'Transfer-Encoding': 'chunked',
+    'Expect': '100-continue',
+    'Connection': 'Keep-Alive',
+}
+headers_default_wmv = {
+    'Content-Type': 'video/x-ms-wmv',
+    'Transfer-Encoding': 'chunked',
+    'Expect': '100-continue',
+    'Connection': 'Keep-Alive',
+}
+headers_default_m4v = {
+    'Content-Type': 'video/x-m4v',
+    'Transfer-Encoding': 'chunked',
+    'Expect': '100-continue',
+    'Connection': 'Keep-Alive',
+}
+headers_default_mpeg = {
+    'Content-Type': 'video/mpeg',
+    'Transfer-Encoding': 'chunked',
+    'Expect': '100-continue',
+    'Connection': 'Keep-Alive',
+}
+headers_default_3gp = {
+    'Content-Type': 'video/3gpp',
+    'Transfer-Encoding': 'chunked',
+    'Expect': '100-continue',
+    'Connection': 'Keep-Alive',
+}
+headers_default_ts = {
+    'Content-Type': 'video/mp2t',
+    'Transfer-Encoding': 'chunked',
+    'Expect': '100-continue',
+    'Connection': 'Keep-Alive',
+}
+
 default_video_prefix = 'http://127.0.0.1:5000/videos/'
 default_video_prefix_encode = default_video_prefix.encode()
 default_video_prefix_fail = 'http://127.0.0.1:5000/videosfail/'
@@ -617,10 +707,15 @@ default_video_prefix_fail = 'http://127.0.0.1:5000/videosfail/'
 fail_m3u8 = f'#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-ALLOW-CACHE:YES\n#EXT-X-TARGETDURATION:19\n#EXTINF:18.160000,\n {default_video_prefix_fail}none.ts\n#EXT-X-ENDLIST\n'.encode()
 
 
+# lock_m3u8 = threading.Lock()
+
+
 # bug:ffmpeg写m3u8和读取它会产生竞争
 @app.route('/videos/<path:path>.m3u8')
 def video_m3u8(path):
+    # with lock_m3u8:
     global ffmpeg_processes
+    global redisKeyWebdavM3uType
     if path not in true_webdav_m3u_dict_raw.keys():
         # if path not in VIDEO_MAPPING.keys():
         return "Video not found", 404
@@ -634,13 +729,28 @@ def video_m3u8(path):
             encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
             hls_url = getNowWebDavFakeUrl()
             # hls_url = default_video_prefix
-            cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c copy -map 0 -f segment -segment_list {os.path.join(slices_dir, path)}.m3u8 -segment_time 10 -hls_base_url {hls_url} {slices_path}"
-            process = subprocess.Popen(cmd, shell=True)
-            ffmpeg_processes[path] = process
+            try:
+                videoType = redisKeyWebdavM3uType[path]
+            except:
+                videoType = 'mp4'
+                pass
+            if videoType == 'mp4':
+                cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c copy -map 0 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+            elif videoType == 'mkv':
+                cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c copy -map 0:v:0 -map 0:a:0  -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+            elif videoType == 'avi':
+                cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c copy -map 0:v:0 -map 0:a:0  -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+            else:
+                cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c copy -map 0 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+
+            # cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c copy -map 0 -f segment -segment_list {os.path.join(slices_dir, path)}.m3u8 -segment_time 10 -hls_base_url {hls_url} {slices_path}"
+            # process = subprocess.Popen(cmd, shell=True)
             checkAndRemovePastData(path)
+            start_ffmpeg(cmd)
+            ffmpeg_processes[path] = ''
     start_time = time.time()  # 获取当前时间戳
     # isSuccess = False
-    while time.time() - start_time < 10:
+    while time.time() - start_time < 300:
         try:
             # 读取M3U8播放列表文件并返回给客户端
             with open(os.path.join(slices_dir, f"{path}.m3u8"), "rb") as f:
@@ -648,8 +758,62 @@ def video_m3u8(path):
             if len(m3u8_data) > 0:
                 # isSuccess = True
                 break
+            time.sleep(1)
         except Exception as e:
-            print(e)
+            time.sleep(1)
+            # print(e)
+            continue
+    # if not isSuccess:
+    #     return Response(fail_m3u8, headers=headers_default)
+    return Response(m3u8_data, headers=headers_default)
+
+
+@app.route('/alist/<path:path>.m3u8')
+def video_m3u8_alist(path):
+    # with lock_m3u8:
+    global ffmpeg_processes
+    global redisKeyAlistM3uType
+    if path not in redisKeyAlistM3u.keys():
+        return "Video not found", 404
+    slices_dir = os.environ.get('SLICES_DIR', '/app/slices')
+    if path not in ffmpeg_processes.keys():
+        # 使用ffmpeg命令行工具对视频进行实时切片，并生成M3U8格式的播放列表文件
+        slices_path = os.path.join(slices_dir,
+                                   f"{path}_%05d.ts")
+        if not os.path.isfile(slices_path % 1):
+            hls_url = getNowWebDavFakeUrl()
+            # hls_url = default_video_prefix
+            try:
+                videoType = redisKeyAlistM3uType[path]
+            except:
+                videoType = 'mp4'
+                pass
+            if videoType == 'mp4':
+                cmd = f"ffmpeg -i {redisKeyAlistM3u[path]} -c copy -map 0 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+            elif videoType == 'mkv':
+                cmd = f"ffmpeg -i {redisKeyAlistM3u[path]} -c copy -map 0:v:0 -map 0:a:0  -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+            elif videoType == 'avi':
+                cmd = f"ffmpeg -i {redisKeyAlistM3u[path]} -c copy -map 0:v:0 -map 0:a:0  -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+            else:
+                cmd = f"ffmpeg -i {redisKeyAlistM3u[path]} -c copy -map 0 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+            checkAndRemovePastData(path)
+            start_ffmpeg(cmd)
+            ffmpeg_processes[path] = ''
+    maxTimeoutM3u8Free = int(getFileNameByTagName('maxTimeoutM3u8Free'))
+    start_time = time.time()  # 获取当前时间戳
+    # isSuccess = False
+    while time.time() - start_time < maxTimeoutM3u8Free:
+        try:
+            # 读取M3U8播放列表文件并返回给客户端
+            with open(os.path.join(slices_dir, f"{path}.m3u8"), "rb") as f:
+                m3u8_data = f.read()
+            if len(m3u8_data) > 0:
+                # isSuccess = True
+                break
+            time.sleep(1)
+        except Exception as e:
+            time.sleep(1)
+            # print(e)
             continue
     # if not isSuccess:
     #     return Response(fail_m3u8, headers=headers_default)
@@ -712,7 +876,7 @@ def check_ts_jump(path):
         return str11
 
 
-lock = threading.Lock()
+# lock = threading.Lock()
 
 
 # 客户端读表，依据顺序读取ts,
@@ -725,46 +889,50 @@ lock = threading.Lock()
 # 有开头，中间读条没有，跳
 @app.route('/videos/<path:path>.ts')
 def video_ts(path):
-    with lock:
-        # ts前进一次，除了切片和第一次找不到是强制归0
-        path2 = check_ts_jump(path)
-        slice_path = os.path.join(SLICES_DIR, f"{path2}.ts")
-        now = time.time()  # 获取当前时间戳
-        # 检查切片文件是否存在，如果不存在则返回404错误
-        while True:
-            if os.path.isfile(slice_path):
-                break
-                # video_ts(path2)
-        # return video_ts_fail(path)
-        # return video_ts(path2)
-        # 使用Flask的send_file函数将切片文件作为流推送给客户端
-        while time.time() - now < 300:
-            try:
-                # bug预防：判断文件存在但是不确定有没有线程占用，所以多次读取文件判断大小，如果不判断直接发送会导致异常ts流被客户端直接通过造成跳帧现象
-                # 读取M3U8播放列表文件并返回给客户端
-                with open(slice_path, "rb") as f1:
-                    ts_data1 = f1.read()
-                if len(ts_data1) == 0:
-                    continue
-                time.sleep(1)
-                with open(slice_path, "rb") as f2:
-                    ts_data2 = f2.read()
-                if ts_data1 == ts_data2:
-                    time.sleep(1)
-                    with open(slice_path, "rb") as f3:
-                        ts_data3 = f3.read()
-                    if ts_data3 == ts_data2:
-                        break
-            except Exception as e:
-                print(e)
+    # with lock:
+    # ts前进一次，除了切片和第一次找不到是强制归0
+    path2 = check_ts_jump(path)
+    slice_path = os.path.join(SLICES_DIR, f"{path2}.ts")
+    now = time.time()  # 获取当前时间戳
+    maxTimeoutTsAlive = int(getFileNameByTagName('maxTimeoutTsAlive'))
+    # 检查切片文件是否存在，如果不存在则返回404错误
+    while time.time() - now < maxTimeoutTsAlive:
+        if os.path.isfile(slice_path):
+            break
+        time.sleep(1)
+        # video_ts(path2)
+    # return video_ts_fail(path)
+    # return video_ts(path2)
+    # 使用Flask的send_file函数将切片文件作为流推送给客户端
+    maxTimeoutTsFree = int(getFileNameByTagName('maxTimeoutTsFree'))
+    while time.time() - now < maxTimeoutTsFree:
+        try:
+            # bug预防：判断文件存在但是不确定有没有线程占用，所以多次读取文件判断大小，如果不判断直接发送会导致异常ts流被客户端直接通过造成跳帧现象
+            # 读取M3U8播放列表文件并返回给客户端
+            with open(slice_path, "rb") as f1:
+                ts_data1 = f1.read()
+            if len(ts_data1) == 0:
                 continue
-        now = time.time()
-        # 记录当前记录的步骤ts
-        pastTs['past'] = path2
-        ts_dict[slice_path] = now
-        # ts成功时间戳记录
-        ts_dict[mark] = now
-        return send_file(slice_path, mimetype='video/MP2T')
+            time.sleep(1)
+            with open(slice_path, "rb") as f2:
+                ts_data2 = f2.read()
+            if ts_data1 == ts_data2:
+                time.sleep(1)
+                with open(slice_path, "rb") as f3:
+                    ts_data3 = f3.read()
+                if ts_data3 == ts_data2:
+                    break
+        except Exception as e:
+            time.sleep(1)
+            # print(e)
+            continue
+    now = time.time()
+    # 记录当前记录的步骤ts
+    pastTs['past'] = path2
+    ts_dict[slice_path] = now
+    # ts成功时间戳记录
+    ts_dict[mark] = now
+    return send_file(slice_path, mimetype='video/MP2T')
 
 
 @app.route('/videosfail/<path:path>.ts')
@@ -832,7 +1000,10 @@ def redis_get_map_keys(key):
 
 # redis删除map字典
 def redis_del_map(key):
-    r.delete(key)
+    try:
+        r.delete(key)
+    except Exception as e:
+        pass
 
 
 #########################################################通用工具区#################################################
@@ -1116,6 +1287,107 @@ async def asynctask(m3u_dict):
 def copyAndRename(source_file):
     with open(source_file, 'rb') as fsrc:
         return fsrc.read()
+
+
+# url-基础请求列表API地址(alist网站/alist/api/fs/list)
+# path-迭代查询路径
+# file_url_dict 已经捕获到的文件(只存储视频文件)
+# 新的路径
+async def getPathBase(site, url, path, future_path_set, sem, session, redisKeyAlistM3u, fakeurl, pathxxx, base_path,
+                      redisKeyAlistM3uType):
+    if path:
+        if not path.startswith('/'):
+            path = '/' + path
+        if path.endswith('/'):
+            path = path[:-1]
+        url = f'{url}?path={path}'
+    try:
+        async with sem, session.get(url) as response:
+            json_data = await response.json()
+            content = json_data['data']['content']
+            for item in content:
+                # 名字
+                name = item['name']
+                # false-不是文件夹 true-是文件夹
+                is_dir = item['is_dir']
+                # 是文件夹，计算下一级目录，等待再次访问
+                # 签名
+                sign = item['sign']
+                if is_dir:
+                    if path:
+                        future_path_set.add(f'{path}/{name}')
+                    else:
+                        future_path_set.add(f'/{name}')
+                # 是文件，直接存储
+                else:
+                    if name.lower().endswith(
+                            (".mp4", ".mkv", ".avi", '.ts', '.mov', '.fly', '.mpg', '.wmv', '.m4v',
+                             '.mpeg', '.3gp', '.rmvb', '.rm')):
+                        if path:
+                            if base_path != '/':
+                                future_path = f'{site}d{base_path}{path}/{name}'
+                            else:
+                                future_path = f'{site}d{path}/{name}'
+                            str1 = path.split('/')[-1]
+                            groupName = f'Alist-{str1}'
+                        else:
+                            if base_path != '/':
+                                future_path = f'{site}d{base_path}/{name}'
+                            else:
+                                future_path = f'{site}d/{name}'
+                            groupName = 'Alist-无分组'
+                        encoded_url = urllib.parse.quote(future_path, safe=':/')
+                        if sign and sign != '':
+                            encoded_url = f'{encoded_url}?sign={sign}'
+                        link = f'#EXTINF:-1 group-title="{groupName}"  tvg-name="{name}",{name}\n'
+                        str_id = str(uuid.uuid4())
+                        redisKeyAlistM3u[str_id] = encoded_url
+                        videotype = name.lower().split('.')[-1]
+                        redisKeyAlistM3uType[str_id] = videotype
+                        redis_add_map(REDIS_KEY_Alist_M3U, {str_id: encoded_url})
+                        redis_add_map(REDIS_KEY_Alist_M3U_TYPE, {str_id: videotype})
+                        fake_m3u8 = f'{fakeurl}{str_id}.m3u8'
+                        async with aiofiles.open(pathxxx, 'a', encoding='utf-8') as f:  # 异步的方式写入内容
+                            await f.write(f'{link}{fake_m3u8}\n')
+    except Exception as e:
+        pass
+
+
+async def sluty_alist_hunter(alist_url_dict, redisKeyAlistM3u, fakeurl, pathxxx, redisKeyAlistM3uType):
+    path = f"{secret_path}alist.m3u"
+    if os.path.exists(path):
+        os.remove(path)
+    api_part = 'api/fs/list'
+    api_me_base_path = 'api/me'
+    # 需要迭代访问的路径
+    future_path_set = set()
+
+    sem = asyncio.Semaphore(1000)  # 限制TCP连接的数量为100个
+    async with aiohttp.ClientSession() as session:
+        for site in alist_url_dict.keys():
+            if not site.endswith('/'):
+                site += '/'
+            base_path_url = site + api_me_base_path
+            async with sem, session.get(base_path_url) as response:
+                json_data = await response.json()
+                base_path = json_data['data']['base_path']
+            full_url = site + api_part
+            await getPathBase(site, full_url, None, future_path_set, sem, session, redisKeyAlistM3u, fakeurl, pathxxx,
+                              base_path, redisKeyAlistM3uType)
+
+            async def process_path(pathbase):
+                await getPathBase(site, full_url, pathbase, future_path_set, sem, session, redisKeyAlistM3u, fakeurl,
+                                  pathxxx, base_path, redisKeyAlistM3uType
+                                  )
+
+            while len(future_path_set) > 0:
+                tasks = [process_path(pathbase) for pathbase in future_path_set]
+                future_path_set.clear()
+                await asyncio.gather(*tasks)
+
+
+def check_alist_file(alist_url_dict, redisKeyAlistM3u, fakeurl, pathxxx, redisKeyAlistM3uType):
+    asyncio.run(sluty_alist_hunter(alist_url_dict, redisKeyAlistM3u, fakeurl, pathxxx, redisKeyAlistM3uType))
 
 
 def check_file(m3u_dict):
@@ -1719,14 +1991,17 @@ def updateFileToGitee(file_name):
     repo_name = init_gitee('reponame', REDIS_KEY_GITEE, redisKeyGitee)
     path = init_gitee('path', REDIS_KEY_GITEE, redisKeyGitee)
     access_token = init_gitee('accesstoken', REDIS_KEY_GITEE, redisKeyGitee)
-    try:
-        removeIfExist(username, repo_name, path, access_token, file_name)
-    except:
-        pass
-    try:
-        uploadNewFileToGitee(username, repo_name, path, access_token, file_name)
-    except:
-        pass
+    now = time.time()
+    while time.time() - now < 300:
+        try:
+            removeIfExist(username, repo_name, path, access_token, file_name)
+        except:
+            pass
+        try:
+            uploadNewFileToGitee(username, repo_name, path, access_token, file_name)
+            break
+        except:
+            continue
 
 
 def removeIfExistGithub(username, repo_name, path, access_token, file_name):
@@ -1777,15 +2052,17 @@ def updateFileToGithub(file_name):
     repo_name = init_gitee('reponame', REDIS_KEY_GITHUB, redisKeyGithub)
     path = init_gitee('path', REDIS_KEY_GITHUB, redisKeyGithub)
     access_token = init_gitee('accesstoken', REDIS_KEY_GITHUB, redisKeyGithub)
-
-    try:
-        removeIfExistGithub(username, repo_name, path, access_token, file_name)
-    except:
-        pass
-    try:
-        uploadNewFileToGithub(username, repo_name, path, access_token, file_name)
-    except:
-        pass
+    now = time.time()
+    while time.time() - now < 300:
+        try:
+            removeIfExistGithub(username, repo_name, path, access_token, file_name)
+        except:
+            pass
+        try:
+            uploadNewFileToGithub(username, repo_name, path, access_token, file_name)
+            break
+        except:
+            continue
 
 
 ########################webdav##################################
@@ -1835,17 +2112,19 @@ def updateFileToWebDAV(file_name):
     password = init_gitee('password', REDIS_KEY_WEBDAV, redisKeyWebDav)
     path = init_gitee('path', REDIS_KEY_WEBDAV, redisKeyWebDav)
     agreement = init_gitee('agreement', REDIS_KEY_WEBDAV, redisKeyWebDav)
-
-    try:
-        removeIfExistWebDav(ip, username, password, path, file_name, port, agreement)
-    except Exception as e:
-        print(e)
-        pass
-    try:
-        uploadNewFileToWebDAV(ip, username, password, path, file_name, port, agreement)
-    except Exception as e:
-        print(e)
-        pass
+    now = time.time()
+    while time.time() - now < 300:
+        try:
+            removeIfExistWebDav(ip, username, password, path, file_name, port, agreement)
+        except Exception as e:
+            # print(e)
+            pass
+        try:
+            uploadNewFileToWebDAV(ip, username, password, path, file_name, port, agreement)
+            break
+        except Exception as e:
+            # print(e)
+            continue
 
 
 # 定义线程数和任务队列,防止多线程提交数据到gitee产生竞争阻塞，最终导致数据丢失
@@ -3054,7 +3333,8 @@ CACHE_KEY_TO_GLOBAL_VAR = {
     REDIS_KEY_YY: 'redisKeyYY',
     REDIS_KEY_WEBDAV_M3U: 'redisKeyWebDavM3u',
     REDIS_KEY_WEBDAV_PATH_LIST: 'redisKeyWebDavPathList',
-    REDIS_KEY_DOUYU: 'redisKeyDouyu'
+    REDIS_KEY_DOUYU: 'redisKeyDouyu',
+    REDIS_KEY_ALIST: 'redisKeyAlist'
 }
 
 
@@ -3921,6 +4201,25 @@ def initReloadCacheForNormal():
                     redisKeyDouyuM3u.update(dict2)
             except Exception as e:
                 pass
+        elif redisKey in REDIS_KEY_ALIST:
+            try:
+                global redisKeyAlist
+                global redisKeyAlistM3u
+                global redisKeyAlistM3uType
+                redisKeyAlist.clear()
+                dict = redis_get_map(REDIS_KEY_ALIST)
+                if dict:
+                    redisKeyAlist.update(dict)
+                redisKeyAlistM3u.clear()
+                dict2 = redis_get_map(REDIS_KEY_Alist_M3U)
+                if dict2:
+                    redisKeyAlistM3u.update(dict2)
+                redisKeyAlistM3uType.clear()
+                dict3 = redis_get_map(REDIS_KEY_Alist_M3U_TYPE)
+                if dict3:
+                    redisKeyAlistM3uType.update(dict3)
+            except Exception as e:
+                pass
 
 
 def initReloadCacheForSpecial():
@@ -4670,7 +4969,10 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'whitelistDirectRule': 'whitelistDirectRule', 'blacklistProxyRule': 'blacklistProxyRule',
                           'simpleOpenclashFallBackFilterDomain': 'simpleOpenclashFallBackFilterDomain',
                           'simpleblacklistProxyRule': 'simpleblacklistProxyRule', 'simpleDnsmasq': 'simpleDnsmasq',
-                          'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30'}
+                          'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
+                          'maxTimeoutIgnoreLastUUID': '300', 'maxTimeoutIgnoreAllUUID': '3600',
+                          'maxTimeoutTsSeen': '300', 'maxTimeoutTsAlive': '30', 'maxTimeoutTsFree': '300',
+                          'maxTimeoutM3u8Free': '300'}
 
 
 def init_file_name():
@@ -4689,6 +4991,16 @@ def init_webdav_m3u():
         global redisKeyWebDavM3u
         redisKeyWebDavM3u.clear()
         redisKeyWebDavM3u = dict.copy()
+    dict2 = redis_get_map(REDIS_KEY_WEBDAV_M3U_DICT_RAW)
+    if dict2:
+        global true_webdav_m3u_dict_raw
+        true_webdav_m3u_dict_raw.clear()
+        true_webdav_m3u_dict_raw = dict2.copy()
+    dict3 = redis_get_map(REDIS_KEY_webdav_M3U_TYPE)
+    if dict3:
+        global redisKeyWebdavM3uType
+        redisKeyWebdavM3uType.clear()
+        redisKeyWebdavM3uType = dict3.copy()
 
 
 def init_webdav_m3u_True_Data():
@@ -4919,6 +5231,12 @@ def upload_json_file25():
 @app.route('/api/upload_json_file29', methods=['POST'])
 def upload_json_file29():
     return upload_json(request, REDIS_KEY_DOUYU, f"{secret_path}tmp_data30.json")
+
+
+# 上传alist直播源json文件
+@app.route('/api/upload_json_file30', methods=['POST'])
+def upload_json_file30():
+    return upload_json(request, REDIS_KEY_ALIST, f"{secret_path}tmp_data31.json")
 
 
 # 上传huya直播源json文件
@@ -5156,6 +5474,14 @@ def deletewm3u29():
     return dellist(request, REDIS_KEY_DOUYU)
 
 
+# 删除alist直播源
+@app.route('/api/deletewm3u30', methods=['POST'])
+def deletewm3u30():
+    deleteurl = request.json.get('deleteurl')
+    del redisKeyAlist[deleteurl]
+    return dellist(request, REDIS_KEY_ALIST)
+
+
 # 删除huya直播源
 @app.route('/api/deletewm3u26', methods=['POST'])
 def deletewm3u26():
@@ -5218,6 +5544,13 @@ def getall25():
 def getall29():
     global redisKeyDouyu
     return returnDictCache(REDIS_KEY_DOUYU, redisKeyDouyu)
+
+
+# 拉取全部alist
+@app.route('/api/getall30', methods=['GET'])
+def getall30():
+    global redisKeyAlist
+    return returnDictCache(REDIS_KEY_ALIST, redisKeyAlist)
 
 
 # 拉取全部huya
@@ -5381,6 +5714,13 @@ def download_json_file25():
 def download_json_file29():
     return download_json_file_base(REDIS_KEY_DOUYU,
                                    f"{secret_path}temp_douyu_m3u.json")
+
+
+# 导出alist直播源配置
+@app.route('/api/download_json_file30', methods=['GET'])
+def download_json_file30():
+    return download_json_file_base(REDIS_KEY_ALIST,
+                                   f"{secret_path}temp_alist_m3u.json")
 
 
 # 导出huya直播源配置
@@ -5548,6 +5888,23 @@ def addnewm3u29():
     global redisKeyDouyu
     redisKeyDouyu[addurl] = name
     return addlist(request, REDIS_KEY_DOUYU)
+
+
+# 添加alist直播源
+@app.route('/api/addnewm3u30', methods=['POST'])
+def addnewm3u30():
+    addurl = request.json.get('addurl')
+    if not addurl.startswith('http'):
+        addurl = 'https://' + addurl
+    if not addurl.endswith('/'):
+        addurl = addurl + '/'
+    name = request.json.get('name')
+    global redisKeyAlist
+    redisKeyAlist[addurl] = name
+
+    my_dict = {addurl: name}
+    redis_add_map(REDIS_KEY_ALIST, my_dict)
+    return jsonify({'addresult': "add success"})
 
 
 # 添加huya直播源
@@ -6982,6 +7339,37 @@ def chaoronghe29():
         return "empty"
 
 
+# 生成全部alist直播源
+@app.route('/api/chaoronghe30', methods=['GET'])
+def chaoronghe30():
+    try:
+        global redisKeyAlist
+        if len(redisKeyAlist) == 0:
+            return "empty"
+        global redisKeyAlistM3u
+        redisKeyAlistM3u.clear()
+        global redisKeyAlistM3uType
+        redisKeyAlistM3uType.clear()
+        try:
+            redis_del_map(REDIS_KEY_Alist_M3U)
+        except:
+            pass
+        try:
+            redis_del_map(REDIS_KEY_Alist_M3U_TYPE)
+        except:
+            pass
+        ip = init_IP()
+        # fakeurl = f"http://127.0.0.1:5000/alist/"
+        fakeurl = f"http://{ip}:{port_live}/alist/"
+        pathxxx = f"{secret_path}alist.m3u"
+        thread2 = threading.Thread(target=check_alist_file,
+                                   args=(redisKeyAlist, redisKeyAlistM3u, fakeurl, pathxxx, redisKeyAlistM3uType))
+        thread2.start()
+        return "result"
+    except Exception as e:
+        return "empty"
+
+
 # 生成全部huyta直播源
 @app.route('/api/chaoronghe26', methods=['GET'])
 def chaoronghe26():
@@ -7069,8 +7457,8 @@ def getWebDavFileName(filePath):
     return filePath
 
 
-def process_child(fake_webdav_m3u_dict, url, true_webdav_m3u_dict_raw_tmp, child_list_chunk, fakeurl,
-                  redisKeyWebDavPathList):
+async def process_child(url, child_list_chunk, fakeurl,
+                        redisKeyWebDavPathList):
     groupName = redisKeyWebDavPathList[url]
     for child in child_list_chunk:
         href = child.find('{DAV:}href').text
@@ -7086,44 +7474,35 @@ def process_child(fake_webdav_m3u_dict, url, true_webdav_m3u_dict_raw_tmp, child
             link = f'#EXTINF:-1 group-title="{groupName}"  tvg-name="{name}",{name}\n'
             # http://127.0.0.1:5000/videos/video1.mp4.m3u8
             str_id = str(uuid.uuid4())
-            fake_webdav_m3u_dict[f'{fakeurl}{str_id}.m3u8'] = link
-            # fake_webdav_m3u_dict[f'{default_video_prefix}{str_id}.m3u8'] = link
-            # video1.mp4=
+            fake_m3u8 = f'{fakeurl}{str_id}.m3u8'
+            # fake_webdav_m3u_dict[fake_m3u8] = link
+            async with aiofiles.open(f"{secret_path}webdav.m3u", 'a', encoding='utf-8') as f:  # 异步的方式写入内容
+                await f.write(f'{link}{fake_m3u8}\n')
             finalPath = url
             finalPath = finalPath.split('/dav')[0] + urllib.parse.unquote(href)
+            finalTrueUrl = quote(finalPath, safe=':/')
             # url编码，跳过:和/，可以解决大部分转移字符的问题
-            true_webdav_m3u_dict_raw_tmp[str_id] = quote(finalPath, safe=':/')
+            # true_webdav_m3u_dict_raw_tmp[str_id] = finalTrueUrl
+            true_webdav_m3u_dict_raw[str_id] = finalTrueUrl
+            type = file_path.split('.')[-1]
+            redisKeyWebdavM3uType[str_id] = type
+            redis_add_map(REDIS_KEY_webdav_M3U_TYPE, {str_id: type})
+            redis_add_map(REDIS_KEY_WEBDAV_M3U_DICT_RAW, {str_id: finalTrueUrl})
 
 
-async def deal_mutil_webdav_path_m3u(session, url, fakeurl, fake_webdav_m3u_dict, true_webdav_m3u_dict_raw_tmp,
+async def deal_mutil_webdav_path_m3u(session, url, fakeurl,
                                      auth_header, redisKeyWebDavPathList):
     try:
         async with session.request('PROPFIND', url, auth=auth_header, timeout=10) as response:
             res = await response.text()
         root = fromstring(res)
         childs = root.findall('{DAV:}response')
-        length = len(childs)
-        trueThreadNum = min(length, 100)
-        # 计算每个线程处理的数据大小
-        chunk_size = length // trueThreadNum
-        left = length - chunk_size * trueThreadNum
-        finalindex = trueThreadNum - 1
-        with concurrent.futures.ThreadPoolExecutor(max_workers=trueThreadNum) as executor:
-            for i in range(trueThreadNum):
-                start_index = i * chunk_size
-                if i == finalindex:
-                    end_index = min(start_index + chunk_size + left, length)
-                else:
-                    end_index = min(start_index + chunk_size, length)
-                black_list_chunk = childs[start_index:end_index]
-                executor.submit(process_child, fake_webdav_m3u_dict, url, true_webdav_m3u_dict_raw_tmp,
-                                black_list_chunk, fakeurl, redisKeyWebDavPathList)
-        executor.shutdown(wait=True)
+        await process_child(url, childs, fakeurl, redisKeyWebDavPathList)
     except Exception as e:
         return
 
 
-async def download_files28(fake_webdav_m3u_dict, true_webdav_m3u_dict_raw_tmp):
+async def download_files28():
     username = redisKeyWebDavM3u['username']
     password = redisKeyWebDavM3u['password']
     auth_header = aiohttp.BasicAuth(login=username, password=password)
@@ -7139,8 +7518,7 @@ async def download_files28(fake_webdav_m3u_dict, true_webdav_m3u_dict_raw_tmp):
             tasks = []
             for url in urls:
                 task = asyncio.ensure_future(
-                    deal_mutil_webdav_path_m3u(session, url, fakeurl, fake_webdav_m3u_dict,
-                                               true_webdav_m3u_dict_raw_tmp, auth_header, redisKeyWebDavPathList))
+                    deal_mutil_webdav_path_m3u(session, url, fakeurl, auth_header, redisKeyWebDavPathList))
                 tasks.append(task)
             await asyncio.gather(*tasks)
     except (aiohttp.ClientError, asyncio.TimeoutError) as e:
@@ -7151,25 +7529,32 @@ async def download_files28(fake_webdav_m3u_dict, true_webdav_m3u_dict_raw_tmp):
 @app.route('/api/chaoronghe28', methods=['GET'])
 def chaoronghe28():
     try:
-
-        fake_webdav_m3u_dict = {}
+        path = f"{secret_path}webdav.m3u"
+        if os.path.exists(path):
+            os.remove(path)
         # webdav名字，真实地址
         global true_webdav_m3u_dict_raw
-        true_webdav_m3u_dict_raw_tmp = {}
+        global redisKeyWebdavM3uType
+        true_webdav_m3u_dict_raw.clear()
+        redisKeyWebdavM3uType.clear()
+        redis_del_map(REDIS_KEY_webdav_M3U_TYPE)
+        redis_del_map(REDIS_KEY_WEBDAV_M3U_DICT_RAW)
+
+        # fake_webdav_m3u_dict = {}
+        # true_webdav_m3u_dict_raw_tmp = {}
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(download_files28(fake_webdav_m3u_dict, true_webdav_m3u_dict_raw_tmp))
-        if len(fake_webdav_m3u_dict) == 0:
-            return "empty"
-
-        if len(true_webdav_m3u_dict_raw_tmp.keys()) > 0:
-            true_webdav_m3u_dict_raw.clear()
-            true_webdav_m3u_dict_raw.update(true_webdav_m3u_dict_raw_tmp)
-            redis_del_map(REDIS_KEY_WEBDAV_M3U_DICT_RAW)
-            redis_add_map(REDIS_KEY_WEBDAV_M3U_DICT_RAW, true_webdav_m3u_dict_raw)
+        loop.run_until_complete(download_files28())
+        # if len(fake_webdav_m3u_dict) == 0:
+        #     return "empty"
+        # if len(true_webdav_m3u_dict_raw_tmp.keys()) > 0:
+        #     true_webdav_m3u_dict_raw.clear()
+        #     true_webdav_m3u_dict_raw.update(true_webdav_m3u_dict_raw_tmp)
+        #     redis_del_map(REDIS_KEY_WEBDAV_M3U_DICT_RAW)
+        #     redis_add_map(REDIS_KEY_WEBDAV_M3U_DICT_RAW, true_webdav_m3u_dict_raw)
         # 同步方法写出全部配置
-        distribute_data(fake_webdav_m3u_dict, f"{secret_path}webdav.m3u", 10)
+        # distribute_data(fake_webdav_m3u_dict, f"{secret_path}webdav.m3u", 10)
         return "result"
     except Exception as e:
         return "empty"
@@ -7482,6 +7867,18 @@ def removem3ulinks29():
     return "success"
 
 
+# 删除全部alist直播源
+@app.route('/api/removem3ulinks30', methods=['GET'])
+def removem3ulinks30():
+    redisKeyAlist.clear()
+    redis_del_map(REDIS_KEY_ALIST)
+    redisKeyAlistM3u.clear()
+    redis_del_map(REDIS_KEY_Alist_M3U)
+    redisKeyAlistM3uType.clear()
+    redis_del_map(REDIS_KEY_Alist_M3U_TYPE)
+    return "success"
+
+
 # 删除全部huya直播源
 @app.route('/api/removem3ulinks26', methods=['GET'])
 def removem3ulinks26():
@@ -7771,17 +8168,25 @@ def thread_webdav_m3u_killer(second):
         lastTsTime = ts_dict[mark]
         # 最近一次uuid
         uuid = recordPath['past']
+        maxTimeoutIgnoreLastUUID = int(getFileNameByTagName('maxTimeoutIgnoreLastUUID'))
+        maxTimeoutIgnoreAllUUID = int(getFileNameByTagName('maxTimeoutIgnoreAllUUID'))
+        maxTimeoutTsSeen = int(getFileNameByTagName('maxTimeoutTsSeen'))
         # 超过1分钟没有人访问切片，干掉最近访问uuid之外所有切片数据
-        if (now - lastTsTime) > (TS_ALIVE_TIME * 18) and uuid != 'nope':
+        if (now - lastTsTime) > maxTimeoutIgnoreLastUUID and uuid != 'nope':
             cleanup(uuid)
-            # 没人看推流了，安全起见，删除全部其他切片
             safe_delete_ts(uuid)
+        # 超过1小时没有人访问切片，干掉全部切片数据
+        if (now - lastTsTime) > maxTimeoutIgnoreAllUUID and uuid != 'nope':
+            cleanup('nope')
+            # 没人看推流了，安全起见，删除全部其他切片
+            safe_delete_ts('nope')
         # 干掉当前正在观看的视频里已经访问过的ts文件，特征是超过2分钟
         removeList = []
         for tsfile, timesec in ts_dict.items():
             if tsfile == mark:
                 continue
-            if (now - timesec) > (TS_ALIVE_TIME * 15):
+            # 已经看过的ts文件保留5分钟
+            if (now - timesec) > maxTimeoutTsSeen:
                 removeList.append(tsfile)
         safe_delete_single_ts(removeList)
         # 已经过期的ts文件，真正被删除掉的
