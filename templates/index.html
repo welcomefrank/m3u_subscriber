@@ -1210,7 +1210,7 @@
         </div>
 
         <div style="display: flex;width: 100%;">
-            webdav/alist直播源已经看过的切片数据保留时间(秒)
+            webdav/alist直播源已经看过的切片数据保留时间(秒),根据带宽和文件大小调整
         </div>
         <div style="width:100%">
             <input type="text" id="maxTimeoutTsSeen" class="stubboninput" placeholder="300"/>
@@ -1220,7 +1220,7 @@
         </div>
 
         <div style="display: flex;width: 100%;">
-            webdav/alist直播源检查单个切片文件是否没有被占用(正在写入)最大检测时长(秒)
+            webdav/alist直播源检查单个切片文件是否没有被占用(正在写入)最大检测时长(秒),根据带宽和文件大小调整
         </div>
         <div style="width:100%">
             <input type="text" id="maxTimeoutTsFree" class="stubboninput" placeholder="300"/>
@@ -1230,11 +1230,20 @@
         </div>
 
         <div style="display: flex;width: 100%;">
-            webdav/alist直播源检查单个直播源m3u8文件是否没有被占用(正在写入)最大检测时长(秒)
+            webdav/alist直播源检查单个直播源m3u8文件是否没有被占用(正在写入)最大检测时长(秒),根据带宽和文件大小调整
         </div>
         <div style="width:100%">
             <input type="text" id="maxTimeoutM3u8Free" class="stubboninput" placeholder="300"/>
             <button onclick="changeFileName('maxTimeoutM3u8Free', 'maxTimeoutM3u8Free', maxTimeoutM3u8Free)"
+                    class="stubbonsave">修改
+            </button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            webdav/alist ffmpeg音频模式处理(copy/aac),copy-速度最快;aac-解决一些音频无法播放的问题
+        </div>
+        <div style="width:100%">
+            <input type="text" id="audioType" class="stubboninput" placeholder="300"/>
+            <button onclick="changeFileName('audioType', 'audioType', audioType)"
                     class="stubbonsave">修改
             </button>
         </div>
@@ -2297,6 +2306,8 @@
     const maxTimeoutTsSeen = document.getElementById('maxTimeoutTsSeen');
     const maxTimeoutTsFree = document.getElementById('maxTimeoutTsFree');
     const maxTimeoutM3u8Free = document.getElementById('maxTimeoutM3u8Free');
+    const audioType = document.getElementById('audioType');
+
 
 
 
@@ -4097,6 +4108,7 @@
             getFileName('maxTimeoutTsSeen', 'maxTimeoutTsSeen', maxTimeoutTsSeen)
             getFileName('maxTimeoutTsFree', 'maxTimeoutTsFree', maxTimeoutTsFree)
             getFileName('maxTimeoutM3u8Free', 'maxTimeoutM3u8Free', maxTimeoutM3u8Free)
+            getFileName('audioType', 'audioType', audioType)
         } else if (selectedPage === pages[17].id) {
             //生成有效M3U
             reloadFunctionOpenButton('switch')

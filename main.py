@@ -153,7 +153,7 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'simpleblacklistProxyRule': 'simpleblacklistProxyRule', 'simpleDnsmasq': 'simpleDnsmasq',
                   'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
                   'maxTimeoutIgnoreLastUUID': '300', 'maxTimeoutIgnoreAllUUID': '3600', 'maxTimeoutTsSeen': '300'
-    , 'maxTimeoutTsFree': '300', 'maxTimeoutM3u8Free': '300'}
+    , 'maxTimeoutTsFree': '300', 'maxTimeoutM3u8Free': '300', 'audioType': 'copy'}
 
 # 单独导入导出使用一个配置,需特殊处理:{{url:{pass,name}}}
 # 下载网络配置并且加密后上传:url+加密密钥+加密文件名字
@@ -728,21 +728,22 @@ def video_m3u8(path):
         if not os.path.isfile(slices_path % 1):
             credentials = f"{redisKeyWebDavM3u['username']}:{redisKeyWebDavM3u['password']}"
             encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
-            # hls_url = getNowWebDavFakeUrl()
-            hls_url = default_video_prefix
+            hls_url = getNowWebDavFakeUrl()
+            #hls_url = default_video_prefix
+            audioType = getFileNameByTagName('audioType')
             try:
                 videoType = redisKeyWebdavM3uType[path]
             except:
                 videoType = 'mp4'
                 pass
             if videoType == 'mp4':
-                cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c copy -map 0 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+                cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
             elif videoType == 'mkv':
-                cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c copy -map 0:v:0 -map 0:a:0  -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+                cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0? -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}   {os.path.join(slices_dir, path)}.m3u8"
             elif videoType == 'avi':
-                cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c copy -map 0:v:0 -map 0:a:0  -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+                cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0?  -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}   {os.path.join(slices_dir, path)}.m3u8"
             else:
-                cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c copy -map 0 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+                cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
 
             # cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c copy -map 0 -f segment -segment_list {os.path.join(slices_dir, path)}.m3u8 -segment_time 10 -hls_base_url {hls_url} {slices_path}"
             # process = subprocess.Popen(cmd, shell=True)
@@ -768,7 +769,10 @@ def video_m3u8(path):
     if not isSuccess:
         send_heartbeat()
         # return "Video not found", 404
-    return Response(m3u8_data, headers=headers_default)
+    try:
+        return Response(m3u8_data, headers=headers_default)
+    except:
+        return "Video not found", 404
 
 
 def send_heartbeat():
@@ -792,41 +796,45 @@ def video_m3u8_alist(path):
         if not os.path.isfile(slices_path % 1):
             hls_url = getNowWebDavFakeUrl()
             # hls_url = default_video_prefix
+            audioType = getFileNameByTagName('audioType')
             try:
                 videoType = redisKeyAlistM3uType[path]
             except:
                 videoType = 'mp4'
                 pass
             if videoType == 'mp4':
-                cmd = f"ffmpeg -i {redisKeyAlistM3u[path]} -c copy -map 0 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+                cmd = f"ffmpeg -i {redisKeyAlistM3u[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
             elif videoType == 'mkv':
-                cmd = f"ffmpeg -i {redisKeyAlistM3u[path]} -c copy -map 0:v:0 -map 0:a:0  -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+                cmd = f"ffmpeg -i {redisKeyAlistM3u[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0?  -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
             elif videoType == 'avi':
-                cmd = f"ffmpeg -i {redisKeyAlistM3u[path]} -c copy -map 0:v:0 -map 0:a:0  -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+                cmd = f"ffmpeg -i {redisKeyAlistM3u[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0?  -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
             else:
-                cmd = f"ffmpeg -i {redisKeyAlistM3u[path]} -c copy -map 0 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+                cmd = f"ffmpeg -i {redisKeyAlistM3u[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
             checkAndRemovePastData(path)
             start_ffmpeg(cmd)
             ffmpeg_processes[path] = ''
     maxTimeoutM3u8Free = int(getFileNameByTagName('maxTimeoutM3u8Free'))
     start_time = time.time()  # 获取当前时间戳
-    # isSuccess = False
+    isSuccess = False
     while time.time() - start_time < maxTimeoutM3u8Free:
         try:
             # 读取M3U8播放列表文件并返回给客户端
             with open(os.path.join(slices_dir, f"{path}.m3u8"), "rb") as f:
                 m3u8_data = f.read()
             if len(m3u8_data) > 0:
-                # isSuccess = True
+                isSuccess = True
                 break
             time.sleep(1)
         except Exception as e:
             time.sleep(1)
             # print(e)
             continue
-    # if not isSuccess:
-    #     return Response(fail_m3u8, headers=headers_default)
-    return Response(m3u8_data, headers=headers_default)
+    if not isSuccess:
+        return "Video not found", 404
+    try:
+        return Response(m3u8_data, headers=headers_default)
+    except:
+        return "Video not found", 404
 
 
 # 上一次切片记录时间
@@ -939,7 +947,14 @@ def video_ts(path):
     ts_dict[slice_path] = now
     # ts成功时间戳记录
     ts_dict[mark] = now
-    return send_file(slice_path, mimetype='video/MP2T')
+    count = 0
+    while count < 10:
+        try:
+            return send_file(slice_path, mimetype='video/MP2T')
+        except:
+            time.sleep(1)
+            count += 1
+            continue
 
 
 @app.route('/videosfail/<path:path>.ts')
@@ -4979,7 +4994,7 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
                           'maxTimeoutIgnoreLastUUID': '300', 'maxTimeoutIgnoreAllUUID': '3600',
                           'maxTimeoutTsSeen': '300', 'maxTimeoutTsFree': '300',
-                          'maxTimeoutM3u8Free': '300'}
+                          'maxTimeoutM3u8Free': '300', 'audioType': 'copy'}
 
 
 def init_file_name():
@@ -7513,8 +7528,8 @@ async def download_files28():
     username = redisKeyWebDavM3u['username']
     password = redisKeyWebDavM3u['password']
     auth_header = aiohttp.BasicAuth(login=username, password=password)
-    # fakeurl = getNowWebDavFakeUrl()
-    fakeurl = default_video_prefix
+    fakeurl = getNowWebDavFakeUrl()
+    #fakeurl = default_video_prefix
     # http://127.0.0.1:5000/videos/video1.mp4.m3u8
     global redisKeyWebDavPathList
     urls = redisKeyWebDavPathList.keys()

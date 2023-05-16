@@ -1,44 +1,4 @@
-        global redisKeyAlist
-        if len(redisKeyAlist) == 0:
-            return "empty"
-        global redisKeyAlistM3u
-        redisKeyAlistM3u.clear()
-        global redisKeyAlistM3uType
-        redisKeyAlistM3uType.clear()
-        try:
-            redis_del_map(REDIS_KEY_Alist_M3U)
-        except:
-            pass
-        try:
-            redis_del_map(REDIS_KEY_Alist_M3U_TYPE)
-        except:
-            pass
-        ip = init_IP()
-        fakeurl = f"http://127.0.0.1:5000/alist/"
-        # fakeurl = f"http://{ip}:{port_live}/alist/"
-        pathxxx = f"{secret_path}alist.m3u"
-        thread2 = threading.Thread(target=check_alist_file,
-                                   args=(redisKeyAlist, redisKeyAlistM3u, fakeurl, pathxxx, redisKeyAlistM3uType))
-        thread2.start()
-        return "result"
-
-
-            path = f"{secret_path}alist.m3u"
-    if os.path.exists(path):
-        os.remove(path)
-
-                                async with aiofiles.open(pathxxx, 'a', encoding='utf-8') as f:  # 异步的方式写入内容
-                            await f.write(f'{link}{fake_m3u8}\n')
-
-                            distribute_data(fake_webdav_m3u_dict, f"{secret_path}webdav.m3u", 10)
-
-
-
-                            # webdav直播源真实地址
-REDIS_KEY_WEBDAV_M3U_DICT_RAW = 'redisKeyWebdavM3uDictRaw'
-# uuid,真实url
-true_webdav_m3u_dict_raw = {}
-# webdav视频格式
-REDIS_KEY_webdav_M3U_TYPE = 'redisKeyWebdavM3uType'
-# webdav uuid,视频格式
-redisKeyWebdavM3uType = {}
+            elif videoType == 'mkv':
+                cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c:v copy -c:a copy -c:s copy -map 0:v:0 -map 0:a:0  -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}   {os.path.join(slices_dir, path)}.m3u8"
+            elif videoType == 'avi':
+                cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c:v copy -c:a copy -c:s copy -map 0:v:0 -map 0:a:0  -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}   {os.path.join(slices_dir, path)}.m3u8"
