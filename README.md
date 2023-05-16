@@ -19,27 +19,27 @@
 
 ## 普通:一般用下面的就可以
 
-docker run -d --name m3usubscriber  --restart unless-stopped --net=host -d jkld310/m3usubscriber:latest
+docker run -d --name m3usubscriber  --restart unless-stopped --net=host -e TZ=Asia/Shanghai jkld310/m3usubscriber:latest
 
-docker run -d --name m3usubscriber --restart unless-stopped --net=host -d jkld310/m3usubscriber:arm64v8
+docker run -d --name m3usubscriber --restart unless-stopped --net=host -e TZ=Asia/Shanghai jkld310/m3usubscriber:arm64v8
 
-docker run -d --name m3usubscriber --restart unless-stopped --net=host -d jkld310/m3usubscriber:x86_64
+docker run -d --name m3usubscriber --restart unless-stopped --net=host -e TZ=Asia/Shanghai jkld310/m3usubscriber:x86_64
 
 ## 特权:开放全部线程和管理权限
 
-docker run -d --name m3usubscriber --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged=true --cap-add=ALL -d jkld310/m3usubscriber:latest
+docker run -d --name m3usubscriber --restart unless-stopped --net=host --memory=1000m --cpus=0.000 --privileged=true --cap-add=ALL -e TZ=Asia/Shanghai jkld310/m3usubscriber:latest
 
-docker run -d --name m3usubscriber  --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged=true --cap-add=ALL -d jkld310/m3usubscriber:arm64v8
+docker run -d --name m3usubscriber  --restart unless-stopped --net=host --memory=1000m --cpus=0.000 --privileged=true --cap-add=ALL -e TZ=Asia/Shanghai jkld310/m3usubscriber:arm64v8
 
-docker run -d --name m3usubscriber --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged=true --cap-add=ALL -d jkld310/m3usubscriber:x86_64
+docker run -d --name m3usubscriber --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged=true --cap-add=ALL -e TZ=Asia/Shanghai jkld310/m3usubscriber:x86_64
 
 #### 二、bridge模式:不建议使用，可能有BUG
 
-docker run -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 22770:22770 -p 22772:22772 -d jkld310/m3usubscriber:latest
+docker run -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 22770:22770 -p 22772:22772 -e TZ=Asia/Shanghai jkld310/m3usubscriber:latest
 
-docker run -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 22770:22770 -p 22772:22772 -d jkld310/m3usubscriber:arm64v8
+docker run -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 22770:22770 -p 22772:22772 -e TZ=Asia/Shanghai jkld310/m3usubscriber:arm64v8
 
-docker run -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 22770:22770 -p 22772:22772 -d jkld310/m3usubscriber:x86_64
+docker run -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 22770:22770 -p 22772:22772 -e TZ=Asia/Shanghai jkld310/m3usubscriber:x86_64
 
 ### 非常高兴能为您介绍本工具所实现的各项功能：
 
@@ -107,6 +107,10 @@ adguardhome)，dns监听端口-22770(在软路由dhcp/dns设置转发127.0.0.1#2
 
 #### 25-参考benmoose39大佬的项目https://github.com/benmoose39/YouTube_to_m3u，加入了youtube转直播源订阅功能，该功能生成的直播源列表会自动追加在白名单和有效直播源里，定时器功能需要在功能开关开启
 
+#### 26-添加了webdav直播，可以把webdav子目录下的全部视频转换成直播源链接，不可以填写根目录，最好是目标视频最近的子目录，这里是根据alist在局域网情况下webdav传输开发的
+
+#### 27-添加了alist直播，可以使用别人的alist网站，格式：https://domain.com/ ，之后程序会自动从根目录穷举查出全部视频文件，尽可能避免套娃的alist网站，仍然有一些网站无法爬取，有些是因为触发了对方网站的请求上限暂时无法爬虫,有的是因为对方alist网站做了特殊手段无法爬取，可以把这些网站汇总让我研究一下
+
 ### 接下来，您只需要按照以下步骤即可使用本工具：
 
 1-新增网络直播源订阅或上传文件导入合并M3U超融合备份；
@@ -152,6 +156,8 @@ subconverter很强大，我无法对其进行参考改造合并，尝试自己�
 10-dns分流器虽然实现了完全自动化，目前没有接入ip分流，主要是ip分流写出BUG了@_@
 
 11-dns分流器目前基于域名分流，如果订阅的黑白域名组有脏东西的话还是会导致分流异常；同时域名分流仅仅基于子域名匹配规则来进行，可以应付大多数情况
+
+12-alist/webdav直播只支持同时存在一个客户端使用，视频无法携带字幕，建议选择mp4硬编码字幕的资源，音频是flac的情况直播可能会没有声音去系统配置改成aac编码就行了。宽带和视频文件大小影响太严重的情况下要特别关注docker内存是否够用，因为切片数据都是存在容器里的，定时删除切片数据适当调长一点防止直播时数据被删掉了，如果网速非常好，视频不算很大的情况，这些参数设置成几分钟就好了
 
 ### 最后：
 
