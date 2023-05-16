@@ -707,6 +707,7 @@ default_video_prefix_fail = 'http://127.0.0.1:5000/videosfail/'
 # default_video_prefix_encode_fail = default_video_prefix_fail.encode()
 fail_m3u8 = f'#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-ALLOW-CACHE:YES\n#EXT-X-TARGETDURATION:19\n#EXTINF:18.160000,\n {default_video_prefix_fail}none.ts\n#EXT-X-ENDLIST\n'.encode()
 
+
 # lock_m3u8 = threading.Lock()
 
 
@@ -727,8 +728,8 @@ def video_m3u8(path):
         if not os.path.isfile(slices_path % 1):
             credentials = f"{redisKeyWebDavM3u['username']}:{redisKeyWebDavM3u['password']}"
             encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
-            hls_url = getNowWebDavFakeUrl()
-            #hls_url = default_video_prefix
+            # hls_url = getNowWebDavFakeUrl()
+            hls_url = default_video_prefix
             try:
                 videoType = redisKeyWebdavM3uType[path]
             except:
@@ -748,9 +749,10 @@ def video_m3u8(path):
             checkAndRemovePastData(path)
             start_ffmpeg(cmd)
             ffmpeg_processes[path] = ''
+    maxTimeoutM3u8Free = int(getFileNameByTagName('maxTimeoutM3u8Free'))
     start_time = time.time()  # 获取当前时间戳
     isSuccess = False
-    while time.time() - start_time < 300:
+    while time.time() - start_time < maxTimeoutM3u8Free:
         try:
             # 读取M3U8播放列表文件并返回给客户端
             with open(os.path.join(slices_dir, f"{path}.m3u8"), "rb") as f:
@@ -764,8 +766,15 @@ def video_m3u8(path):
             # print(e)
             continue
     if not isSuccess:
-        return "Video not found", 404
+        send_heartbeat()
+        # return "Video not found", 404
     return Response(m3u8_data, headers=headers_default)
+
+
+def send_heartbeat():
+    # 将一个空的 M3U8 文件推送给客户端
+    m3u8_data = b"#EXTM3U\n#EXT-X-ENDLIST\n"
+    return Response(m3u8_data, headers={'Content-Type': 'application/vnd.apple.mpegurl'})
 
 
 @app.route('/alist/<path:path>.m3u8')
@@ -889,48 +898,48 @@ lock = threading.Lock()
 # 有开头，中间读条没有，跳
 @app.route('/videos/<path:path>.ts')
 def video_ts(path):
-    with lock:
-        # ts前进一次，除了切片和第一次找不到是强制归0
-        path2 = check_ts_jump(path)
-        slice_path = os.path.join(SLICES_DIR, f"{path2}.ts")
-        now = time.time()  # 获取当前时间戳
-        # 使用Flask的send_file函数将切片文件作为流推送给客户端
-        maxTimeoutTsFree = int(getFileNameByTagName('maxTimeoutTsFree'))
-        is_safe = False
-        while time.time() - now < maxTimeoutTsFree:
-            try:
-                if not os.path.isfile(slice_path):
-                    time.sleep(1)
-                    continue
-                # bug预防：判断文件存在但是不确定有没有线程占用，所以多次读取文件判断大小，如果不判断直接发送会导致异常ts流被客户端直接通过造成跳帧现象
-                # 读取M3U8播放列表文件并返回给客户端
-                with open(slice_path, "rb") as f1:
-                    ts_data1 = f1.read()
-                if len(ts_data1) == 0:
-                    continue
-                time.sleep(1)
-                with open(slice_path, "rb") as f2:
-                    ts_data2 = f2.read()
-                if ts_data1 == ts_data2:
-                    time.sleep(1)
-                    with open(slice_path, "rb") as f3:
-                        ts_data3 = f3.read()
-                    if ts_data3 == ts_data2:
-                        is_safe = True
-                        break
-            except Exception as e:
+    # with lock:
+    # ts前进一次，除了切片和第一次找不到是强制归0
+    path2 = check_ts_jump(path)
+    slice_path = os.path.join(SLICES_DIR, f"{path2}.ts")
+    now = time.time()  # 获取当前时间戳
+    # 使用Flask的send_file函数将切片文件作为流推送给客户端
+    maxTimeoutTsFree = int(getFileNameByTagName('maxTimeoutTsFree'))
+    is_safe = False
+    while time.time() - now < maxTimeoutTsFree:
+        try:
+            if not os.path.isfile(slice_path):
                 time.sleep(1)
                 continue
-        if not is_safe:
-            #checkAndRemovePastData('nope')
-            return "Slice not found", 404
-        now = time.time()
-        # 记录当前记录的步骤ts
-        pastTs['past'] = path2
-        ts_dict[slice_path] = now
-        # ts成功时间戳记录
-        ts_dict[mark] = now
-        return send_file(slice_path, mimetype='video/MP2T')
+            # bug预防：判断文件存在但是不确定有没有线程占用，所以多次读取文件判断大小，如果不判断直接发送会导致异常ts流被客户端直接通过造成跳帧现象
+            # 读取M3U8播放列表文件并返回给客户端
+            with open(slice_path, "rb") as f1:
+                ts_data1 = f1.read()
+            if len(ts_data1) == 0:
+                continue
+            time.sleep(1)
+            with open(slice_path, "rb") as f2:
+                ts_data2 = f2.read()
+            if ts_data1 == ts_data2:
+                time.sleep(1)
+                with open(slice_path, "rb") as f3:
+                    ts_data3 = f3.read()
+                if ts_data3 == ts_data2:
+                    is_safe = True
+                    break
+        except Exception as e:
+            time.sleep(1)
+            continue
+    if not is_safe:
+        # checkAndRemovePastData('nope')
+        return "Slice not found", 404
+    now = time.time()
+    # 记录当前记录的步骤ts
+    pastTs['past'] = path2
+    ts_dict[slice_path] = now
+    # ts成功时间戳记录
+    ts_dict[mark] = now
+    return send_file(slice_path, mimetype='video/MP2T')
 
 
 @app.route('/videosfail/<path:path>.ts')
@@ -7504,8 +7513,8 @@ async def download_files28():
     username = redisKeyWebDavM3u['username']
     password = redisKeyWebDavM3u['password']
     auth_header = aiohttp.BasicAuth(login=username, password=password)
-    fakeurl = getNowWebDavFakeUrl()
-    #fakeurl = default_video_prefix
+    # fakeurl = getNowWebDavFakeUrl()
+    fakeurl = default_video_prefix
     # http://127.0.0.1:5000/videos/video1.mp4.m3u8
     global redisKeyWebDavPathList
     urls = redisKeyWebDavPathList.keys()
