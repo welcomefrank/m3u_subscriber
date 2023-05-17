@@ -118,7 +118,10 @@ def clearCacheFast(second):
 
 # redis删除map字典
 def redis_del_map(key):
-    r.delete(key)
+    try:
+        r.delete(key)
+    except:
+        pass
 
 
 # 简易dns黑白名单保留最低限度的1000条数据
@@ -126,10 +129,12 @@ def clearAndStoreAtLeast50DataInRedis(redisKey, cacheDict):
     tmpDict = redis_get_map(redisKey)
     cacheDict.clear()
     count = 0
-    data = dict(tmpDict.items()[:1000])
+    # data = dict(list(tmpDict.items())[:1000])
+    data = {}
     for key in tmpDict.keys():
         if count > 1000:
             break
+        data[key] = ''
         updateSpData(key, cacheDict)
         count = count + 1
     try:
@@ -257,7 +262,7 @@ def deal_black_list_simple_policy_queue(second):
 
 # 并发检测白名单黑名单线程数主键
 REDIS_KEY_THREADS = "threadsnum"
-threadsNum = {REDIS_KEY_THREADS: 100}
+threadsNum = {REDIS_KEY_THREADS: 1000}
 
 MAXTHREAD = 100
 
@@ -849,9 +854,12 @@ def simpleDomain(domain_name):
 
 
 def redis_get_map(key):
-    redis_dict = r.hgetall(key)
-    python_dict = {key.decode('utf-8'): value.decode('utf-8') for key, value in redis_dict.items()}
-    return python_dict
+    try:
+        redis_dict = r.hgetall(key)
+        python_dict = {key.decode('utf-8'): value.decode('utf-8') for key, value in redis_dict.items()}
+        return python_dict
+    except:
+        return {}
 
 
 def initSimpleBlackList():

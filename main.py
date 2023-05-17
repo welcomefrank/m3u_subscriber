@@ -153,7 +153,7 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'simpleblacklistProxyRule': 'simpleblacklistProxyRule', 'simpleDnsmasq': 'simpleDnsmasq',
                   'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
                   'maxTimeoutIgnoreLastUUID': '300', 'maxTimeoutIgnoreAllUUID': '3600', 'maxTimeoutTsSeen': '300'
-    , 'maxTimeoutTsFree': '300', 'maxTimeoutM3u8Free': '300', 'audioType': 'copy'}
+    , 'maxTimeoutTsFree': '300', 'maxTimeoutM3u8Free': '300', 'audioType': 'copy', 'ffmpegThread': '4'}
 
 # 单独导入导出使用一个配置,需特殊处理:{{url:{pass,name}}}
 # 下载网络配置并且加密后上传:url+加密密钥+加密文件名字
@@ -326,7 +326,7 @@ REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG = "updatewhitelistspflag"
 REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG = "updateblacklistspflag"
 
 REDIS_KEY_THREADS = "threadsnum"
-threadsNum = {REDIS_KEY_THREADS: 0}
+threadsNum = {REDIS_KEY_THREADS: 1000}
 
 REDIS_KEY_CHINA_DNS_SERVER = "chinadnsserver"
 chinadnsserver = {REDIS_KEY_CHINA_DNS_SERVER: ""}
@@ -707,6 +707,8 @@ default_video_prefix_fail = 'http://127.0.0.1:5000/videosfail/'
 # default_video_prefix_encode_fail = default_video_prefix_fail.encode()
 fail_m3u8 = f'#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-ALLOW-CACHE:YES\n#EXT-X-TARGETDURATION:19\n#EXTINF:18.160000,\n {default_video_prefix_fail}none.ts\n#EXT-X-ENDLIST\n'.encode()
 
+# 绕过一些网站对下载工具的限制或检测
+user_agent = '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"'
 
 # lock_m3u8 = threading.Lock()
 
@@ -719,7 +721,8 @@ def video_m3u8(path):
     global redisKeyWebdavM3uType
     if path not in true_webdav_m3u_dict_raw.keys():
         # if path not in VIDEO_MAPPING.keys():
-        return "Video not found", 404
+        return send_heartbeat()
+        # return "Video not found", 404
     slices_dir = os.environ.get('SLICES_DIR', '/app/slices')
     if path not in ffmpeg_processes.keys():
         # 使用ffmpeg命令行工具对视频进行实时切片，并生成M3U8格式的播放列表文件
@@ -736,14 +739,15 @@ def video_m3u8(path):
             except:
                 videoType = 'mp4'
                 pass
+            ffmpegThread = int(getFileNameByTagName('ffmpegThread'))
             if videoType == 'mp4':
-                cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+                cmd = f"ffmpeg -threads {ffmpegThread} {user_agent} -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
             elif videoType == 'mkv':
-                cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0? -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}   {os.path.join(slices_dir, path)}.m3u8"
+                cmd = f"ffmpeg -threads {ffmpegThread} {user_agent} -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0? -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}   {os.path.join(slices_dir, path)}.m3u8"
             elif videoType == 'avi':
-                cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0?  -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}   {os.path.join(slices_dir, path)}.m3u8"
+                cmd = f"ffmpeg -threads {ffmpegThread} {user_agent} -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0?  -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}   {os.path.join(slices_dir, path)}.m3u8"
             else:
-                cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+                cmd = f"ffmpeg -threads {ffmpegThread} {user_agent} -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
 
             # cmd = f"ffmpeg -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c copy -map 0 -f segment -segment_list {os.path.join(slices_dir, path)}.m3u8 -segment_time 10 -hls_base_url {hls_url} {slices_path}"
             # process = subprocess.Popen(cmd, shell=True)
@@ -767,12 +771,13 @@ def video_m3u8(path):
             # print(e)
             continue
     if not isSuccess:
-        send_heartbeat()
+        return send_heartbeat()
         # return "Video not found", 404
     try:
         return Response(m3u8_data, headers=headers_default)
     except:
-        return "Video not found", 404
+        return send_heartbeat()
+        # return "Video not found", 404
 
 
 def send_heartbeat():
@@ -787,7 +792,8 @@ def video_m3u8_alist(path):
     global ffmpeg_processes
     global redisKeyAlistM3uType
     if path not in redisKeyAlistM3u.keys():
-        return "Video not found", 404
+        return send_heartbeat()
+        # return "Video not found", 404
     slices_dir = os.environ.get('SLICES_DIR', '/app/slices')
     if path not in ffmpeg_processes.keys():
         # 使用ffmpeg命令行工具对视频进行实时切片，并生成M3U8格式的播放列表文件
@@ -802,14 +808,15 @@ def video_m3u8_alist(path):
             except:
                 videoType = 'mp4'
                 pass
+            ffmpegThread = int(getFileNameByTagName('ffmpegThread'))
             if videoType == 'mp4':
-                cmd = f"ffmpeg -i {redisKeyAlistM3u[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+                cmd = f"ffmpeg -threads {ffmpegThread} {user_agent} -i {redisKeyAlistM3u[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
             elif videoType == 'mkv':
-                cmd = f"ffmpeg -i {redisKeyAlistM3u[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0?  -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+                cmd = f"ffmpeg -threads {ffmpegThread} {user_agent} -i {redisKeyAlistM3u[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0?  -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
             elif videoType == 'avi':
-                cmd = f"ffmpeg -i {redisKeyAlistM3u[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0?  -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+                cmd = f"ffmpeg -threads {ffmpegThread} {user_agent} -i {redisKeyAlistM3u[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0?  -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
             else:
-                cmd = f"ffmpeg -i {redisKeyAlistM3u[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+                cmd = f"ffmpeg -threads {ffmpegThread} {user_agent} -i {redisKeyAlistM3u[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
             checkAndRemovePastData(path)
             start_ffmpeg(cmd)
             ffmpeg_processes[path] = ''
@@ -830,11 +837,13 @@ def video_m3u8_alist(path):
             # print(e)
             continue
     if not isSuccess:
-        return "Video not found", 404
+        return send_heartbeat()
+        # return "Video not found", 404
     try:
         return Response(m3u8_data, headers=headers_default)
     except:
-        return "Video not found", 404
+        return send_heartbeat()
+        # return "Video not found", 404
 
 
 # 上一次切片记录时间
@@ -3999,13 +4008,13 @@ def init_threads_num():
     if num:
         num = int(num.decode())
         if num == 0:
-            num = 100
+            num = 1000
             redis_add(REDIS_KEY_THREADS, num)
             threadsNum[REDIS_KEY_THREADS] = num
             redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 1)
         threadsNum[REDIS_KEY_THREADS] = num
     else:
-        num = 100
+        num = 1000
         redis_add(REDIS_KEY_THREADS, num)
         threadsNum[REDIS_KEY_THREADS] = num
         redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 1)
@@ -4994,7 +5003,7 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
                           'maxTimeoutIgnoreLastUUID': '300', 'maxTimeoutIgnoreAllUUID': '3600',
                           'maxTimeoutTsSeen': '300', 'maxTimeoutTsFree': '300',
-                          'maxTimeoutM3u8Free': '300', 'audioType': 'copy'}
+                          'maxTimeoutM3u8Free': '300', 'audioType': 'copy', 'ffmpegThread': '4'}
 
 
 def init_file_name():

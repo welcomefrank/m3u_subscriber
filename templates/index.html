@@ -1247,6 +1247,15 @@
                     class="stubbonsave">修改
             </button>
         </div>
+        <div style="display: flex;width: 100%;">
+            webdav/alist 多线程设置
+        </div>
+        <div style="width:100%">
+            <input type="text" id="ffmpegThread" class="stubboninput" placeholder="4"/>
+            <button onclick="changeFileName('ffmpegThread', 'ffmpegThread', ffmpegThread)"
+                    class="stubbonsave">修改
+            </button>
+        </div>
     </div>
     <div id="page18" style="display: none;">
         <h1>功能开关</h1>
@@ -2307,6 +2316,7 @@
     const maxTimeoutTsFree = document.getElementById('maxTimeoutTsFree');
     const maxTimeoutM3u8Free = document.getElementById('maxTimeoutM3u8Free');
     const audioType = document.getElementById('audioType');
+    const ffmpegThread = document.getElementById('ffmpegThread');
 
 
 
@@ -4109,6 +4119,7 @@
             getFileName('maxTimeoutTsFree', 'maxTimeoutTsFree', maxTimeoutTsFree)
             getFileName('maxTimeoutM3u8Free', 'maxTimeoutM3u8Free', maxTimeoutM3u8Free)
             getFileName('audioType', 'audioType', audioType)
+            getFileName('ffmpegThread', 'ffmpegThread', ffmpegThread)
         } else if (selectedPage === pages[17].id) {
             //生成有效M3U
             reloadFunctionOpenButton('switch')
