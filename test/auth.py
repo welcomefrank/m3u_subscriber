@@ -1,6 +1,8 @@
-# auth = HTTPBasicAuth()
+from requests.auth import HTTPBasicAuth
 
-# flask密码验证，客户端服务器都需要密码验证才可以链接webdav视频
+auth = HTTPBasicAuth()
+
+#flask密码验证，客户端服务器都需要密码验证才可以链接webdav视频
 # @auth.verify_password
 # def verify_password(username, password):
 #     # 验证用户名和密码

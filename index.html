@@ -1256,6 +1256,25 @@
                     class="stubbonsave">修改
             </button>
         </div>
+
+        <div style="display: flex;width: 100%;">
+            系统用户名
+        </div>
+        <div style="width:100%">
+            <input type="text" id="usernameSys" class="stubboninput" placeholder="admin"/>
+            <button onclick="changeFileName('usernameSys', 'usernameSys', usernameSys)"
+                    class="stubbonsave">修改
+            </button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            系统密码
+        </div>
+        <div style="width:100%">
+            <input type="text" id="passwordSys" class="stubboninput" placeholder="password"/>
+            <button onclick="changeFileName('passwordSys', 'passwordSys', passwordSys)"
+                    class="stubbonsave">修改
+            </button>
+        </div>
     </div>
     <div id="page18" style="display: none;">
         <h1>功能开关</h1>
@@ -1504,7 +1523,7 @@
     </div>
     <div id="page21" style="display: none;">
         <h1>打赏专栏</h1>
-        <a href="https://t.me/+4swJ9h40iLQ3ZTVl">https://t.me/+4swJ9h40iLQ3ZTVl</a>
+        <a href="https://t.me/+stAaKNYl3mtmN2Zl">https://t.me/+stAaKNYl3mtmN2Zl</a>
         <h3>各位路人朋友可以请我喝一杯咖啡吗^_^,您的支持将给予我更多动力迭代这个项目</h3>
         <h4>比特币(bitcoin)</h4>
          <li id="bitcoin" ><img id="bitcoin-image" src="#" alt="Bitcoin"></li>
@@ -2317,7 +2336,8 @@
     const maxTimeoutM3u8Free = document.getElementById('maxTimeoutM3u8Free');
     const audioType = document.getElementById('audioType');
     const ffmpegThread = document.getElementById('ffmpegThread');
-
+    const usernameSys = document.getElementById('usernameSys');
+    const passwordSys = document.getElementById('passwordSys');
 
 
 
@@ -4120,6 +4140,8 @@
             getFileName('maxTimeoutM3u8Free', 'maxTimeoutM3u8Free', maxTimeoutM3u8Free)
             getFileName('audioType', 'audioType', audioType)
             getFileName('ffmpegThread', 'ffmpegThread', ffmpegThread)
+            getFileName('usernameSys', 'usernameSys', usernameSys)
+            getFileName('passwordSys', 'passwordSys', passwordSys)
         } else if (selectedPage === pages[17].id) {
             //生成有效M3U
             reloadFunctionOpenButton('switch')
