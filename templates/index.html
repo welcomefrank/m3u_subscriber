@@ -11,10 +11,9 @@
             color: aliceblue;
         }
 
-        .button, .addNewSubscriber,.saveButtonClassName,.deleteButtonClassName,
-        .save-m3u-button, .delete-m3u-button,.changePasswordButtonClassName, .saveButtonClassName2, .deleteButtonClassName2,
-         #simply,#proxy-model-switch,.toggletext
-        ,#proxy-model-switch2{
+        .button, .addNewSubscriber, .saveButtonClassName, .deleteButtonClassName,
+        .save-m3u-button, .delete-m3u-button, .changePasswordButtonClassName, .saveButtonClassName2, .deleteButtonClassName2,
+        #simply, #proxy-model-switch, .toggletext, #proxy-model-switch2 {
             padding: 10px 20px;
             background-color: #4CAF50;
             color: white;
@@ -30,9 +29,8 @@
             background-color: #3e8e41;
         }
 
-        .saveButtonClassName,.deleteButtonClassName,
-        .save-m3u-button, .delete-m3u-button, #simply
-        {
+        .saveButtonClassName, .deleteButtonClassName,
+        .save-m3u-button, .delete-m3u-button, #simply {
             margin-right: 5px;
             width: 45%
         }
@@ -41,10 +39,12 @@
             margin-right: 3px;
             width: 29%
         }
-       .changePasswordButtonClassName {
+
+        .changePasswordButtonClassName {
             margin-right: 3px;
             width: 38%
         }
+
         .suburlclassname {
             width: 70%;
             background-color: #758a99;
@@ -59,14 +59,14 @@
             font-size: x-large;
         }
 
-        .subnameClassName2{
+        .subnameClassName2 {
             width: 15%;
             background-color: #758a99;
             color: aliceblue;
             font-size: x-large;
         }
 
-        .passwordClassName2{
+        .passwordClassName2 {
             width: 15%;
             background-color: #758a99;
             color: aliceblue;
@@ -84,8 +84,7 @@
             padding-bottom: 20px;
         }
 
-        .stubbonsave
-        {
+        .stubbonsave {
             padding: 20px 30px;
             background-color: #4CAF50;
             color: white;
@@ -96,7 +95,7 @@
             margin-left: 15px;
         }
 
-        .subnameClassName{
+        .subnameClassName {
             width: 20%;
             background-color: #758a99;
             color: aliceblue;
@@ -109,20 +108,19 @@
             color: aliceblue;
             font-size: x-large;
         }
-         .suburlclassname,.subnameClassName,.saveButtonClassName,.deleteButtonClassName,.stepflag,
-          .notice, #upload-m3u,.changePasswordButtonClassName,.suburlclassname2,.subnameClassName2,
-         .passwordClassName2,.saveButtonClassName2,.deleteButtonClassName2,
+
+        .suburlclassname, .subnameClassName, .saveButtonClassName, .deleteButtonClassName, .stepflag,
+        .notice, #upload-m3u, .changePasswordButtonClassName, .suburlclassname2, .subnameClassName2,
+        .passwordClassName2, .saveButtonClassName2, .deleteButtonClassName2,
         #sub-m3u, #generatepass, #savem3uareas, .save-m3u-button, .delete-m3u-button, #upload-m3u-btn,
         #download-m3u-btn, #remove-m3u-btn, #remove-m3u-btn,
-          .uploadjsonbtn,
-         #simply, .download-json-btn
-        , .dropdown,#proxy-model-switch,#proxy-model-switch2,.dropdown2,.stubbonsave,.removeallSubscriber,.addNewSubscriber
-        {
+        .uploadjsonbtn,
+        #simply, .download-json-btn, .dropdown, #proxy-model-switch, #proxy-model-switch2, .dropdown2, .stubbonsave, .removeallSubscriber, .addNewSubscriber {
             font-size: x-large;
         }
 
         #upload-m3u, #sub-m3u, #generatepass, #savem3uareas, #upload-m3u-btn, #download-m3u-btn, #remove-m3u-btn, #remove-m3u-btn,
-        #simply, .uploadjsonbtn,.removeallSubscriber{
+        #simply, .uploadjsonbtn, .removeallSubscriber {
             float: right;
             background-color: #4CAF50;
             color: white;
@@ -132,8 +130,8 @@
             margin-bottom: 5px;
             margin-top: 5px;
         }
-        .deleteButtonClassName, .deleteButtonClassName2
-         {
+
+        .deleteButtonClassName, .deleteButtonClassName2 {
             background-color: crimson;
         }
 
@@ -143,7 +141,7 @@
             width: 25%;
         }
 
-        #input, #output,#input2, #output2 {
+        #input, #output, #input2, #output2 {
             width: 90%;
             background-color: #758a99;
             color: aliceblue;
@@ -152,7 +150,7 @@
 
         }
 
-        .buttonChooseProxies,.toggletext {
+        .buttonChooseProxies, .toggletext {
             float: left;
             background-color: #4CAF50;
             border: none;
@@ -171,14 +169,14 @@
             background-color: crimson;
         }
 
-        .dropdown,.dropdown2 {
+        .dropdown, .dropdown2 {
 
             display: block;
             float: right;
             width: 100%;
         }
 
-        .dropdown-content,.dropdown-content2 {
+        .dropdown-content, .dropdown-content2 {
             display: none;
             position: absolute;
             width: 50%;
@@ -188,7 +186,7 @@
             border: 2px solid #ccc; /* 设置边框 */
         }
 
-        .dropdown.active .dropdown-content,.dropdown2.active .dropdown-content2 {
+        .dropdown.active .dropdown-content, .dropdown2.active .dropdown-content2 {
             display: block;
         }
 
@@ -202,12 +200,12 @@
             cursor: pointer;
         }
 
-        .on{
+        .on {
             background-color: #4CAF50;
             width: 100%;
         }
 
-        .off{
+        .off {
             background-color: crimson;
             width: 100%;
         }
@@ -253,14 +251,14 @@
         }
 
 
-
     </style>
 </head>
 <body onload="init()">
 <div style="width:100%;display:flex; justify-content:space-between;">
     <h1 style="width: 20%">M3U 超融合</h1>
     <button id="download-json-btn7" class="button download-json-btn" style="width: 30%">一键导出全部配置</button>
-    <div id="upload-json-btn7" class="uploadjsonbtn" style="position: relative; width: 30%; display: flex; justify-content: center; align-items: center;">
+    <div id="upload-json-btn7" class="uploadjsonbtn"
+         style="position: relative; width: 30%; display: flex; justify-content: center; align-items: center;">
         <label for="file-upload">一键导入全部配置</label>
         <input type="file" name="file-upload"
                style="position: absolute; top: 0; left: 0; height: 100%; width: 100%; opacity: 0;"></input>
@@ -409,9 +407,12 @@
             <h3 class="urllink">全部直播源-无加密: http://192.168.5.1:22771/secret/allM3u.m3u</h3>
             <h3 class="urllink">全部直播源-加密: http://192.168.5.1:22771/url/allM3uSecret.txt</h3>
             <h3 class="urllink">有效直播源-无加密: http://192.168.5.1:22771/secret/aliveM3u.m3u</h3>
-            <h3 class="urllink">电视盒子专用-华语电视台-有效直播源-无加密: http://192.168.5.1:22771/secret/healthM3u.m3u</h3>
-            <h3 class="urllink">adguardhome放行直播源域名-无加密: http://192.168.5.1:22771/secret/tvDomainForAdguardhome.txt</h3>
-            <h3 class="urllink">adguardhome放行直播源域名-加密: http://192.168.5.1:22771/url/tvDomainForAdguardhomeSecret.txt</h3>
+            <h3 class="urllink">电视盒子专用-华语电视台-有效直播源-无加密:
+                http://192.168.5.1:22771/secret/healthM3u.m3u</h3>
+            <h3 class="urllink">adguardhome放行直播源域名-无加密:
+                http://192.168.5.1:22771/secret/tvDomainForAdguardhome.txt</h3>
+            <h3 class="urllink">adguardhome放行直播源域名-加密:
+                http://192.168.5.1:22771/url/tvDomainForAdguardhomeSecret.txt</h3>
             <h3>上传文件导入合并M3U超融合备份</h3>
         </div>
         <div style="float: right;width: 30%">
@@ -431,16 +432,18 @@
                 <button id="add-row" class="addNewSubscriber" style="width:100%">新增网络直播源订阅</button>
             </div>
             <div>
-                <button  class="button stepflag" onclick="execute()" style="width: 100%">生成M3U超融合直播源订阅
+                <button class="button stepflag" onclick="execute()" style="width: 100%">生成M3U超融合直播源订阅
                 </button>
             </div>
             <div>
-                <button id="download-json-btn" class="button download-json-btn" style="width: 100%">导出M3U订阅备份</button>
+                <button id="download-json-btn" class="button download-json-btn" style="width: 100%">导出M3U订阅备份
+                </button>
             </div>
             <div style="width: 97%;">
                 <input type="text" id="searchInput6" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
             </div>
-            <button id="removem3ulinks" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks')">删除全部订阅
+            <button id="removem3ulinks" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks')">删除全部订阅
             </button>
             <div style="display: flex;width: 100%;">
                 <div class="notice" style="display: flex;width: 80%;">订阅来源:M3U网络直播源订阅地址+加密订阅源的密码(没有加密就不填写)
@@ -489,12 +492,14 @@
                 <button id="add-row6" class="addNewSubscriber" style="width:100%">新增密码</button>
             </div>
             <div>
-                <button id="download-json-btn6" class="button download-json-btn" style="width: 100%">导出密码备份</button>
+                <button id="download-json-btn6" class="button download-json-btn" style="width: 100%">导出密码备份
+                </button>
             </div>
             <div style="width: 97%;">
-                <input type="text" id="searchInput" placeholder="搜索框"  class="searchbox" style="width: 100%"></input>
+                <input type="text" id="searchInput" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
             </div>
-            <button id="removem3ulinks6" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks6')">删除全部密码
+            <button id="removem3ulinks6" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks6')">删除全部密码
             </button>
             <div style="display: flex;width: 100%;">
                 <div class="notice" style="display: flex;width: 80%;">订阅来源:密码来源+密码内容
@@ -550,8 +555,9 @@
             <h3 class="urllink">dnsmasq-加密:http://192.168.5.1:22771/url/whiteListDnsmasqSecret.txt</h3>
             <h3 class="urllink">whitelist-无加密:http://192.168.5.1:22771/secret/whiteListDomian.txt</h3>
             <h3 class="urllink">whitelist-加密:http://192.168.5.1:22771/url/whiteListDomianSecret.txt</h3>
-            <h3 class="urllink">whitelist-openclash第三方直连规则-无加密:http://192.168.5.1:22771/secret/whitelistDirectRule.txt</h3>
-            <h3 >上传文件导入合并白名单订阅</h3>
+            <h3 class="urllink">
+                whitelist-openclash第三方直连规则-无加密:http://192.168.5.1:22771/secret/whitelistDirectRule.txt</h3>
+            <h3>上传文件导入合并白名单订阅</h3>
         </div>
         <div style="width:100%">
             <div>
@@ -561,16 +567,19 @@
                 <button id="add-row2" class="addNewSubscriber" style="width:100%">新增白名单域名订阅</button>
             </div>
             <div>
-                <button  class="button stepflag" onclick="execute2()" style="width: 100%">生成白名单超融合订阅
+                <button class="button stepflag" onclick="execute2()" style="width: 100%">生成白名单超融合订阅
                 </button>
             </div>
             <div>
-                <button id="download-json-btn2" class="button download-json-btn" style="width: 100%">导出白名单订阅备份</button>
+                <button id="download-json-btn2" class="button download-json-btn" style="width: 100%">
+                    导出白名单订阅备份
+                </button>
             </div>
             <div style="width: 97%;">
                 <input type="text" id="searchInput7" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
             </div>
-            <button id="removem3ulinks2" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks2')">删除全部订阅
+            <button id="removem3ulinks2" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks2')">删除全部订阅
             </button>
             <div style="display: flex;width: 100%;">
                 <div class="notice" style="display: flex;width: 80%;">订阅来源:白名单订阅地址+加密订阅源的密码(没有加密就不填写)
@@ -603,16 +612,19 @@
                 <button id="add-row3" class="addNewSubscriber" style="width:100%">新增黑名单域名订阅</button>
             </div>
             <div>
-                <button  class="button stepflag" onclick="execute3()" style="width: 100%">生成黑名单超融合订阅
+                <button class="button stepflag" onclick="execute3()" style="width: 100%">生成黑名单超融合订阅
                 </button>
             </div>
             <div>
-                <button id="download-json-btn3" class="button download-json-btn" style="width: 100%">导出黑名单订阅备份</button>
+                <button id="download-json-btn3" class="button download-json-btn" style="width: 100%">
+                    导出黑名单订阅备份
+                </button>
             </div>
             <div style="width: 97%;">
                 <input type="text" id="searchInput8" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
             </div>
-            <button id="removem3ulinks3" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks3')">删除全部订阅
+            <button id="removem3ulinks3" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks3')">删除全部订阅
             </button>
             <div style="display: flex;width: 100%;">
                 <div class="notice" style="display: flex;width: 80%;">订阅来源:黑名单订阅地址+加密订阅源的密码(没有加密就不填写)
@@ -642,16 +654,18 @@
                 <button id="add-row4" class="addNewSubscriber" style="width:100%">新增ipv4订阅</button>
             </div>
             <div>
-                <button  class="button stepflag" onclick="execute4()" style="width: 100%">生成ipv4超融合订阅
+                <button class="button stepflag" onclick="execute4()" style="width: 100%">生成ipv4超融合订阅
                 </button>
             </div>
             <div>
-                <button id="download-json-btn4" class="button download-json-btn" style="width: 100%">导出ipv4订阅备份</button>
+                <button id="download-json-btn4" class="button download-json-btn" style="width: 100%">导出ipv4订阅备份
+                </button>
             </div>
             <div style="width: 97%;">
                 <input type="text" id="searchInput9" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
             </div>
-            <button id="removem3ulinks4" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks4')">删除全部订阅
+            <button id="removem3ulinks4" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks4')">删除全部订阅
             </button>
             <div style="display: flex;width: 100%;">
                 <div class="notice" style="display: flex;width: 80%;">订阅来源:ipv4订阅地址+加密订阅源的密码(没有加密就不填写)
@@ -681,16 +695,19 @@
                 <button id="add-row5" class="addNewSubscriber" style="width:100%">新增ipv6订阅</button>
             </div>
             <div>
-                <button  class="button stepflag" onclick="execute5()" style="width: 100%">生成ipv6超融合订阅
+                <button class="button stepflag" onclick="execute5()" style="width: 100%">生成ipv6超融合订阅
                 </button>
             </div>
             <div>
-                <button id="download-json-btn5" class="button download-json-btn" style="width: 100%">导出ipv6订阅备份</button>
+                <button id="download-json-btn5" class="button download-json-btn" style="width: 100%">导出ipv6订阅备份
+                </button>
             </div>
             <div style="width: 97%;">
-                <input type="text" id="searchInput10" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+                <input type="text" id="searchInput10" placeholder="搜索框" class="searchbox"
+                       style="width: 100%"></input>
             </div>
-            <button id="removem3ulinks5" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks5')">删除全部订阅
+            <button id="removem3ulinks5" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks5')">删除全部订阅
             </button>
             <div style="display: flex;width: 100%;">
                 <div class="notice" style="display: flex;width: 80%;">订阅来源:ipv6订阅地址+加密订阅源的密码(没有加密就不填写)
@@ -766,16 +783,19 @@
                 <button id="add-row8" class="addNewSubscriber" style="width:100%">新增节点订阅</button>
             </div>
             <div>
-                <button  class="button stepflag" onclick="execute6()" style="width: 100%">生成节点超融合订阅
+                <button class="button stepflag" onclick="execute6()" style="width: 100%">生成节点超融合订阅
                 </button>
             </div>
             <div>
-                <button id="download-json-btn8" class="button download-json-btn" style="width: 100%">导出节点订阅备份</button>
+                <button id="download-json-btn8" class="button download-json-btn" style="width: 100%">导出节点订阅备份
+                </button>
             </div>
             <div style="width: 97%;">
-                <input type="text" id="searchInput11" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+                <input type="text" id="searchInput11" placeholder="搜索框" class="searchbox"
+                       style="width: 100%"></input>
             </div>
-            <button id="removem3ulinks8" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks8')">删除全部订阅
+            <button id="removem3ulinks8" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks8')">删除全部订阅
             </button>
             <div style="display: flex;width: 100%;">
                 <div class="notice" style="display: flex;width: 80%;">订阅来源:节点订阅地址+加密订阅源的密码
@@ -801,12 +821,15 @@
                 <button id="add-row9" class="addNewSubscriber" style="width:100%">新增远程配置订阅</button>
             </div>
             <div>
-                <button id="download-json-btn9" class="button download-json-btn" style="width: 100%">导出远程配置备份</button>
+                <button id="download-json-btn9" class="button download-json-btn" style="width: 100%">导出远程配置备份
+                </button>
             </div>
             <div style="width: 97%;">
-                <input type="text" id="searchInput12" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+                <input type="text" id="searchInput12" placeholder="搜索框" class="searchbox"
+                       style="width: 100%"></input>
             </div>
-            <button id="removem3ulinks9" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks9')">删除全部订阅
+            <button id="removem3ulinks9" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks9')">删除全部订阅
             </button>
             <div style="display: flex;width: 100%;">
                 <div class="notice" style="display: flex;width: 80%;">订阅来源:远程订阅地址+备注
@@ -832,12 +855,16 @@
                 <button id="add-row10" class="addNewSubscriber" style="width:100%">新增后端地址</button>
             </div>
             <div>
-                <button id="download-json-btn10" class="button download-json-btn" style="width: 100%">导出后端地址配置备份</button>
+                <button id="download-json-btn10" class="button download-json-btn" style="width: 100%">
+                    导出后端地址配置备份
+                </button>
             </div>
             <div style="width: 97%;">
-                <input type="text" id="searchInput13" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+                <input type="text" id="searchInput13" placeholder="搜索框" class="searchbox"
+                       style="width: 100%"></input>
             </div>
-            <button id="removem3ulinks10" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks10')">删除全部订阅
+            <button id="removem3ulinks10" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks10')">删除全部订阅
             </button>
             <div style="display: flex;width: 100%;">
                 <div class="notice" style="display: flex;width: 80%;">订阅来源:后端地址+备注
@@ -917,55 +944,66 @@
             <input type="file" id="upload-json-btn20" class="uploadjsonbtn" style="width: 100%"></input>
         </div>
         <div>
-            <button id="download-json-btn20" class="button download-json-btn" style="width: 100%">导出个人配置备份</button>
+            <button id="download-json-btn20" class="button download-json-btn" style="width: 100%">导出个人配置备份
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             直播源订阅
         </div>
         <div style="width:100%">
             <input type="text" id="threads2" class="stubboninput"/>
-            <button  onclick="changePassword('m3u','threads2',threadNum2)" class="stubbonsave">随机</button>
-            <button  onclick="changePasswordByHand('m3u','threads2',threadNum2)" class="stubbonsave">手动修改</button>
+            <button onclick="changePassword('m3u','threads2',threadNum2)" class="stubbonsave">随机</button>
+            <button onclick="changePasswordByHand('m3u','threads2',threadNum2)" class="stubbonsave">手动修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             域名白名单订阅
         </div>
         <div style="width:100%">
             <input type="text" id="chinaDnsServer2" class="stubboninput"/>
-            <button  onclick="changePassword('whitelist','chinaDnsServer2',chinaDnsServer2)" class="stubbonsave">随机</button>
-            <button  onclick="changePasswordByHand('whitelist','chinaDnsServer2',chinaDnsServer2)" class="stubbonsave">手动修改</button>
+            <button onclick="changePassword('whitelist','chinaDnsServer2',chinaDnsServer2)" class="stubbonsave">随机
+            </button>
+            <button onclick="changePasswordByHand('whitelist','chinaDnsServer2',chinaDnsServer2)" class="stubbonsave">
+                手动修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             域名黑名单订阅
         </div>
         <div style="width:100%">
             <input type="text" id="chinaDnsPort2" class="stubboninput"/>
-            <button  onclick="changePassword('blacklist','chinaDnsPort2',chinaDnsPort2)" class="stubbonsave">随机</button>
-            <button  onclick="changePasswordByHand('blacklist','chinaDnsPort2',chinaDnsPort2)" class="stubbonsave">手动修改</button>
+            <button onclick="changePassword('blacklist','chinaDnsPort2',chinaDnsPort2)" class="stubbonsave">随机
+            </button>
+            <button onclick="changePasswordByHand('blacklist','chinaDnsPort2',chinaDnsPort2)" class="stubbonsave">
+                手动修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             ipv4订阅
         </div>
         <div style="width:100%">
             <input type="text" id="extraDnsServer2" class="stubboninput"/>
-            <button  onclick="changePassword('ipv4','extraDnsServer2',extraDnsServer2)" class="stubbonsave">随机</button>
-            <button  onclick="changePasswordByHand('ipv4','extraDnsServer2',extraDnsServer2)" class="stubbonsave">手动修改</button>
+            <button onclick="changePassword('ipv4','extraDnsServer2',extraDnsServer2)" class="stubbonsave">随机</button>
+            <button onclick="changePasswordByHand('ipv4','extraDnsServer2',extraDnsServer2)" class="stubbonsave">
+                手动修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             ipv6订阅
         </div>
         <div style="width:100%">
             <input type="text" id="extraDnsPort2" class="stubboninput"/>
-            <button  onclick="changePassword('ipv6','extraDnsPort2',extraDnsPort2)" class="stubbonsave">随机</button>
-            <button  onclick="changePasswordByHand('ipv6','extraDnsPort2',extraDnsPort2)" class="stubbonsave">手动修改</button>
+            <button onclick="changePassword('ipv6','extraDnsPort2',extraDnsPort2)" class="stubbonsave">随机</button>
+            <button onclick="changePasswordByHand('ipv6','extraDnsPort2',extraDnsPort2)" class="stubbonsave">手动修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             节点订阅
         </div>
         <div style="width:100%">
             <input type="text" id="extraDnsPort3" class="stubboninput"/>
-            <button  onclick="changePassword('proxy','extraDnsPort3',extraDnsPort3)" class="stubbonsave">随机</button>
-            <button  onclick="changePasswordByHand('proxy','extraDnsPort3',extraDnsPort3)" class="stubbonsave">手动修改</button>
+            <button onclick="changePassword('proxy','extraDnsPort3',extraDnsPort3)" class="stubbonsave">随机</button>
+            <button onclick="changePasswordByHand('proxy','extraDnsPort3',extraDnsPort3)" class="stubbonsave">手动修改
+            </button>
         </div>
         <br>
         <h1>历史加密密码记录</h1>
@@ -984,7 +1022,8 @@
             <div style="width: 97%;">
                 <input type="text" id="searchInput2" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
             </div>
-            <button id="removem3ulinks14" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks14')">删除全部历史订阅密码
+            <button id="removem3ulinks14" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks14')">删除全部历史订阅密码
             </button>
             <div style="display: flex;width: 100%;">
                 <div class="notice" style="display: flex;width: 80%;">订阅密码+订阅类型
@@ -1008,35 +1047,42 @@
             <input type="file" id="upload-json-btn21" class="uploadjsonbtn" style="width: 100%"></input>
         </div>
         <div>
-            <button id="download-json-btn21" class="button download-json-btn" style="width: 100%">导出个人配置备份</button>
+            <button id="download-json-btn21" class="button download-json-btn" style="width: 100%">导出个人配置备份
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             gitee用户名:username
         </div>
         <div style="width:100%">
             <input type="text" id="giteeUsername" class="stubboninput" placeholder="ppap"/>
-            <button  onclick="changeSyncData('username', 'bbs', 'giteeUsername', giteeUsername)" class="stubbonsave">修改</button>
+            <button onclick="changeSyncData('username', 'bbs', 'giteeUsername', giteeUsername)" class="stubbonsave">
+                修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             gitee仓库名:repo_name
         </div>
         <div style="width:100%">
             <input type="text" id="giteeRePoname" class="stubboninput" placeholder="test"/>
-            <button  onclick="changeSyncData('reponame', 'bbs', 'giteeRePoname', giteeRePoname)" class="stubbonsave">修改</button>
+            <button onclick="changeSyncData('reponame', 'bbs', 'giteeRePoname', giteeRePoname)" class="stubbonsave">
+                修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             gitee路径:path
         </div>
         <div style="width:100%">
             <input type="text" id="giteePath" class="stubboninput" placeholder="/"/>
-            <button  onclick="changeSyncData('path', 'bbs', 'giteePath', giteePath)" class="stubbonsave">修改</button>
+            <button onclick="changeSyncData('path', 'bbs', 'giteePath', giteePath)" class="stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             gitee访问令牌:access_token
         </div>
         <div style="width:100%">
             <input type="text" id="giteeAcessToken" class="stubboninput" placeholder="dsfdgshgrhergwrgsdeg"/>
-            <button  onclick="changeSyncData('accesstoken', 'bbs', 'giteeAcessToken', giteeAcessToken)" class="stubbonsave">修改</button>
+            <button onclick="changeSyncData('accesstoken', 'bbs', 'giteeAcessToken', giteeAcessToken)"
+                    class="stubbonsave">修改
+            </button>
         </div>
 
         <h1>github同步账号</h1>
@@ -1049,35 +1095,42 @@
             <input type="file" id="upload-json-btn22" class="uploadjsonbtn" style="width: 100%"></input>
         </div>
         <div>
-            <button id="download-json-btn22" class="button download-json-btn" style="width: 100%">导出个人配置备份</button>
+            <button id="download-json-btn22" class="button download-json-btn" style="width: 100%">导出个人配置备份
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             github用户名:username
         </div>
         <div style="width:100%">
             <input type="text" id="githubUsername" class="stubboninput" placeholder="ppap"/>
-            <button  onclick="changeSyncData('username', 'pps', 'githubUsername', githubUsername)" class="stubbonsave">修改</button>
+            <button onclick="changeSyncData('username', 'pps', 'githubUsername', githubUsername)" class="stubbonsave">
+                修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             github仓库名:repo_name
         </div>
         <div style="width:100%">
             <input type="text" id="githubRePoname" class="stubboninput" placeholder="test"/>
-            <button  onclick="changeSyncData('reponame', 'pps', 'githubRePoname', githubRePoname)" class="stubbonsave">修改</button>
+            <button onclick="changeSyncData('reponame', 'pps', 'githubRePoname', githubRePoname)" class="stubbonsave">
+                修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             github路径:path
         </div>
         <div style="width:100%">
             <input type="text" id="githubPath" class="stubboninput" placeholder="/"/>
-            <button  onclick="changeSyncData('path', 'pps', 'githubPath', githubPath)" class="stubbonsave">修改</button>
+            <button onclick="changeSyncData('path', 'pps', 'githubPath', githubPath)" class="stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             github访问令牌:access_token
         </div>
         <div style="width:100%">
             <input type="text" id="githubAcessToken" class="stubboninput" placeholder="rewretwertrt34twr"/>
-            <button  onclick="changeSyncData('accesstoken', 'pps', 'githubAcessToken', githubAcessToken)" class="stubbonsave">修改</button>
+            <button onclick="changeSyncData('accesstoken', 'pps', 'githubAcessToken', githubAcessToken)"
+                    class="stubbonsave">修改
+            </button>
         </div>
 
         <h1>webdav同步账号</h1>
@@ -1090,49 +1143,56 @@
             <input type="file" id="upload-json-btn23" class="uploadjsonbtn" style="width: 100%"></input>
         </div>
         <div>
-            <button id="download-json-btn23" class="button download-json-btn" style="width: 100%">导出个人配置备份</button>
+            <button id="download-json-btn23" class="button download-json-btn" style="width: 100%">导出个人配置备份
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             webdav用户名:username
         </div>
         <div style="width:100%">
             <input type="text" id="webdavUsername" class="stubboninput" placeholder="ppap"/>
-            <button  onclick="changeSyncData('username', 'lls', 'webdavUsername', webdavUsername)" class="stubbonsave">修改</button>
+            <button onclick="changeSyncData('username', 'lls', 'webdavUsername', webdavUsername)" class="stubbonsave">
+                修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             webdav密码:password
         </div>
         <div style="width:100%">
             <input type="text" id="webdavPassword" class="stubboninput" placeholder="123456"/>
-            <button  onclick="changeSyncData('password', 'lls', 'webdavPassword', webdavPassword)" class="stubbonsave">修改</button>
+            <button onclick="changeSyncData('password', 'lls', 'webdavPassword', webdavPassword)" class="stubbonsave">
+                修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             webdav路径:path
         </div>
         <div style="width:100%">
             <input type="text" id="webdavPath" class="stubboninput" placeholder="/dav/"/>
-            <button  onclick="changeSyncData('path', 'lls', 'webdavPath', webdavPath)" class="stubbonsave">修改</button>
+            <button onclick="changeSyncData('path', 'lls', 'webdavPath', webdavPath)" class="stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             webdav协议:agreement（http/https）
         </div>
         <div style="width:100%">
             <input type="text" id="webdavAgreement" class="stubboninput" placeholder="http"/>
-            <button  onclick="changeSyncData('agreement', 'lls', 'webdavAgreement', webdavAgreement)" class="stubbonsave">修改</button>
+            <button onclick="changeSyncData('agreement', 'lls', 'webdavAgreement', webdavAgreement)"
+                    class="stubbonsave">修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             webdav地址:ip地址或者域名(和协议对应起来,ip一般是http,域名一般是https)
         </div>
         <div style="width:100%">
             <input type="text" id="webdavIp" class="stubboninput" placeholder="192.168.5.1"/>
-            <button  onclick="changeSyncData('ip', 'lls', 'webdavIp', webdavIp)" class="stubbonsave">修改</button>
+            <button onclick="changeSyncData('ip', 'lls', 'webdavIp', webdavIp)" class="stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             webdav端口:port (比如5244/80/8080....)
         </div>
         <div style="width:100%">
             <input type="text" id="webdavPort" class="stubboninput" placeholder="5244"/>
-            <button  onclick="changeSyncData('port', 'lls', 'webdavPort', webdavPort)" class="stubbonsave">修改</button>
+            <button onclick="changeSyncData('port', 'lls', 'webdavPort', webdavPort)" class="stubbonsave">修改</button>
         </div>
     </div>
     <div id="page16" style="display: none;">
@@ -1148,12 +1208,15 @@
                 <button id="add-row11" class="addNewSubscriber" style="width:100%">新增关键字</button>
             </div>
             <div>
-                <button id="download-json-btn11" class="button download-json-btn" style="width: 100%">导出关键字配置备份</button>
+                <button id="download-json-btn11" class="button download-json-btn" style="width: 100%">
+                    导出关键字配置备份
+                </button>
             </div>
             <div style="width: 97%;">
                 <input type="text" id="searchInput3" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
             </div>
-            <button id="removem3ulinks11" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks11')">删除全部关键字
+            <button id="removem3ulinks11" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks11')">删除全部关键字
             </button>
             <div style="display: flex;width: 100%;">
                 <div class="notice" style="display: flex;width: 80%;">关键字:过滤生成有效大陆直播源的判断依据;备注:频道分组
@@ -1323,7 +1386,7 @@
                 <button id="switch9" class="switchfunctionbutton" onclick="toggleSwitch('switch9')">已关闭</button>
                 <input class="toggletext" type="text" value="域名白名单生成dnsmasq加密文件">
             </div>
-             <div class="grid-item">
+            <div class="grid-item">
                 <button id="switch10" class="switchfunctionbutton" onclick="toggleSwitch('switch10')">已关闭</button>
                 <input class="toggletext" type="text" value="域名白名单加密dnsmasq文件上传">
             </div>
@@ -1400,10 +1463,6 @@
                 <input class="toggletext" type="text" value="ipv6-定时器">
             </div>
             <div class="grid-item">
-                <button id="switch29" class="switchfunctionbutton" onclick="toggleSwitch('switch29')">已关闭</button>
-                <input class="toggletext" type="text" value="节点订阅-定时器">
-            </div>
-            <div class="grid-item">
                 <button id="switch30" class="switchfunctionbutton" onclick="toggleSwitch('switch30')">已关闭</button>
                 <input class="toggletext" type="text" value="上传至Gitee">
             </div>
@@ -1440,7 +1499,8 @@
             <h3>数据最终模板来源于白名单订阅里全部数据,如果那边的数据不可靠,这个功能是无效的</h3>
             <h3>每隔24小时自动清除数据</h3>
             <h3 class="urllink">个人白名单浏览记录-dnsmasq: http://192.168.5.1:22771/secret/simpleDnsmasq.conf</h3>
-            <h3 class="urllink">个人白名单分流规则-openclash: http://192.168.5.1:22771/secret/simplewhitelistProxyRule.txt</h3>
+            <h3 class="urllink">个人白名单分流规则-openclash:
+                http://192.168.5.1:22771/secret/simplewhitelistProxyRule.txt</h3>
             <h3>上传文件导入合并简易DNS分流白名单</h3>
         </div>
         <div style="width:100%">
@@ -1456,12 +1516,14 @@
                 </button>
             </div>
             <div>
-                <button id="download-json-btn12" class="button download-json-btn" style="width: 100%">导出配置备份</button>
+                <button id="download-json-btn12" class="button download-json-btn" style="width: 100%">导出配置备份
+                </button>
             </div>
             <div style="width: 97%;">
                 <input type="text" id="searchInput4" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
             </div>
-            <button id="removem3ulinks12" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks12')">删除全部域名
+            <button id="removem3ulinks12" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks12')">删除全部域名
             </button>
             <div style="display: flex;width: 100%;">
                 <div class="notice" style="display: flex;width: 80%;">简易白名单域名:一级域名
@@ -1486,8 +1548,10 @@
             <h3 style="color: crimson">默认自动开启自主生成黑名单数据,如果不可靠可以在功能开关关闭该功能</h3>
             <h3>数据最终模板来源于黑名单订阅里全部数据,如果那边的数据不可靠,这个功能是无效的</h3>
             <h3>每隔24小时自动清除数据</h3>
-            <h3 class="urllink">个人黑名单浏览记录-openclash: http://192.168.5.1:22771/secret/simpleOpenclashFallBackFilterDomain.txt</h3>
-            <h3 class="urllink">个人黑名单分流规则-openclash: http://192.168.5.1:22771/secret/simpleblacklistProxyRule.txt</h3>
+            <h3 class="urllink">个人黑名单浏览记录-openclash:
+                http://192.168.5.1:22771/secret/simpleOpenclashFallBackFilterDomain.txt</h3>
+            <h3 class="urllink">个人黑名单分流规则-openclash:
+                http://192.168.5.1:22771/secret/simpleblacklistProxyRule.txt</h3>
             <h3>上传文件导入合并简易DNS分流黑名单</h3>
         </div>
         <div style="width:100%">
@@ -1503,12 +1567,14 @@
                 </button>
             </div>
             <div>
-                <button id="download-json-btn13" class="button download-json-btn" style="width: 100%">导出配置备份</button>
+                <button id="download-json-btn13" class="button download-json-btn" style="width: 100%">导出配置备份
+                </button>
             </div>
             <div style="width: 97%;">
                 <input type="text" id="searchInput5" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
             </div>
-            <button id="removem3ulinks13" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks13')">删除全部域名
+            <button id="removem3ulinks13" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks13')">删除全部域名
             </button>
             <div style="display: flex;width: 100%;">
                 <div class="notice" style="display: flex;width: 80%;">简易黑名单域名:一级域名
@@ -1526,7 +1592,7 @@
         <a href="https://t.me/+stAaKNYl3mtmN2Zl">https://t.me/+stAaKNYl3mtmN2Zl</a>
         <h3>各位路人朋友可以请我喝一杯咖啡吗^_^,您的支持将给予我更多动力迭代这个项目</h3>
         <h4>比特币(bitcoin)</h4>
-         <li id="bitcoin" ><img id="bitcoin-image" src="#" alt="Bitcoin"></li>
+        <li id="bitcoin"><img id="bitcoin-image" src="#" alt="Bitcoin"></li>
     </div>
     <div id="page22" style="display: none;">
         <h1>订阅文件重命名</h1>
@@ -1539,77 +1605,92 @@
             <input type="file" id="upload-json-btn19" class="uploadjsonbtn" style="width: 100%"></input>
         </div>
         <div>
-            <button id="download-json-btn19" class="button download-json-btn" style="width: 100%">导出个人配置备份</button>
+            <button id="download-json-btn19" class="button download-json-btn" style="width: 100%">导出个人配置备份
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             全部直播源-无加密:allM3u
         </div>
         <div style="width:100%">
             <input type="text" id="allM3u" class="stubboninput" placeholder="allM3u"/>
-            <button  onclick="changeFileName('allM3u', 'allM3u', allM3u)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('allM3u', 'allM3u', allM3u)" class="stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             全部直播源-加密:allM3uSecret
         </div>
         <div style="width:100%">
             <input type="text" id="allM3uSecret" class="stubboninput" placeholder="allM3uSecret"/>
-            <button  onclick="changeFileName('allM3uSecret', 'allM3uSecret', allM3uSecret)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('allM3uSecret', 'allM3uSecret', allM3uSecret)" class="stubbonsave">修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             有效直播源-无加密:aliveM3u
         </div>
         <div style="width:100%">
             <input type="text" id="aliveM3u" class="stubboninput" placeholder="aliveM3u"/>
-            <button  onclick="changeFileName('aliveM3u', 'aliveM3u', aliveM3u)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('aliveM3u', 'aliveM3u', aliveM3u)" class="stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             电视盒子专用-华语电视台-有效直播源-无加密:healthM3u
         </div>
         <div style="width:100%">
             <input type="text" id="healthM3u" class="stubboninput" placeholder="healthM3u"/>
-            <button  onclick="changeFileName('healthM3u', 'healthM3u', healthM3u)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('healthM3u', 'healthM3u', healthM3u)" class="stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             adguardhome放行TV域名-无加密:tvDomainForAdguardhome
         </div>
         <div style="width:100%">
             <input type="text" id="tvDomainForAdguardhome" class="stubboninput" placeholder="tvDomainForAdguardhome"/>
-            <button  onclick="changeFileName('tvDomainForAdguardhome', 'tvDomainForAdguardhome', tvDomainForAdguardhome)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('tvDomainForAdguardhome', 'tvDomainForAdguardhome', tvDomainForAdguardhome)"
+                    class="stubbonsave">修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             adguardhome放行TV域名-加密:tvDomainForAdguardhomeSecret
         </div>
         <div style="width:100%">
-            <input type="text" id="tvDomainForAdguardhomeSecret" class="stubboninput" placeholder="tvDomainForAdguardhomeSecret"/>
-            <button  onclick="changeFileName('tvDomainForAdguardhomeSecret', 'tvDomainForAdguardhomeSecret', tvDomainForAdguardhomeSecret)" class="stubbonsave">修改</button>
+            <input type="text" id="tvDomainForAdguardhomeSecret" class="stubboninput"
+                   placeholder="tvDomainForAdguardhomeSecret"/>
+            <button onclick="changeFileName('tvDomainForAdguardhomeSecret', 'tvDomainForAdguardhomeSecret', tvDomainForAdguardhomeSecret)"
+                    class="stubbonsave">修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             域名白名单-dnsmasq-无加密:whiteListDnsmasq
         </div>
         <div style="width:100%">
             <input type="text" id="whiteListDnsmasq" class="stubboninput" placeholder="whiteListDnsmasq"/>
-            <button  onclick="changeFileName('whiteListDnsmasq', 'whiteListDnsmasq', whiteListDnsmasq)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('whiteListDnsmasq', 'whiteListDnsmasq', whiteListDnsmasq)"
+                    class="stubbonsave">修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             域名白名单-dnsmasq-加密:whiteListDnsmasqSecret
         </div>
         <div style="width:100%">
             <input type="text" id="whiteListDnsmasqSecret" class="stubboninput" placeholder="whiteListDnsmasqSecret"/>
-            <button  onclick="changeFileName('whiteListDnsmasqSecret', 'whiteListDnsmasqSecret', whiteListDnsmasqSecret)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('whiteListDnsmasqSecret', 'whiteListDnsmasqSecret', whiteListDnsmasqSecret)"
+                    class="stubbonsave">修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             域名白名单-whitelist-无加密:whiteListDomian
         </div>
         <div style="width:100%">
             <input type="text" id="whiteListDomian" class="stubboninput" placeholder="whiteListDomian"/>
-            <button  onclick="changeFileName('whiteListDomian', 'whiteListDomian', whiteListDomian)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('whiteListDomian', 'whiteListDomian', whiteListDomian)" class="stubbonsave">
+                修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             域名白名单-whitelist-加密:whiteListDomianSecret
         </div>
         <div style="width:100%">
             <input type="text" id="whiteListDomianSecret" class="stubboninput" placeholder="whiteListDomianSecret"/>
-            <button  onclick="changeFileName('whiteListDomianSecret', 'whiteListDomianSecret', whiteListDomianSecret)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('whiteListDomianSecret', 'whiteListDomianSecret', whiteListDomianSecret)"
+                    class="stubbonsave">修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             域名白名单-openclash直连规则:whitelistDirectRule
@@ -1624,78 +1705,93 @@
             域名黑名单-OP-无加密:openclashFallbackFilterDomain
         </div>
         <div style="width:100%">
-            <input type="text" id="openclashFallbackFilterDomain" class="stubboninput" placeholder="openclashFallbackFilterDomain"/>
-            <button  onclick="changeFileName('openclashFallbackFilterDomain', 'openclashFallbackFilterDomain', openclashFallbackFilterDomain)" class="stubbonsave">修改</button>
+            <input type="text" id="openclashFallbackFilterDomain" class="stubboninput"
+                   placeholder="openclashFallbackFilterDomain"/>
+            <button onclick="changeFileName('openclashFallbackFilterDomain', 'openclashFallbackFilterDomain', openclashFallbackFilterDomain)"
+                    class="stubbonsave">修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             域名黑名单-OP-加密:openclashFallbackFilterDomainSecret
         </div>
         <div style="width:100%">
-            <input type="text" id="openclashFallbackFilterDomainSecret" class="stubboninput" placeholder="openclashFallbackFilterDomainSecret"/>
-            <button  onclick="changeFileName('openclashFallbackFilterDomainSecret', 'openclashFallbackFilterDomainSecret', openclashFallbackFilterDomainSecret)" class="stubbonsave">修改</button>
+            <input type="text" id="openclashFallbackFilterDomainSecret" class="stubboninput"
+                   placeholder="openclashFallbackFilterDomainSecret"/>
+            <button onclick="changeFileName('openclashFallbackFilterDomainSecret', 'openclashFallbackFilterDomainSecret', openclashFallbackFilterDomainSecret)"
+                    class="stubbonsave">修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             域名黑名单-无加密:blackListDomain
         </div>
         <div style="width:100%">
             <input type="text" id="blackListDomain" class="stubboninput" placeholder="blackListDomain"/>
-            <button  onclick="changeFileName('blackListDomain', 'blackListDomain', blackListDomain)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('blackListDomain', 'blackListDomain', blackListDomain)" class="stubbonsave">
+                修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             域名黑名单-加密:blackListDomainSecret
         </div>
         <div style="width:100%">
             <input type="text" id="blackListDomainSecret" class="stubboninput" placeholder="blackListDomainSecret"/>
-            <button  onclick="changeFileName('blackListDomainSecret', 'blackListDomainSecret', blackListDomainSecret)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('blackListDomainSecret', 'blackListDomainSecret', blackListDomainSecret)"
+                    class="stubbonsave">修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
-        域名黑名单-openclash代理规则:blacklistProxyRule
+            域名黑名单-openclash代理规则:blacklistProxyRule
         </div>
         <div style="width:100%">
             <input type="text" id="blacklistProxyRule" class="stubboninput" placeholder="blacklistProxyRule"/>
-            <button  onclick="changeFileName('blacklistProxyRule', 'blacklistProxyRule', blacklistProxyRule)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('blacklistProxyRule', 'blacklistProxyRule', blacklistProxyRule)"
+                    class="stubbonsave">修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             ipv4-无加密:ipv4
         </div>
         <div style="width:100%">
             <input type="text" id="ipv4" class="stubboninput" placeholder="ipv4"/>
-            <button  onclick="changeFileName('ipv4', 'ipv4', ipv4)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('ipv4', 'ipv4', ipv4)" class="stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             ipv4-加密:ipv4Secret
         </div>
         <div style="width:100%">
             <input type="text" id="ipv4Secret" class="stubboninput" placeholder="ipv4Secret"/>
-            <button  onclick="changeFileName('ipv4Secret', 'ipv4Secret', ipv4Secret)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('ipv4Secret', 'ipv4Secret', ipv4Secret)" class="stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             ipv6-无加密:ipv6
         </div>
         <div style="width:100%">
             <input type="text" id="ipv6" class="stubboninput" placeholder="ipv6"/>
-            <button  onclick="changeFileName('ipv6', 'ipv6', ipv6)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('ipv6', 'ipv6', ipv6)" class="stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             ipv6-加密:ipv6Secret
         </div>
         <div style="width:100%">
             <input type="text" id="ipv6Secret" class="stubboninput" placeholder="ipv6Secret"/>
-            <button  onclick="changeFileName('ipv6Secret', 'ipv6Secret', ipv6Secret)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('ipv6Secret', 'ipv6Secret', ipv6Secret)" class="stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             节点订阅-无加密:proxyConfig
         </div>
         <div style="width:100%">
             <input type="text" id="proxyConfig" class="stubboninput" placeholder="proxyConfig"/>
-            <button  onclick="changeFileName('proxyConfig', 'proxyConfig', proxyConfig)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('proxyConfig', 'proxyConfig', proxyConfig)" class="stubbonsave">修改
+            </button>
         </div>
         <div style="display: flex;width: 100%;">
             节点订阅-加密:proxyConfigSecret
         </div>
         <div style="width:100%">
             <input type="text" id="proxyConfigSecret" class="stubboninput" placeholder="proxyConfigSecret"/>
-            <button  onclick="changeFileName('proxyConfigSecret', 'proxyConfigSecret', proxyConfigSecret)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('proxyConfigSecret', 'proxyConfigSecret', proxyConfigSecret)"
+                    class="stubbonsave">修改
+            </button>
         </div>
     </div>
 
@@ -1718,7 +1814,8 @@
                 </button>
             </div>
             <div style="width: 97%;">
-                <input type="text" id="searchInput14" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+                <input type="text" id="searchInput14" placeholder="搜索框" class="searchbox"
+                       style="width: 100%"></input>
             </div>
             <button id="removem3ulinks15" class="button removeallSubscriber"
                     onclick="removelinksBase('/api/removem3ulinks15')">删除全部关键字
@@ -1750,12 +1847,15 @@
                 <button id="add-row16" class="addNewSubscriber" style="width:100%">新增分组配置</button>
             </div>
             <div>
-                <button id="download-json-btn16" class="button download-json-btn" style="width: 100%">导出分组配置备份</button>
+                <button id="download-json-btn16" class="button download-json-btn" style="width: 100%">导出分组配置备份
+                </button>
             </div>
             <div style="width: 97%;">
-                <input type="text" id="searchInput16" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+                <input type="text" id="searchInput16" placeholder="搜索框" class="searchbox"
+                       style="width: 100%"></input>
             </div>
-            <button id="removem3ulinks16" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks16')">删除全部关键字
+            <button id="removem3ulinks16" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks16')">删除全部关键字
             </button>
             <div style="display: flex;width: 100%;">
                 <div class="notice" style="display: flex;width: 80%;">分组:m3u白名单分组;备注:优先级数字
@@ -1783,17 +1883,20 @@
                 <button id="add-row17" class="addNewSubscriber" style="width:100%">新增配置</button>
             </div>
             <div>
-                <button id="download-json-btn17" class="button download-json-btn" style="width: 100%">导出配置备份</button>
+                <button id="download-json-btn17" class="button download-json-btn" style="width: 100%">导出配置备份
+                </button>
             </div>
             <div style="width: 97%;">
-                <input type="text" id="searchInput17" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+                <input type="text" id="searchInput17" placeholder="搜索框" class="searchbox"
+                       style="width: 100%"></input>
             </div>
             <div>
                 <button class="button stepflag" onclick="execute9()" style="width: 100%">
                     下载全部配置并且加密上传至同步账号
                 </button>
             </div>
-            <button id="removem3ulinks17" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks17')">删除全部
+            <button id="removem3ulinks17" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks17')">删除全部
             </button>
             <div style="display: flex;width: 100%;">
                 <div class="notice" style="display: flex;width: 80%;">下载链接+加密密码+重命名名字(包含文件格式)
@@ -1822,17 +1925,20 @@
                 <button id="add-row18" class="addNewSubscriber" style="width:100%">新增配置</button>
             </div>
             <div>
-                <button id="download-json-btn18" class="button download-json-btn" style="width: 100%">导出配置备份</button>
+                <button id="download-json-btn18" class="button download-json-btn" style="width: 100%">导出配置备份
+                </button>
             </div>
             <div style="width: 97%;">
-                <input type="text" id="searchInput18" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+                <input type="text" id="searchInput18" placeholder="搜索框" class="searchbox"
+                       style="width: 100%"></input>
             </div>
             <div>
                 <button class="button stepflag" onclick="execute10()" style="width: 100%">
                     下载全部配置并且解密还原
                 </button>
             </div>
-            <button id="removem3ulinks18" class="button removeallSubscriber" onclick="removelinksBase('/api/removem3ulinks18')">删除全部
+            <button id="removem3ulinks18" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks18')">删除全部
             </button>
             <div style="display: flex;width: 100%;">
                 <div class="notice" style="display: flex;width: 80%;">下载链接+加密密码+源文件名字(包含文件格式)
@@ -2047,7 +2153,8 @@
             </div>
             <div style="width:100%">
                 <input type="text" id="webdavUsernameM3u" class="stubboninput" placeholder="ppap"/>
-                <button onclick="changeSyncData('username', 'm3u', 'webdavUsernameM3u', webdavUsernameM3u)" class="stubbonsave">
+                <button onclick="changeSyncData('username', 'm3u', 'webdavUsernameM3u', webdavUsernameM3u)"
+                        class="stubbonsave">
                     修改
                 </button>
             </div>
@@ -2086,7 +2193,8 @@
             </button>
             <br>
             <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">订阅来源:webdav直播子目录(不包括视频文件本身) +频道分组名字(举例子:游戏王5DS,这一行配置代表全部游戏王5DS的直播源)
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:webdav直播子目录(不包括视频文件本身)
+                    +频道分组名字(举例子:游戏王5DS,这一行配置代表全部游戏王5DS的直播源)
                 </div>
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
@@ -2188,8 +2296,6 @@
 <script>
     const addRowButton = document.getElementById('add-row');
     const inputTable = document.getElementById('input-table');
-    const downloadBtn = document.getElementById('download-json-btn');
-    const fileInput = document.getElementById('upload-json-btn');
     //const form = document.querySelector('form');
     const forms = document.querySelectorAll('form');
     const switchbox = document.getElementById("switchbox");
@@ -2201,55 +2307,35 @@
     const batchSize = 50;
     let currentBatch = 0;
     let currentBatchData = [];
-    const downloadM3UBtn = document.getElementById('download-m3u-btn');
 
-    const fileInput2 = document.getElementById('upload-json-btn2');
     const addRowButton2 = document.getElementById('add-row2');
     const inputTable2 = document.getElementById('input-table2');
-    const downloadBtn2 = document.getElementById('download-json-btn2');
 
-    const fileInput3 = document.getElementById('upload-json-btn3');
     const addRowButton3 = document.getElementById('add-row3');
     const inputTable3 = document.getElementById('input-table3');
-    const downloadBtn3 = document.getElementById('download-json-btn3');
 
-    const fileInput4 = document.getElementById('upload-json-btn4');
     const addRowButton4 = document.getElementById('add-row4');
     const inputTable4 = document.getElementById('input-table4');
-    const downloadBtn4 = document.getElementById('download-json-btn4');
 
-    const fileInput5 = document.getElementById('upload-json-btn5');
     const addRowButton5 = document.getElementById('add-row5');
     const inputTable5 = document.getElementById('input-table5');
-    const downloadBtn5 = document.getElementById('download-json-btn5');
 
-    const fileInput6 = document.getElementById('upload-json-btn6');
     const addRowButton6 = document.getElementById('add-row6');
     const inputTable6 = document.getElementById('input-table6');
-    const downloadBtn6 = document.getElementById('download-json-btn6');
 
     // 获取页面元素-密码本
     const searchInput = document.getElementById('searchInput');
 
-    const fileInput7 = document.getElementById('upload-json-btn7');
-    const downloadBtn7 = document.getElementById('download-json-btn7');
-
-    const fileInput8 = document.getElementById('upload-json-btn8');
     const addRowButton8 = document.getElementById('add-row8');
     const inputTable8 = document.getElementById('input-table8');
-    const downloadBtn8 = document.getElementById('download-json-btn8');
 
-    const fileInput9 = document.getElementById('upload-json-btn9');
     const addRowButton9 = document.getElementById('add-row9');
     const inputTable9 = document.getElementById('input-table9');
-    const downloadBtn9 = document.getElementById('download-json-btn9');
 
-    const fileInput10 = document.getElementById('upload-json-btn10');
     const addRowButton10 = document.getElementById('add-row10');
     const inputTable10 = document.getElementById('input-table10');
-    const downloadBtn10 = document.getElementById('download-json-btn10');
 
-        // 节点订阅-节点类型转换按钮选项框
+    // 节点订阅-节点类型转换按钮选项框
     var buttons = document.querySelectorAll('.buttonChooseProxies');
     var selectedButtonId = sessionStorage.getItem('selected-button-id');
 
@@ -2322,7 +2408,7 @@
     // 输入框显示webdav账户地址
     const webdavIp = document.getElementById('webdavIp');
 
-        // 输入框显示webdav账号用户名
+    // 输入框显示webdav账号用户名
     const webdavUsernameM3u = document.getElementById('webdavUsernameM3u');
     // 输入框显示webdav密码
     const webdavPassM3u = document.getElementById('webdavPassM3u');
@@ -2338,7 +2424,6 @@
     const ffmpegThread = document.getElementById('ffmpegThread');
     const usernameSys = document.getElementById('usernameSys');
     const passwordSys = document.getElementById('passwordSys');
-
 
 
     const allM3u = document.getElementById('allM3u');
@@ -2364,41 +2449,20 @@
     const proxyConfig = document.getElementById('proxyConfig');
     const proxyConfigSecret = document.getElementById('proxyConfigSecret');
 
-    const fileInput11 = document.getElementById('upload-json-btn11');
     const addRowButton11 = document.getElementById('add-row11');
     const inputTable11 = document.getElementById('input-table11');
-    const downloadBtn11 = document.getElementById('download-json-btn11');
 
-    const fileInput15 = document.getElementById('upload-json-btn15');
     const addRowButton15 = document.getElementById('add-row15');
     const inputTable15 = document.getElementById('input-table15');
-    const downloadBtn15 = document.getElementById('download-json-btn15');
 
-    const fileInput16 = document.getElementById('upload-json-btn16');
     const addRowButton16 = document.getElementById('add-row16');
     const inputTable16 = document.getElementById('input-table16');
-    const downloadBtn16 = document.getElementById('download-json-btn16');
 
-    const fileInput17 = document.getElementById('upload-json-btn17');
     const addRowButton17 = document.getElementById('add-row17');
     const inputTable17 = document.getElementById('input-table17');
-    const downloadBtn17 = document.getElementById('download-json-btn17');
 
-    const fileInput18 = document.getElementById('upload-json-btn18');
     const addRowButton18 = document.getElementById('add-row18');
     const inputTable18 = document.getElementById('input-table18');
-    const downloadBtn18 = document.getElementById('download-json-btn18');
-
-    const fileInput19 = document.getElementById('upload-json-btn19');
-    const downloadBtn19 = document.getElementById('download-json-btn19');
-    const fileInput20 = document.getElementById('upload-json-btn20');
-    const downloadBtn20 = document.getElementById('download-json-btn20');
-    const fileInput21 = document.getElementById('upload-json-btn21');
-    const downloadBtn21 = document.getElementById('download-json-btn21');
-    const fileInput22 = document.getElementById('upload-json-btn22');
-    const downloadBtn22 = document.getElementById('download-json-btn22');
-    const fileInput23 = document.getElementById('upload-json-btn23');
-    const downloadBtn23 = document.getElementById('download-json-btn23');
     // 输入框显示主机ip
     const iptext = document.getElementById('iptext');
     var iptextCache = sessionStorage.getItem('iptext');
@@ -2406,55 +2470,42 @@
     // 获取所有具有类名 "urllink" 的 h3 元素
     var elements = document.getElementsByClassName("urllink");
 
-    const fileInput12 = document.getElementById('upload-json-btn12');
     const addRowButton12 = document.getElementById('add-row12');
     const inputTable12 = document.getElementById('input-table12');
     const downloadBtn12 = document.getElementById('download-json-btn12');
 
-    const fileInput13 = document.getElementById('upload-json-btn13');
     const addRowButton13 = document.getElementById('add-row13');
     const inputTable13 = document.getElementById('input-table13');
     const downloadBtn13 = document.getElementById('download-json-btn13');
 
-
-    const fileInput24 = document.getElementById('upload-json-btn24');
     const addRowButton24 = document.getElementById('add-row24');
     const inputTable24 = document.getElementById('input-table24');
     const downloadBtn24 = document.getElementById('download-json-btn24');
 
-    const fileInput25 = document.getElementById('upload-json-btn25');
     const addRowButton25 = document.getElementById('add-row25');
     const inputTable25 = document.getElementById('input-table25');
     const downloadBtn25 = document.getElementById('download-json-btn25');
 
-
-
-    const fileInput29 = document.getElementById('upload-json-btn29');
     const addRowButton29 = document.getElementById('add-row29');
     const inputTable29 = document.getElementById('input-table29');
     const downloadBtn29 = document.getElementById('download-json-btn29');
 
-    const fileInput30 = document.getElementById('upload-json-btn30');
     const addRowButton30 = document.getElementById('add-row30');
     const inputTable30 = document.getElementById('input-table30');
     const downloadBtn30 = document.getElementById('download-json-btn30');
 
-    const fileInput26 = document.getElementById('upload-json-btn26');
     const addRowButton26 = document.getElementById('add-row26');
     const inputTable26 = document.getElementById('input-table26');
     const downloadBtn26 = document.getElementById('download-json-btn26');
 
-    const fileInput27 = document.getElementById('upload-json-btn27');
     const addRowButton27 = document.getElementById('add-row27');
     const inputTable27 = document.getElementById('input-table27');
     const downloadBtn27 = document.getElementById('download-json-btn27');
 
-    const fileInput28 = document.getElementById('upload-json-btn28');
     const downloadBtn28 = document.getElementById('download-json-btn28');
     const addRowButton28 = document.getElementById('add-row28');
     const inputTable28 = document.getElementById('input-table28');
     const downloadBtn282 = document.getElementById('download-json-btn28-2');
-    const fileInput282 = document.getElementById('upload-json-btn282');
 
 
     // 输入框显示中国DNS端口
@@ -2466,7 +2517,6 @@
     // 输入框显示通信超时时间
     const timeout = document.getElementById('timeout');
 
-    const fileInput14 = document.getElementById('upload-json-btn14');
     const inputTable14 = document.getElementById('input-table14');
     const downloadBtn14 = document.getElementById('download-json-btn14');
 
@@ -2502,7 +2552,7 @@
     const searchInput12 = document.getElementById('searchInput12');
     // 获取页面元素-节点后端配置订阅
     const searchInput13 = document.getElementById('searchInput13');
-        // 获取页面元素-m3u黑名单
+    // 获取页面元素-m3u黑名单
     const searchInput14 = document.getElementById('searchInput14');
     // 获取页面元素-m3u白名单分组优先级
     const searchInput16 = document.getElementById('searchInput16');
@@ -2516,64 +2566,64 @@
     const searchInput25 = document.getElementById('searchInput25');
     // 获取页面元素-huya直播源
     const searchInput26 = document.getElementById('searchInput26');
-        // 获取页面元素-YY直播源
+    // 获取页面元素-YY直播源
     const searchInput27 = document.getElementById('searchInput27');
-            // 获取页面元素-webdav直播源
+    // 获取页面元素-webdav直播源
     const searchInput28 = document.getElementById('searchInput28');
-        // 获取页面元素-douyu直播源
+    // 获取页面元素-douyu直播源
     const searchInput29 = document.getElementById('searchInput29');
-            // 获取页面元素-alist直播源
+    // 获取页面元素-alist直播源
     const searchInput30 = document.getElementById('searchInput30');
 
-    searchAddListener2(searchInput18,inputTable18)
-    searchAddListener2(searchInput17,inputTable17)
+    searchAddListener2(searchInput18, inputTable18)
+    searchAddListener2(searchInput17, inputTable17)
     // 给m3u白名单分组优先级搜索框绑定'oninput'事件
-    searchAddListener(searchInput16,inputTable16)
+    searchAddListener(searchInput16, inputTable16)
     // 给m3u黑名单搜索框绑定'oninput'事件
-    searchAddListener(searchInput14,inputTable15)
+    searchAddListener(searchInput14, inputTable15)
     // 给节点后端配置订阅搜索框绑定'oninput'事件
-    searchAddListener(searchInput13,inputTable10)
+    searchAddListener(searchInput13, inputTable10)
     // 给节点远程配置订阅搜索框绑定'oninput'事件
-    searchAddListener(searchInput12,inputTable9)
+    searchAddListener(searchInput12, inputTable9)
     // 给节点订阅搜索框绑定'oninput'事件
-    searchAddListener(searchInput11,inputTable8)
+    searchAddListener(searchInput11, inputTable8)
     // 给ipv6订阅搜索框绑定'oninput'事件
-    searchAddListener(searchInput10,inputTable5)
+    searchAddListener(searchInput10, inputTable5)
     // 给ipv4订阅搜索框绑定'oninput'事件
-    searchAddListener(searchInput9,inputTable4)
+    searchAddListener(searchInput9, inputTable4)
     // 给域名黑名单订阅搜索框绑定'oninput'事件
-    searchAddListener(searchInput8,inputTable3)
+    searchAddListener(searchInput8, inputTable3)
     // 给域名白名单订阅搜索框绑定'oninput'事件
-    searchAddListener(searchInput7,inputTable2)
+    searchAddListener(searchInput7, inputTable2)
     // 给直播源订阅搜索框绑定'oninput'事件
-    searchAddListener(searchInput6,inputTable)
+    searchAddListener(searchInput6, inputTable)
     // 给简易dns白名单搜索框绑定'oninput'事件
-    searchAddListener(searchInput5,inputTable13)
+    searchAddListener(searchInput5, inputTable13)
     // 给youtube直播源搜索框绑定'oninput'事件
-    searchAddListener(searchInput24,inputTable24)
+    searchAddListener(searchInput24, inputTable24)
     // 给bilibili直播源搜索框绑定'oninput'事件
-    searchAddListener(searchInput25,inputTable25)
-        // 给douyu直播源搜索框绑定'oninput'事件
-   searchAddListener(searchInput29,inputTable29)
-            // 给alist直播源搜索框绑定'oninput'事件
-   searchAddListener(searchInput30,inputTable30)
+    searchAddListener(searchInput25, inputTable25)
+    // 给douyu直播源搜索框绑定'oninput'事件
+    searchAddListener(searchInput29, inputTable29)
+    // 给alist直播源搜索框绑定'oninput'事件
+    searchAddListener(searchInput30, inputTable30)
     // 给huya直播源搜索框绑定'oninput'事件
-    searchAddListener(searchInput26,inputTable26)
-        // 给YY直播源搜索框绑定'oninput'事件
-    searchAddListener(searchInput27,inputTable27)
-            // 给webdav直播源搜索框绑定'oninput'事件
-    searchAddListener(searchInput28,inputTable28)
+    searchAddListener(searchInput26, inputTable26)
+    // 给YY直播源搜索框绑定'oninput'事件
+    searchAddListener(searchInput27, inputTable27)
+    // 给webdav直播源搜索框绑定'oninput'事件
+    searchAddListener(searchInput28, inputTable28)
     // 给简易dns白名单搜索框绑定'oninput'事件
-    searchAddListener(searchInput4,inputTable12)
+    searchAddListener(searchInput4, inputTable12)
     // 给m3u白名单搜索框绑定'oninput'事件
-    searchAddListener(searchInput3,inputTable11)
+    searchAddListener(searchInput3, inputTable11)
     // 给历史订阅密码搜索框绑定'oninput'事件
-    searchAddListener(searchInput2,inputTable14)
+    searchAddListener(searchInput2, inputTable14)
     // 给密码本搜索框绑定'oninput'事件
-    searchAddListener(searchInput,inputTable6)
+    searchAddListener(searchInput, inputTable6)
 
     // 下拉菜单搜索框监听
-    function searchAddListener(searchInputVar,tableVar) {
+    function searchAddListener(searchInputVar, tableVar) {
         searchInputVar.addEventListener('input', () => {
             // 获取搜索框的值
             const keyword = searchInputVar.value.trim().toLowerCase();
@@ -2591,8 +2641,8 @@
         });
     }
 
-        // 下拉菜单搜索框监听
-    function searchAddListener2(searchInputVar,tableVar) {
+    // 下拉菜单搜索框监听
+    function searchAddListener2(searchInputVar, tableVar) {
         searchInputVar.addEventListener('input', () => {
             // 获取搜索框的值
             const keyword = searchInputVar.value.trim().toLowerCase();
@@ -2602,7 +2652,7 @@
                 const passwordName = row.querySelector('.suburlclassname2').value.trim().toLowerCase();
                 const passwordValue = row.querySelector('.subnameClassName2').value.trim().toLowerCase();
                 const passwordValue2 = row.querySelector('.passwordClassName2').value.trim().toLowerCase();
-                if (passwordName.includes(keyword) || passwordValue.includes(keyword)|| passwordValue2.includes(keyword)) {
+                if (passwordName.includes(keyword) || passwordValue.includes(keyword) || passwordValue2.includes(keyword)) {
                     row.style.display = '';
                 } else {
                     row.style.display = 'none';
@@ -2611,12 +2661,12 @@
         });
     }
 
-    function reloadImage(){
-            fetch('/api/get_image')
-        .then((response) => response.blob())
-        .then((blob) => {
-            imageElement.src = URL.createObjectURL(blob);
-        });
+    function reloadImage() {
+        fetch('/api/get_image')
+            .then((response) => response.blob())
+            .then((blob) => {
+                imageElement.src = URL.createObjectURL(blob);
+            });
     }
 
 
@@ -2630,7 +2680,7 @@
                 if (xhr.status === 200) {
                     const response = JSON.parse(xhr.responseText);
                     state = response.checkresult
-                    if (state === '1' || state===1) {
+                    if (state === '1' || state === 1) {
                         switchButton.classList.remove("off");
                         switchButton.classList.add("on");
                         switchButton.textContent = "已开启";
@@ -2648,10 +2698,10 @@
     }
 
     // 发送请求到后端
-    function sendRequest(state,id) {
+    function sendRequest(state, id) {
         fetch('/api/switchstate', {
             method: 'POST',
-            body: JSON.stringify({'state': state,'id': id}),
+            body: JSON.stringify({'state': state, 'id': id}),
             headers: {'Content-Type': 'application/json'}
         }).catch(error => console.error(error));
     }
@@ -2681,12 +2731,12 @@
             switchButton.classList.remove("on");
             switchButton.classList.add("off");
             switchButton.textContent = "已关闭";
-            sendRequest(0,id);
+            sendRequest(0, id);
         } else {
             switchButton.classList.remove("off");
             switchButton.classList.add("on");
             switchButton.textContent = "已开启";
-            sendRequest(1,id);
+            sendRequest(1, id);
         }
     }
 
@@ -2705,9 +2755,9 @@
     }
 
     function handleClick() {
-        text=this.textContent.split(":")
+        text = this.textContent.split(":")
         // 获取 URL
-        var url = text[1]+[':']+text[2]+[':']+text[3];
+        var url = text[1] + [':'] + text[2] + [':'] + text[3];
         // 在新窗口中打开链接
         window.open(url, "_blank");
     }
@@ -2729,7 +2779,7 @@
             var tagnamefile = parts2[2]
             var parts3 = tagnamefile.split(".")
             var tagname = parts3[0]
-            if (tagname==='youtube' ||tagname==='bilibili'||tagname==='huya'||tagname==='YY'||tagname==='douyu'||tagname==='webdav'||tagname==='alist' ){
+            if (tagname === 'youtube' || tagname === 'bilibili' || tagname === 'huya' || tagname === 'YY' || tagname === 'douyu' || tagname === 'webdav' || tagname === 'alist') {
                 elements[i].innerHTML = prefix + "//" + newIp + suffix2 + "/" + tagname + "." + parts3[1];
                 continue
             }
@@ -2744,7 +2794,7 @@
 
 
     function changePassword(cacheKey, id, idVar) {
-        PostDataByAskAndReturn('/api/changeSubscribePassword', cacheKey,'获取功能开启状态失败：')
+        PostDataByAskAndReturn('/api/changeSubscribePassword', cacheKey, '获取功能开启状态失败：')
             .then(function (returnValue) {
                 idVar.value = returnValue;
                 sessionStorage.setItem(id, returnValue);
@@ -2755,23 +2805,23 @@
     }
 
     function getFileName(cacheKey, id, idVar) {
-       // var filename = sessionStorage.getItem(id);
+        // var filename = sessionStorage.getItem(id);
         //if (filename && filename !== '') {
-           // idVar.value = filename;
-       // } else {
-            PostDataByAskAndReturn('/api/getFileName', cacheKey, '订阅文件名字获取失败：')
-                .then(function (returnValue) {
-                    idVar.value = returnValue;
-                    sessionStorage.setItem(id, returnValue);
-                })
-                .catch(function (error) {
-                    console.log(error);
-                });
-       // }
+        // idVar.value = filename;
+        // } else {
+        PostDataByAskAndReturn('/api/getFileName', cacheKey, '订阅文件名字获取失败：')
+            .then(function (returnValue) {
+                idVar.value = returnValue;
+                sessionStorage.setItem(id, returnValue);
+            })
+            .catch(function (error) {
+                console.log(error);
+            });
+        // }
     }
 
     function changePasswordByHand(cacheKey, id, idVar) {
-        PostDataByAsk2AndReturn('/api/changeSubscribePasswordByHand', cacheKey,idVar.value)
+        PostDataByAsk2AndReturn('/api/changeSubscribePasswordByHand', cacheKey, idVar.value)
             .then(function (returnValue) {
                 sessionStorage.setItem(id, idVar.value);
             })
@@ -2782,7 +2832,7 @@
 
 
     function changeFileName(cacheKey, id, idVar) {
-        PostDataByAsk2AndReturn('/api/changeFileName', cacheKey,idVar.value)
+        PostDataByAsk2AndReturn('/api/changeFileName', cacheKey, idVar.value)
             .then(function (returnValue) {
                 sessionStorage.setItem(id, idVar.value);
             })
@@ -2794,21 +2844,21 @@
     function getSyncData(cacheKey, type, id, idVar) {
         //var cachevalue = sessionStorage.getItem(id);
         //if (cachevalue && cachevalue !== '') {
-            ///idVar.value = cachevalue;
-       // } else {
-            PostDataByAsk2AndReturn('/api/getSyncAccountData', cacheKey, type)
-                .then(function (returnValue) {
-                    idVar.value = returnValue;
-                    sessionStorage.setItem(id, returnValue);
-                })
-                .catch(function (error) {
-                    console.log(error);
-                });
-       // }
+        ///idVar.value = cachevalue;
+        // } else {
+        PostDataByAsk2AndReturn('/api/getSyncAccountData', cacheKey, type)
+            .then(function (returnValue) {
+                idVar.value = returnValue;
+                sessionStorage.setItem(id, returnValue);
+            })
+            .catch(function (error) {
+                console.log(error);
+            });
+        // }
     }
 
     function changeSyncData(cacheKey, type, id, idVar) {
-        PostDataByAsk3AndReturn('/api/changeSyncData', cacheKey, type,idVar.value)
+        PostDataByAsk3AndReturn('/api/changeSyncData', cacheKey, type, idVar.value)
             .then(function (returnValue) {
                 //idVar.value = returnValue;
                 //sessionStorage.setItem(id, idVar.value);
@@ -2819,7 +2869,7 @@
     }
 
     // 发送一个cachekey,requestpath,一个值type,一个值修改值,有返回值
-    function PostDataByAsk3AndReturn(requestPath, cacheKey,type, textvalue) {
+    function PostDataByAsk3AndReturn(requestPath, cacheKey, type, textvalue) {
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             xhr.open('POST', requestPath);
@@ -2834,7 +2884,7 @@
                     }
                 }
             };
-            xhr.send(JSON.stringify({'cacheKey': cacheKey,'type':type,'inputvalue': textvalue}));
+            xhr.send(JSON.stringify({'cacheKey': cacheKey, 'type': type, 'inputvalue': textvalue}));
         });
     }
 
@@ -2854,7 +2904,7 @@
                     }
                 }
             };
-            xhr.send(JSON.stringify({'cacheKey': cacheKey,'inputvalue': textvalue}));
+            xhr.send(JSON.stringify({'cacheKey': cacheKey, 'inputvalue': textvalue}));
         });
     }
 
@@ -2880,17 +2930,17 @@
 
     //修改外国DNS端口
     function saveExtraDnsPort() {
-        saveDnsSetting('/api/saveExtraDnsPort','extraDnsPort',extraDnsPort)
+        saveDnsSetting('/api/saveExtraDnsPort', 'extraDnsPort', extraDnsPort)
     }
 
     //外国DNS端口加载
     function reloadExtraDnsPort() {
-        reloadDnsSetting(extraDnsPort,'/api/getExtraDnsPort')
+        reloadDnsSetting(extraDnsPort, '/api/getExtraDnsPort')
     }
 
     //主机IP加载
     function reloadIP() {
-        reloadDnsSetting(iptext,'/api/getIP')
+        reloadDnsSetting(iptext, '/api/getIP')
         getFileName('allM3u', 'allM3u', allM3u)
         getFileName('allM3uSecret', 'allM3uSecret', allM3uSecret)
         getFileName('aliveM3u', 'aliveM3u', aliveM3u)
@@ -2919,32 +2969,32 @@
 
     //修改外国DNS服务器
     function saveExtraDnsServer() {
-        saveDnsSetting('/api/saveExtraDnsServer','extraDnsServer',extraDnsServer)
+        saveDnsSetting('/api/saveExtraDnsServer', 'extraDnsServer', extraDnsServer)
     }
 
     //外国DNS服务器加载
     function reloadExtraDnsServer() {
-        reloadDnsSetting(extraDnsServer,'/api/getExtraDnsServer')
+        reloadDnsSetting(extraDnsServer, '/api/getExtraDnsServer')
     }
 
     //修改中国DNS端口
     function saveChinaDnsPort() {
-        saveDnsSetting('/api/savechinaDnsPort','chinaDnsPort',chinaDnsPort)
+        saveDnsSetting('/api/savechinaDnsPort', 'chinaDnsPort', chinaDnsPort)
     }
 
     //修改DNS并发查询数
     function saveQueryThreadNum() {
-        saveDnsSetting('/api/savequeryThreadNum','queryThreadNum',queryThreadNum)
+        saveDnsSetting('/api/savequeryThreadNum', 'queryThreadNum', queryThreadNum)
     }
 
     //修改DNS通信时间
     function saveTimeout() {
-        saveDnsSetting('/api/savetimeout','timeout',timeout)
+        saveDnsSetting('/api/savetimeout', 'timeout', timeout)
     }
 
     //修改主机IP
     function changeIP() {
-        saveDnsSetting('/api/changeIP','iptext',iptext)
+        saveDnsSetting('/api/changeIP', 'iptext', iptext)
         //changeUrls()
         stopMonitoring()
         addMonitoring()
@@ -2952,95 +3002,93 @@
 
     //中国DNS端口加载
     function reloadChinaDnsPort() {
-        reloadDnsSetting(chinaDnsPort,'/api/getChinaDnsPort')
+        reloadDnsSetting(chinaDnsPort, '/api/getChinaDnsPort')
     }
 
     //DNS并发查询数
     function reloadQueryThreadNum() {
-        reloadDnsSetting(queryThreadNum,'/api/getQueryThreadNum')
+        reloadDnsSetting(queryThreadNum, '/api/getQueryThreadNum')
     }
 
     //通信超时时间查询
     function reloadTimeout() {
-        reloadDnsSetting(timeout,'/api/gettimeout')
+        reloadDnsSetting(timeout, '/api/gettimeout')
     }
 
     //修改中国DNS服务器
     function saveChinaDnsServer() {
-        saveDnsSetting('/api/savechinaDnsServer','chinaDnsServer',chinaDnsServer)
+        saveDnsSetting('/api/savechinaDnsServer', 'chinaDnsServer', chinaDnsServer)
     }
 
     //中国DNS服务器加载
     function reloadChinaDnsServer() {
-        reloadDnsSetting(chinaDnsServer,'/api/getChinaDnsServer')
+        reloadDnsSetting(chinaDnsServer, '/api/getChinaDnsServer')
     }
 
     //线程数加载
     function reloadThreadNum() {
-        reloadDnsSetting(threadNum,'/api/getThreadNum')
+        reloadDnsSetting(threadNum, '/api/getThreadNum')
     }
 
     //直播源订阅密码加载
     function reloadThreadNum2() {
-        reloadDnsSetting(threadNum2,'/api/getThreadNum2')
+        reloadDnsSetting(threadNum2, '/api/getThreadNum2')
     }
 
-     //域名白名单订阅密码加载
+    //域名白名单订阅密码加载
     function reloadChinaDnsServer2() {
-        reloadDnsSetting(chinaDnsServer2,'/api/getChinaDnsServer2')
+        reloadDnsSetting(chinaDnsServer2, '/api/getChinaDnsServer2')
     }
 
     //域名黑名单订阅密码加载
     function reloadChinaDnsPort2() {
-        reloadDnsSetting(chinaDnsPort2,'/api/getChinaDnsPort2')
+        reloadDnsSetting(chinaDnsPort2, '/api/getChinaDnsPort2')
     }
 
     //IPV4订阅密码加载
     function reloadExtraDnsServer2() {
-        reloadDnsSetting(extraDnsServer2,'/api/getExtraDnsServer2')
+        reloadDnsSetting(extraDnsServer2, '/api/getExtraDnsServer2')
     }
 
     //IPV6订阅密码加载
     function reloadExtraDnsPort2() {
-        reloadDnsSetting(extraDnsPort2,'/api/getExtraDnsPort2')
+        reloadDnsSetting(extraDnsPort2, '/api/getExtraDnsPort2')
     }
 
     //节点订阅密码加载
     function reloadExtraDnsPort3() {
-        reloadDnsSetting(extraDnsPort3,'/api/getExtraDnsPort3')
+        reloadDnsSetting(extraDnsPort3, '/api/getExtraDnsPort3')
     }
 
     //修改线程数
     function saveData() {
-        saveDnsSetting('/api/saveThreadS','threads',threadNum)
+        saveDnsSetting('/api/saveThreadS', 'threads', threadNum)
     }
 
     function reloadDnsSetting(targetConst, requestpath) {
         //if (targetcache&&targetcache !== '') {
-           // targetConst.value = targetcache
+        // targetConst.value = targetcache
         //} else {
-            // 发送 GET 请求
-            fetch(requestpath)
-                .then(response => response.json())  // 将响应体解析为 JSON 格式
-                .then(data => {
-                    // 更新服务器设置
-                    targetConst.value = data.button;
-                    if (requestpath === '/api/getIP') {
-                        sessionStorage.setItem('iptext', data.button);
-                    }
-                   // sessionStorage.setItem(targetCacheName, data.button);
-                })
-       // }
+        // 发送 GET 请求
+        fetch(requestpath)
+            .then(response => response.json())  // 将响应体解析为 JSON 格式
+            .then(data => {
+                // 更新服务器设置
+                targetConst.value = data.button;
+                if (requestpath === '/api/getIP') {
+                    sessionStorage.setItem('iptext', data.button);
+                }
+                // sessionStorage.setItem(targetCacheName, data.button);
+            })
+        // }
     }
 
-    function saveDnsSetting(requestPath,id,idVar){
+    function saveDnsSetting(requestPath, id, idVar) {
         let data = document.getElementById(id).value;
-        sendData(requestPath,data);
+        sendData(requestPath, data);
         idVar.value = data;
         sessionStorage.setItem(id, data);
     }
-
-
 
 
     // 节点订阅-节点类型如果存在已选择按钮，则将该按钮设置为活动状态
@@ -3089,16 +3137,16 @@
 
     // 监听节点服务器按钮点击事件，用于显示/隐藏下拉菜单
     proxymodelswitch.addEventListener('click', () => {
-      dropdown.classList.toggle('active');
+        dropdown.classList.toggle('active');
     });
 
     // 监听节点远程配置按钮点击事件，用于显示/隐藏下拉菜单
     proxymodelswitch2.addEventListener('click', () => {
-      dropdown2.classList.toggle('active');
+        dropdown2.classList.toggle('active');
     });
 
     // 节点订阅-修改默认的代理模板，只POST不需要返回值
-    function sendData(requestPath,name) {
+    function sendData(requestPath, name) {
         // TODO: 发送请求到后端
         // 发送选择按钮的请求给后端
         fetch(requestPath, {
@@ -3173,98 +3221,102 @@
 
     //超融合M3U-从数据库拉取订阅列表数据
     function reload() {
-        reloadBase('/api/getall',  inputTable)
+        reloadBase('/api/getall', inputTable)
     }
 
     //超融合节点订阅-从数据库拉取订阅列表数据
     function reloadProxiesListLink() {
-        reloadBase('/api/getall8',  inputTable8)
+        reloadBase('/api/getall8', inputTable8)
     }
 
     //超融合节点订阅远程配置-从数据库拉取订阅列表数据
     function reloadProxyModelListLink() {
-        reloadBase('/api/getall9',   inputTable9)
+        reloadBase('/api/getall9', inputTable9)
     }
 
     //超融合节点订阅后端配置-从数据库拉取订阅列表数据
     function reloadProxyServerListLink() {
-        reloadBase('/api/getall10',  inputTable10)
+        reloadBase('/api/getall10', inputTable10)
     }
 
     //M3U白名单-从数据库拉取关键字列表数据
     function reloadM3uWhiteList() {
-        reloadBase('/api/getall11',  inputTable11)
+        reloadBase('/api/getall11', inputTable11)
     }
+
     //M3U白名单分组优先级-从数据库拉取关键字列表数据
     function reloadM3uWhiteListRank() {
-        reloadBase('/api/getall16',  inputTable16)
+        reloadBase('/api/getall16', inputTable16)
     }
+
     //下载加密上传-从数据库拉取关键字列表数据
     function reloadDownLoadAndSecretUpload() {
-        reloadBase2('/api/getall17',  inputTable17)
+        reloadBase2('/api/getall17', inputTable17)
     }
+
     //下载解密-从数据库拉取关键字列表数据
     function reloadDownLoadAndDeSecret() {
-        reloadBase2('/api/getall18',  inputTable18)
+        reloadBase2('/api/getall18', inputTable18)
     }
+
     //M3U黑名单-从数据库拉取关键字列表数据
     function reloadM3uBlackList() {
-        reloadBase('/api/getall15',  inputTable15)
+        reloadBase('/api/getall15', inputTable15)
     }
 
     //DNS简易白名单-从数据库拉取关键字列表数据
     function reloadDNSSIMPLEWhiteList() {
-        reloadBase('/api/getall12',  inputTable12)
+        reloadBase('/api/getall12', inputTable12)
     }
 
     //DNS简易黑名单-从数据库拉取关键字列表数据
     function reloadDNSSIMPLEBlackList() {
-        reloadBase('/api/getall13',  inputTable13)
+        reloadBase('/api/getall13', inputTable13)
     }
 
     //youtube直播源-从数据库拉取关键字列表数据
     function reloadYoutubeM3U() {
-        reloadBase('/api/getall24',  inputTable24)
+        reloadBase('/api/getall24', inputTable24)
     }
 
     //bilibili直播源-从数据库拉取关键字列表数据
     function reloadBilibiliM3U() {
-        reloadBase('/api/getall25',  inputTable25)
+        reloadBase('/api/getall25', inputTable25)
     }
 
-        //douyu直播源-从数据库拉取关键字列表数据
+    //douyu直播源-从数据库拉取关键字列表数据
     function reloadDouyuM3U() {
-        reloadBase('/api/getall29',  inputTable29)
+        reloadBase('/api/getall29', inputTable29)
     }
 
-            //alist直播源-从数据库拉取关键字列表数据
+    //alist直播源-从数据库拉取关键字列表数据
     function reloadAlistM3U() {
-        reloadBase('/api/getall30',  inputTable30)
+        reloadBase('/api/getall30', inputTable30)
     }
 
     //huya直播源-从数据库拉取关键字列表数据
     function reloadHuyaM3U() {
-        reloadBase('/api/getall26',  inputTable26)
+        reloadBase('/api/getall26', inputTable26)
     }
 
-        //YY直播源-从数据库拉取关键字列表数据
+    //YY直播源-从数据库拉取关键字列表数据
     function reloadYYM3U() {
-        reloadBase('/api/getall27',  inputTable27)
+        reloadBase('/api/getall27', inputTable27)
     }
 
-            //webdav直播源-从数据库拉取关键字列表数据
+    //webdav直播源-从数据库拉取关键字列表数据
     function reloadWebdavM3U() {
-        reloadBase('/api/getall28',  inputTable28)
+        reloadBase('/api/getall28', inputTable28)
     }
 
     //加密订阅密码历史记录-从数据库拉取关键字列表数据
     function reloadHistorySubscribePassList() {
-        reloadBase('/api/getall14',  inputTable14)
+        reloadBase('/api/getall14', inputTable14)
     }
 
     //超融合ipv6-从数据库拉取订阅列表数据
     function reloadIpv6ListLink() {
-        reloadBase('/api/getall5',   inputTable5)
+        reloadBase('/api/getall5', inputTable5)
     }
 
     //超融合ipv4-从数据库拉取订阅列表数据
@@ -3274,17 +3326,17 @@
 
     //超融合白名单-从数据库拉取订阅列表数据
     function reloadWhiteListLink() {
-        reloadBase('/api/getall2',   inputTable2)
+        reloadBase('/api/getall2', inputTable2)
     }
 
     //超融合黑名单-从数据库拉取订阅列表数据
     function reloadBlackListLink() {
-        reloadBase('/api/getall3',  inputTable3)
+        reloadBase('/api/getall3', inputTable3)
     }
 
-        //密码本-从数据库拉取密码列表数据
+    //密码本-从数据库拉取密码列表数据
     function reloadPasswordList() {
-        reloadBase('/api/getall6',  inputTable6)
+        reloadBase('/api/getall6', inputTable6)
     }
 
     //从数据库拉取订阅列表数据
@@ -3331,7 +3383,7 @@
                         inputTableElement.querySelector('tbody').appendChild(row);
                         //行内填充元素
                         // 特殊，列表name参数写入下拉列表
-                        reloadProxyModels(requestpath,taeinput.value)
+                        reloadProxyModels(requestpath, taeinput.value)
                     }
                 }
             })
@@ -3440,7 +3492,7 @@
         saveInputValuebase(inputValue, name, '/api/addnewm3u11')
     }
 
-        //保留关键字-M3U黑名单配置
+    //保留关键字-M3U黑名单配置
     function saveInputValue15(inputValue, name) {
         saveInputValuebase(inputValue, name, '/api/addnewm3u15')
     }
@@ -3486,12 +3538,12 @@
         saveInputValuebase(inputValue, name, '/api/addnewm3u25')
     }
 
-        //douyu配置
+    //douyu配置
     function saveInputValue29(inputValue, name) {
         saveInputValuebase(inputValue, name, '/api/addnewm3u29')
     }
 
-            //alist配置
+    //alist配置
     function saveInputValue30(inputValue, name) {
         saveInputValuebase(inputValue, name, '/api/addnewm3u30')
     }
@@ -3501,12 +3553,12 @@
         saveInputValuebase(inputValue, name, '/api/addnewm3u26')
     }
 
-        //YY配置
+    //YY配置
     function saveInputValue27(inputValue, name) {
         saveInputValuebase(inputValue, name, '/api/addnewm3u27')
     }
 
-            //webdav配置
+    //webdav配置
     function saveInputValue28(inputValue, name) {
         saveInputValuebase(inputValue, name, '/api/addnewm3u28')
     }
@@ -3537,7 +3589,7 @@
         xhr.send(JSON.stringify({'addurl': inputValue, 'name': name}));
     }
 
-    function saveInputValuebase2(url,password, secretName, requestpath) {
+    function saveInputValuebase2(url, password, secretName, requestpath) {
         // 其他情况
         const xhr = new XMLHttpRequest();
         xhr.open('POST', requestpath);
@@ -3550,7 +3602,7 @@
                 }
             }
         };
-        xhr.send(JSON.stringify({'url': url,'password':password, 'secretName': secretName}));
+        xhr.send(JSON.stringify({'url': url, 'password': password, 'secretName': secretName}));
     }
 
     //删除订阅-白名单
@@ -3614,7 +3666,7 @@
     }
 
 
-        //删除关键字-M3U黑名单
+    //删除关键字-M3U黑名单
     function deleteInputRow15(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u15')
     }
@@ -3628,34 +3680,42 @@
     function deleteInputRow13(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u13')
     }
+
     //删除youtube直播源
     function deleteInputRow24(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u24')
     }
+
     //删除bilibili直播源
     function deleteInputRow25(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u25')
     }
-        //删除douyu直播源
+
+    //删除douyu直播源
     function deleteInputRow29(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u29')
     }
-            //删除alist直播源
+
+    //删除alist直播源
     function deleteInputRow30(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u30')
     }
+
     //删除huya直播源
     function deleteInputRow26(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u26')
     }
-        //删除YY直播源
+
+    //删除YY直播源
     function deleteInputRow27(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u27')
     }
-            //删除webdav直播源
+
+    //删除webdav直播源
     function deleteInputRow28(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u28')
     }
+
     //删除加密订阅密码历史记录
     function deleteInputRow14(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u14')
@@ -3704,7 +3764,7 @@
     }
 
     function switchPassword17(url) {
-        PostDataByAskAndReturn('/api/changeSubscribePassword2', url,'切换密码失败：')
+        PostDataByAskAndReturn('/api/changeSubscribePassword2', url, '切换密码失败：')
             .then(function (returnValue) {
                 return returnValue
             })
@@ -3719,55 +3779,55 @@
     }
 
     //下载解密-关键字列表里按钮监听
-    inputableAddEventListener2(inputTable18,  'saveInputValue18', 'deleteInputRow18','switchPassword18')
+    inputableAddEventListener2(inputTable18, 'saveInputValue18', 'deleteInputRow18', 'switchPassword18')
     //下载加密上传-关键字列表里按钮监听
-    inputableAddEventListener2(inputTable17,  'saveInputValue17', 'deleteInputRow17','switchPassword17')
+    inputableAddEventListener2(inputTable17, 'saveInputValue17', 'deleteInputRow17', 'switchPassword17')
     //m3u白名单分组优先级-关键字列表里按钮监听
-    inputableAddEventListener(inputTable16,  'saveInputValue16', 'deleteInputRow16')
+    inputableAddEventListener(inputTable16, 'saveInputValue16', 'deleteInputRow16')
     //m3u黑名单-关键字列表里按钮监听
-    inputableAddEventListener(inputTable15,  'saveInputValue15', 'deleteInputRow15')
+    inputableAddEventListener(inputTable15, 'saveInputValue15', 'deleteInputRow15')
     //加密订阅密码历史记录
-    inputableAddEventListener(inputTable14,  'saveInputValue14', 'deleteInputRow14')
+    inputableAddEventListener(inputTable14, 'saveInputValue14', 'deleteInputRow14')
     //youtube直播源
-    inputableAddEventListener(inputTable24,  'saveInputValue24', 'deleteInputRow24')
+    inputableAddEventListener(inputTable24, 'saveInputValue24', 'deleteInputRow24')
     //bilibili直播源
-    inputableAddEventListener(inputTable25,  'saveInputValue25', 'deleteInputRow25')
-        //douyu直播源
-    inputableAddEventListener(inputTable29,  'saveInputValue29', 'deleteInputRow29')
-            //alist直播源
-    inputableAddEventListener(inputTable30,  'saveInputValue30', 'deleteInputRow30')
+    inputableAddEventListener(inputTable25, 'saveInputValue25', 'deleteInputRow25')
+    //douyu直播源
+    inputableAddEventListener(inputTable29, 'saveInputValue29', 'deleteInputRow29')
+    //alist直播源
+    inputableAddEventListener(inputTable30, 'saveInputValue30', 'deleteInputRow30')
     //huya直播源
-    inputableAddEventListener(inputTable26,  'saveInputValue26', 'deleteInputRow26')
-        //YY直播源
-    inputableAddEventListener(inputTable27,  'saveInputValue27', 'deleteInputRow27')
-            //webdav直播源
-    inputableAddEventListener(inputTable28,  'saveInputValue28', 'deleteInputRow28')
+    inputableAddEventListener(inputTable26, 'saveInputValue26', 'deleteInputRow26')
+    //YY直播源
+    inputableAddEventListener(inputTable27, 'saveInputValue27', 'deleteInputRow27')
+    //webdav直播源
+    inputableAddEventListener(inputTable28, 'saveInputValue28', 'deleteInputRow28')
     //简易DNS黑名单
-    inputableAddEventListener(inputTable13,  'saveInputValue13', 'deleteInputRow13')
+    inputableAddEventListener(inputTable13, 'saveInputValue13', 'deleteInputRow13')
     //简易DNS白名单
-    inputableAddEventListener(inputTable12,  'saveInputValue12', 'deleteInputRow12')
+    inputableAddEventListener(inputTable12, 'saveInputValue12', 'deleteInputRow12')
     //m3u白名单-关键字列表里按钮监听
-    inputableAddEventListener(inputTable11,  'saveInputValue11', 'deleteInputRow11')
+    inputableAddEventListener(inputTable11, 'saveInputValue11', 'deleteInputRow11')
     //节点后端服务器订阅-订阅列表里按钮监听
-    inputableAddEventListener(inputTable10,  'saveInputValue10', 'deleteInputRow10')
+    inputableAddEventListener(inputTable10, 'saveInputValue10', 'deleteInputRow10')
     //节点远程配置文件订阅-订阅列表里按钮监听
-    inputableAddEventListener(inputTable9,  'saveInputValue9', 'deleteInputRow9')
+    inputableAddEventListener(inputTable9, 'saveInputValue9', 'deleteInputRow9')
     //节点订阅-订阅列表里按钮监听
-    inputableAddEventListener(inputTable8,  'saveInputValue8', 'deleteInputRow8')
+    inputableAddEventListener(inputTable8, 'saveInputValue8', 'deleteInputRow8')
     //密码本-订阅列表里按钮监听
     inputableAddEventListener(inputTable6, 'saveInputValue6', 'deleteInputRow6')
     //ipv6-订阅列表里按钮监听
     inputableAddEventListener(inputTable5, 'saveInputValue5', 'deleteInputRow5')
     //ipv4-订阅列表里按钮监听
-    inputableAddEventListener(inputTable4,  'saveInputValue4', 'deleteInputRow4')
+    inputableAddEventListener(inputTable4, 'saveInputValue4', 'deleteInputRow4')
     //白名单-订阅列表里按钮监听
-    inputableAddEventListener(inputTable2,  'saveInputValue2', 'deleteInputRow2')
+    inputableAddEventListener(inputTable2, 'saveInputValue2', 'deleteInputRow2')
     //黑名单-订阅列表里按钮监听
-    inputableAddEventListener(inputTable3,  'saveInputValue3', 'deleteInputRow3')
+    inputableAddEventListener(inputTable3, 'saveInputValue3', 'deleteInputRow3')
     //超融合-订阅列表里按钮监听
-    inputableAddEventListener(inputTable,  'saveInputValue', 'deleteInputRow')
+    inputableAddEventListener(inputTable, 'saveInputValue', 'deleteInputRow')
     //永久列表-直播源列表增删按钮
-    inputableAddEventListener(m3uTable,  'savem3uInputValue', 'deleteM3uInputRow')
+    inputableAddEventListener(m3uTable, 'savem3uInputValue', 'deleteM3uInputRow')
 
     function inputableAddEventListener(inputTableTarget, saveInputValueBaseName, deleteInputRowBaseName) {
         inputTableTarget.addEventListener('click', (event) => {
@@ -3815,75 +3875,77 @@
                 const row = event.target.parentElement.parentElement;
                 var x = event.target.parentElement.parentElement.querySelectorAll('input');
                 const inputValue = x[0].value;
-                x[1].value=methodC(changePassRowBaseName, [inputValue])
+                x[1].value = methodC(changePassRowBaseName, [inputValue])
             }
         });
     }
-    //webdav同步账号-导入json配置
-    fileInputAddEventListenerBase(fileInput23, '/api/upload_json_file23')
-    //github同步账号-导入json配置
-    fileInputAddEventListenerBase(fileInput22, '/api/upload_json_file22')
-    //gitee同步账号-导入json配置
-    fileInputAddEventListenerBase(fileInput21, '/api/upload_json_file21')
-    //订阅密码锁-导入json配置
-    fileInputAddEventListenerBase(fileInput20, '/api/upload_json_file20')
-    //加密订阅文件重命名-导入json配置
-    fileInputAddEventListenerBase(fileInput19, '/api/upload_json_file19')
-    //网络下载配置加密上传-导入json配置
-    fileInputAddEventListenerBase(fileInput18, '/api/upload_json_file18')
-    //youtube直播源-导入json配置
-    fileInputAddEventListenerBase(fileInput24, '/api/upload_json_file24')
-    //bilibili直播源-导入json配置
-    fileInputAddEventListenerBase(fileInput25, '/api/upload_json_file25')
-        //douyu直播源-导入json配置
-    fileInputAddEventListenerBase(fileInput29, '/api/upload_json_file29')
-            //alist直播源-导入json配置
-    fileInputAddEventListenerBase(fileInput30, '/api/upload_json_file30')
-    //huya直播源-导入json配置
-    fileInputAddEventListenerBase(fileInput26, '/api/upload_json_file26')
-        //YY直播源-导入json配置
-    fileInputAddEventListenerBase(fileInput27, '/api/upload_json_file27')
-            //webdav直播源账号-导入json配置
-    fileInputAddEventListenerBase(fileInput28, '/api/upload_json_file28')
-                //webdav直播源子目录-导入json配置
-    fileInputAddEventListenerBase(fileInput282, '/api/upload_json_file282')
-    //网络下载配置加密上传-导入json配置
-    fileInputAddEventListenerBase(fileInput17, '/api/upload_json_file17')
-    //m3u白名单分组优先级-导入json配置
-    fileInputAddEventListenerBase(fileInput16, '/api/upload_json_file16')
-    //m3u黑名单-关键字-导入json配置
-    fileInputAddEventListenerBase(fileInput15, '/api/upload_json_file15')
-    //加密订阅密码历史记录-导入json配置
-    fileInputAddEventListenerBase(fileInput14, '/api/upload_json_file14')
-    //DNS简易黑名单-导入json配置
-    fileInputAddEventListenerBase(fileInput13, '/api/upload_json_file13')
-    //DNS简易白名单-导入json配置
-    fileInputAddEventListenerBase(fileInput12, '/api/upload_json_file12')
-    //m3u白名单-关键字-导入json配置
-    fileInputAddEventListenerBase(fileInput11, '/api/upload_json_file11')
-    //节点订阅-后端地址配置订阅-导入json配置
-    fileInputAddEventListenerBase(fileInput10, '/api/upload_json_file10')
-    //节点订阅-远程配置订阅-导入json配置
-    fileInputAddEventListenerBase(fileInput9, '/api/upload_json_file9')
-    //节点订阅-导入json配置
-    fileInputAddEventListenerBase(fileInput8, '/api/upload_json_file8')
-    //一键导入全部json配置
-    fileInputAddEventListenerBase(fileInput7, '/api/upload_json_file7')
-    //密码本-导入json配置
-    fileInputAddEventListenerBase(fileInput6, '/api/upload_json_file6')
-    //中国ipv6-导入json配置
-    fileInputAddEventListenerBase(fileInput5, '/api/upload_json_file5')
-    //中国ipv4-导入json配置
-    fileInputAddEventListenerBase(fileInput4, '/api/upload_json_file4')
-    //白名单-导入json配置
-    fileInputAddEventListenerBase(fileInput2, '/api/upload_json_file2')
-    //黑名单-导入json配置
-    fileInputAddEventListenerBase(fileInput3, '/api/upload_json_file3')
-    //超融合-导入json配置
-    fileInputAddEventListenerBase(fileInput, '/api/upload_json_file')
 
-    function fileInputAddEventListenerBase(fileInputBase, requestPath) {
-        fileInputBase.addEventListener('change', (event) => {
+    //webdav同步账号-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn23', 'redisKeyWebdav', '/api/upload_json')
+    //github同步账号-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn22', 'redisKeyGithub', '/api/upload_json')
+    //gitee同步账号-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn21', 'redisKeyGitee', '/api/upload_json')
+    //订阅密码锁-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn20', 'secretpassnow', '/api/upload_json')
+    //加密订阅文件重命名-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn19', 'redisKeyFileName', '/api/upload_json')
+    //网络下载配置加密上传-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn18', 'downloadAndDeSecretUrlPasswordAndName', '/api/upload_json')
+    //youtube直播源-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn24', 'redisKeyYoutube', '/api/upload_json')
+    //bilibili直播源-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn25', 'redisKeyBilibili', '/api/upload_json')
+    //douyu直播源-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn29', 'redisKeyDouyu', '/api/upload_json')
+    //alist直播源-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn30', 'redisKeyAlist', '/api/upload_json')
+    //huya直播源-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn26', 'redisKeyHuya', '/api/upload_json')
+    //YY直播源-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn27', 'redisKeyYY', '/api/upload_json')
+    //webdav直播源账号-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn28', 'redisKeyWebdavM3u', '/api/upload_json')
+    //webdav直播源子目录-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn282', 'redisKeyWebdavPathList', '/api/upload_json')
+    //网络下载配置加密上传-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn17', 'downloadAndSecretUploadUrlPasswordAndName', '/api/upload_json')
+    //m3u白名单分组优先级-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn16', 'm3uwhitelistrank', '/api/upload_json')
+    //m3u黑名单-关键字-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn15', 'm3ublacklist', '/api/upload_json')
+    //加密订阅密码历史记录-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn14', 'secretSubscribeHistoryPass', '/api/upload_json')
+    //DNS简易黑名单-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn13', 'dnssimpleblacklist', '/api/upload_json')
+    //DNS简易白名单-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn12', 'dnssimplewhitelist', '/api/upload_json')
+    //m3u白名单-关键字-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn11', 'm3uwhitelist', '/api/upload_json')
+    //节点订阅-后端地址配置订阅-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn10', 'proxiesserver', '/api/upload_json')
+    //节点订阅-远程配置订阅-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn9', 'proxiesmodel', '/api/upload_json')
+    //节点订阅-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn8', 'proxieslink', '/api/upload_json')
+    //一键导入全部json配置
+    fileInputAddEventListenerBase2('upload-json-btn7', '/api/upload_json_file7')
+    //密码本-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn6', 'passwordlink', '/api/upload_json')
+    //中国ipv6-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn5', 'whitelistipv6link', '/api/upload_json')
+    //中国ipv4-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn4', 'whitelistipv4link', '/api/upload_json')
+    //白名单-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn2', 'whitelistlink', '/api/upload_json')
+    //黑名单-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn3', 'blacklistlink', '/api/upload_json')
+    //超融合-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn', 'm3ulink', '/api/upload_json')
+
+    function fileInputAddEventListenerBase2(fileInputBase, requestPath) {
+        const downloadBtn = document.getElementById(fileInputBase);
+        downloadBtn.addEventListener('change', (event) => {
             const file = event.target.files[0];
             // 使用 FileReader 读取 JSON 文件内容
             const reader = new FileReader();
@@ -3893,6 +3955,34 @@
                 fetch(requestPath, {
                     method: 'POST',
                     body: fileContent
+                })
+                    .then(response => response.json())
+                    .then(data => console.log(data))
+                    .catch(error => console.log(error));
+            };
+            reader.readAsText(file);
+            location.reload()
+        });
+    }
+
+    function fileInputAddEventListenerBase(fileInputBase, rediskey, requestpath) {
+        const downloadBtn = document.getElementById(fileInputBase);
+        downloadBtn.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            // 使用 FileReader 读取 JSON 文件内容
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const fileContent = event.target.result;
+                // 将 JSON 文件上传至 Flask 后端
+                fetch(requestpath, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        rediskey: rediskey,
+                        content: fileContent
+                    })
                 })
                     .then(response => response.json())
                     .then(data => console.log(data))
@@ -4199,8 +4289,6 @@
             reloadFunctionOpenButton('switch27')
             //ipv6-定时器
             reloadFunctionOpenButton('switch28')
-            //节点订阅-定时器
-            reloadFunctionOpenButton('switch29')
             //上传选项1-Gitee
             reloadFunctionOpenButton('switch30')
             //上传选项2-Github
@@ -4222,29 +4310,27 @@
             reloadImage()
         } else if (selectedPage === pages[22].id) {
             reloadM3uBlackList()
-        }else if (selectedPage === pages[23].id) {
+        } else if (selectedPage === pages[23].id) {
             reloadM3uWhiteListRank()
         } else if (selectedPage === pages[24].id) {
             reloadDownLoadAndSecretUpload()
         } else if (selectedPage === pages[25].id) {
             reloadDownLoadAndDeSecret()
-        }else if (selectedPage === pages[26].id) {
+        } else if (selectedPage === pages[26].id) {
             reloadYoutubeM3U()
-        }else if (selectedPage === pages[27].id) {
+        } else if (selectedPage === pages[27].id) {
             reloadBilibiliM3U()
-        }else if (selectedPage === pages[28].id) {
+        } else if (selectedPage === pages[28].id) {
             reloadHuyaM3U()
-        }else if (selectedPage === pages[29].id) {
+        } else if (selectedPage === pages[29].id) {
             reloadYYM3U()
-        }else if (selectedPage === pages[30].id) {
+        } else if (selectedPage === pages[30].id) {
             getSyncData('username', 'm3u', 'webdavUsernameM3u', webdavUsernameM3u)
             getSyncData('password', 'm3u', 'webdavPassM3u', webdavPassM3u)
             reloadWebdavM3U()
-        }
-        else if (selectedPage === pages[31].id) {
+        } else if (selectedPage === pages[31].id) {
             reloadDouyuM3U()
-        }
-        else if (selectedPage === pages[32].id) {
+        } else if (selectedPage === pages[32].id) {
             reloadAlistM3U()
         }
         if (selectedPage !== pages[1].id) {
@@ -4288,72 +4374,73 @@
     }
 
     // webdav账号-导出json配置
-    downloadBtnAddEventListenerBase(downloadBtn23, '/api/download_json_file23', 'temp_outputWebdav.json')
+    downloadBtnAddEventListenerBase('download-json-btn23', 'redisKeyWebdav')
     // gitee账号-导出json配置
-    downloadBtnAddEventListenerBase(downloadBtn22, '/api/download_json_file22', 'temp_outputGithub.json')
+    downloadBtnAddEventListenerBase('download-json-btn22', 'redisKeyGithub')
     // gitee账号-导出json配置
-    downloadBtnAddEventListenerBase(downloadBtn21, '/api/download_json_file21', 'temp_outputGitee.json')
+    downloadBtnAddEventListenerBase('download-json-btn21', 'redisKeyGitee')
     // 订阅密码锁-导出json配置
-    downloadBtnAddEventListenerBase(downloadBtn20, '/api/download_json_file20', 'temp_subscribePass.json')
+    downloadBtnAddEventListenerBase('download-json-btn20', 'secretpassnow')
     // 下载解密-导出加密文件重命名json配置
-    downloadBtnAddEventListenerBase(downloadBtn19, '/api/download_json_file19', 'temp_subscribeName.json')
+    downloadBtnAddEventListenerBase('download-json-btn19', 'redisKeyFileName')
     // 下载解密-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn18, '/api/download_json_file18', 'temp_downloadAndDeSecret.json')
+    downloadBtnAddEventListenerBase('download-json-btn18', 'downloadAndDeSecretUrlPasswordAndName')
     // youtube直播源-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn24, '/api/download_json_file24', 'temp_youtube_m3u.json')
+    downloadBtnAddEventListenerBase('download-json-btn24', 'redisKeyYoutube')
     // bilibili直播源-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn25, '/api/download_json_file25', 'temp_bilibili_m3u.json')
-        // douyu直播源-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn29, '/api/download_json_file29', 'temp_douyu_m3u.json')
-            // alist直播源-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn30, '/api/download_json_file30', 'temp_alist_m3u.json')
+    downloadBtnAddEventListenerBase('download-json-btn25', 'redisKeyBilibili')
+    // douyu直播源-导出订阅json配置
+    downloadBtnAddEventListenerBase('download-json-btn29', 'redisKeyDouyu')
+    // alist直播源-导出订阅json配置
+    downloadBtnAddEventListenerBase('download-json-btn30', 'redisKeyAlist')
     // huya直播源-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn26, '/api/download_json_file26', 'temp_huya_m3u.json')
-        // YY直播源-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn27, '/api/download_json_file27', 'temp_YY_m3u.json')
-            // WEBDAV直播源账号密码-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn28, '/api/download_json_file28', 'temp_WEBDAV_m3u.json')
-                // WEBDAV直播源子目录-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn282, '/api/download_json_file282', 'temp_WEBDAV_m3u_path.json')
+    downloadBtnAddEventListenerBase('download-json-btn26', 'redisKeyHuya')
+    // YY直播源-导出订阅json配置
+    downloadBtnAddEventListenerBase('download-json-btn27', 'redisKeyYY')
+    // WEBDAV直播源账号密码-导出订阅json配置
+    downloadBtnAddEventListenerBase('download-json-btn28', 'redisKeyWebdavM3u')
+    // WEBDAV直播源子目录-导出订阅json配置
+    downloadBtnAddEventListenerBase('download-json-btn28-2', 'redisKeyWebdavPathList')
     // 下载加密上传-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn17, '/api/download_json_file17', 'temp_downloadAndSecretUpload.json')
+    downloadBtnAddEventListenerBase('download-json-btn17', 'downloadAndSecretUploadUrlPasswordAndName')
     // M3U白名单分组优先级-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn16, '/api/download_json_file16', 'temp_m3uwhiteranklist.json')
+    downloadBtnAddEventListenerBase('download-json-btn16', 'm3uwhitelistrank')
     // M3U黑名单-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn15, '/api/download_json_file15', 'temp_m3ublacklist.json')
+    downloadBtnAddEventListenerBase('download-json-btn15', 'm3ublacklist')
     // 加密订阅密码历史记录-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn14, '/api/download_json_file14', 'temp_historysubscribepasslist.json')
+    downloadBtnAddEventListenerBase('download-json-btn14', 'secretSubscribeHistoryPass')
     // DNS简易黑名单-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn13, '/api/download_json_file13', 'temp_dnssimpleblacklist.json')
+    downloadBtnAddEventListenerBase('download-json-btn13', 'dnssimpleblacklist')
     // DNS简易白名单-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn12, '/api/download_json_file12', 'temp_dnssimplewhitelist.json')
+    downloadBtnAddEventListenerBase('download-json-btn12', 'dnssimplewhitelist')
     // M3U白名单-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn11, '/api/download_json_file11', 'temp_m3uwhitelist.json')
+    downloadBtnAddEventListenerBase('download-json-btn11', 'm3uwhitelist')
     // 超融合节点后端服务器订阅-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn10, '/api/download_json_file10', 'temp_proxyserverlistlink.json')
+    downloadBtnAddEventListenerBase('download-json-btn10', 'proxiesserver')
     // 超融合节点远程配置订阅-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn9, '/api/download_json_file9', 'temp_proxyremotemodellistlink.json')
+    downloadBtnAddEventListenerBase('download-json-btn9', 'proxiesmodel')
     // 超融合节点订阅-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn8, '/api/download_json_file8', 'temp_proxieslistlink.json')
+    downloadBtnAddEventListenerBase('download-json-btn8', 'proxieslink')
     // 超融合M3U-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn, '/api/download_json_file', 'temp_m3ulink.json')
+    downloadBtnAddEventListenerBase('download-json-btn', 'm3ulink')
     // 超融合域名白名单-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn2, '/api/download_json_file2', 'temp_whitelistlink.json')
+    downloadBtnAddEventListenerBase('download-json-btn2', 'whitelistlink')
     // 超融合域名黑名单-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn3, '/api/download_json_file3', 'temp_blacklistlink.json')
+    downloadBtnAddEventListenerBase('download-json-btn3', 'blacklistlink')
     // 超融合IPV4-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn4, '/api/download_json_file4', 'temp_ipv4listlink.json')
+    downloadBtnAddEventListenerBase('download-json-btn4', 'whitelistipv4link')
     // 超融合IPV6-导出订阅json配置
-    downloadBtnAddEventListenerBase(downloadBtn5, '/api/download_json_file5', 'temp_ipv6listlink.json')
+    downloadBtnAddEventListenerBase('download-json-btn5', 'whitelistipv6link')
     // 密码本-导出json配置
-    downloadBtnAddEventListenerBase(downloadBtn6, '/api/download_json_file6', 'temp_passwordlist.json')
+    downloadBtnAddEventListenerBase('download-json-btn6', 'passwordlink')
     // 导出所有json配置
-    downloadBtnAddEventListenerBase(downloadBtn7, '/api/download_json_file7', 'allData.zip')
+    downloadBtnAddEventListenerBase2('download-json-btn7', '/api/download_json_file7', 'allData.zip')
     // 永久列表-导出永久列表
-    downloadBtnAddEventListenerBase(downloadM3UBtn, '/api/download_m3u_file', 'temp_m3u.m3u')
+    downloadBtnAddEventListenerBase2('download-m3u-btn', '/api/download_m3u_file', 'temp_m3u.m3u')
 
-    function downloadBtnAddEventListenerBase(downloadBtnBase, requestPath, jsonName) {
-        downloadBtnBase.addEventListener('click', () => {
+    function downloadBtnAddEventListenerBase2(downloadBtnBase, requestPath, jsonName) {
+        const downloadBtn = document.getElementById(downloadBtnBase);
+        downloadBtn.addEventListener('click', () => {
             fetch(requestPath)
                 .then(response => response.blob())
                 .then(data => {
@@ -4371,6 +4458,39 @@
         });
     }
 
+    function downloadBtnAddEventListenerBase(downloadBtnBase, jsonName) {
+        const downloadBtn = document.getElementById(downloadBtnBase);
+        downloadBtn.addEventListener('click', () => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/download_config');
+            xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+            xhr.responseType = 'blob';
+
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    const blob = new Blob([xhr.response], {type: 'application/json'});
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `${jsonName}.json`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                } else {
+                    console.error(xhr.statusText);
+                }
+            };
+            xhr.onerror = function () {
+                console.error(xhr.statusText);
+            };
+
+            // 在这里定义要发送给后端的数据。
+            const data = {protocol: jsonName};
+            xhr.send(JSON.stringify(data));
+        });
+    }
+
     //下载解密-只添加一行列表，不存储数据
     addRowButtonAddEventListener2(addRowButton18, inputTable18)
     //下载加密上传-只添加一行列表，不存储数据
@@ -4385,15 +4505,15 @@
     addRowButtonAddEventListener(addRowButton24, inputTable24)
     //bilibili直播源-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton25, inputTable25)
-        //douyu直播源-只添加一行列表，不存储数据
+    //douyu直播源-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton29, inputTable29)
-            //alist直播源-只添加一行列表，不存储数据
+    //alist直播源-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton30, inputTable30)
     //huya直播源-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton26, inputTable26)
-        //YY直播源-只添加一行列表，不存储数据
+    //YY直播源-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton27, inputTable27)
-            //webdav直播源-只添加一行列表，不存储数据
+    //webdav直播源-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton28, inputTable28)
     //DNS简易白名单-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton12, inputTable12)
@@ -4427,7 +4547,7 @@
 
     function addRowButtonAddEventListener2(addRowButtonBase, inputTableBase) {
         addRowButtonBase.addEventListener('click', () => {
-            const newRow = methodC('createInputRow2', ['suburlclassname2','passwordClassName2', 'subnameClassName2','changePasswordButtonClassName', 'saveButtonClassName2', 'deleteButtonClassName2']);
+            const newRow = methodC('createInputRow2', ['suburlclassname2', 'passwordClassName2', 'subnameClassName2', 'changePasswordButtonClassName', 'saveButtonClassName2', 'deleteButtonClassName2']);
             inputTableBase.querySelector('tbody').prepend(newRow);
         });
     }
@@ -4551,27 +4671,27 @@
         executeBase('/api/chaoronghe25')
     }
 
-        //超融合-douyu直播源生成
+    //超融合-douyu直播源生成
     function execute29() {
         executeBase('/api/chaoronghe29')
     }
 
-            //超融合-alist直播源生成
+    //超融合-alist直播源生成
     function execute30() {
         executeBase('/api/chaoronghe30')
     }
 
-       //超融合-huya直播源生成
+    //超融合-huya直播源生成
     function execute26() {
         executeBase('/api/chaoronghe26')
     }
 
-           //超融合-YY直播源生成
+    //超融合-YY直播源生成
     function execute27() {
         executeBase('/api/chaoronghe27')
     }
 
-               //超融合-webdav直播源生成
+    //超融合-webdav直播源生成
     function execute28() {
         executeBase('/api/chaoronghe28')
     }

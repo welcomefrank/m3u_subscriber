@@ -150,75 +150,44 @@ def clearAndStoreAtLeast50DataInRedis(redisKey, cacheDict):
 def deal_black_list_simple_tmp_cache_queue(second):
     global black_list_simple_tmp_cache_queue
     global black_list_simple_tmp_cache
-    while True:
-        deal_tmp_cache_policy_queue(black_list_simple_tmp_cache_queue, black_list_simple_tmp_cache)
-        time.sleep(second)
-
-
-def deal_black_list_simple_tmp_policy_queue(second):
+    global white_list_simple_tmp_cache_queue
+    global white_list_simple_tmp_cache
+    global white_list_simple_tmp_policy_queue
+    global white_list_simple_tmp_policy
+    global black_list_tmp_cache_queue
+    global black_list_tmp_cache
+    global black_list_tmp_policy_queue
+    global black_list_tmp_policy
+    global white_list_tmp_cache_queue
+    global white_list_tmp_cache
+    global white_list_tmp_policy_queue
+    global white_list_tmp_policy
     global black_list_simple_tmp_policy_queue
     global black_list_simple_tmp_policy
     while True:
+        deal_tmp_cache_policy_queue(black_list_simple_tmp_cache_queue, black_list_simple_tmp_cache)
+        deal_tmp_cache_policy_queue(white_list_simple_tmp_cache_queue, white_list_simple_tmp_cache)
+        deal_tmp_cache_policy_queue(white_list_simple_tmp_policy_queue, white_list_simple_tmp_policy)
+        deal_tmp_cache_policy_queue(black_list_tmp_cache_queue, black_list_tmp_cache)
+        deal_tmp_cache_policy_queue(black_list_tmp_policy_queue, black_list_tmp_policy)
+        deal_tmp_cache_policy_queue(white_list_tmp_cache_queue, white_list_tmp_cache)
+        deal_tmp_cache_policy_queue(white_list_tmp_policy_queue, white_list_tmp_policy)
         deal_tmp_cache_policy_queue(black_list_simple_tmp_policy_queue, black_list_simple_tmp_policy)
         time.sleep(second)
 
 
-def deal_white_list_simple_tmp_cache_queue(second):
-    global white_list_simple_tmp_cache_queue
-    global white_list_simple_tmp_cache
-    while True:
-        deal_tmp_cache_policy_queue(white_list_simple_tmp_cache_queue, white_list_simple_tmp_cache)
-        time.sleep(second)
-
-
-def deal_white_list_simple_tmp_policy_queue(second):
-    global white_list_simple_tmp_policy_queue
-    global white_list_simple_tmp_policy
-    while True:
-        deal_tmp_cache_policy_queue(white_list_simple_tmp_policy_queue, white_list_simple_tmp_policy)
-        time.sleep(second)
-
-
-def deal_black_list_tmp_cache_queue(second):
-    global black_list_tmp_cache_queue
-    global black_list_tmp_cache
-    while True:
-        deal_tmp_cache_policy_queue(black_list_tmp_cache_queue, black_list_tmp_cache)
-        time.sleep(second)
-
-
-def deal_black_list_tmp_policy_queue(second):
-    global black_list_tmp_policy_queue
-    global black_list_tmp_policy
-    while True:
-        deal_tmp_cache_policy_queue(black_list_tmp_policy_queue, black_list_tmp_policy)
-        time.sleep(second)
-
-
-def deal_white_list_tmp_cache_queue(second):
-    global white_list_tmp_cache_queue
-    global white_list_tmp_cache
-    while True:
-        deal_tmp_cache_policy_queue(white_list_tmp_cache_queue, white_list_tmp_cache)
-        time.sleep(second)
-
-
-def deal_white_list_tmp_policy_queue(second):
-    global white_list_tmp_policy_queue
-    global white_list_tmp_policy
-    while True:
-        deal_tmp_cache_policy_queue(white_list_tmp_policy_queue, white_list_tmp_policy)
-        time.sleep(second)
-
-
 def deal_tmp_cache_policy_queue(queue, dict):
-    add_dict = {}
-    for i in range(10):
-        if not queue.empty():
-            domain = queue.get()
-            add_dict[domain] = ''
-    if len(add_dict) > 0:
-        dict.update(add_dict)
+    try:
+        add_dict = {}
+        for i in range(10):
+            if not queue.empty():
+                domain = queue.get()
+                add_dict[domain] = ''
+        if len(add_dict) > 0:
+            dict.update(add_dict)
+    except Exception as e:
+        print(e)
+        pass
 
 
 # 自动更新黑白名单数据至redis,多线程插入会丢失数据，只能把插数据的操作集中到单个线程
@@ -1349,27 +1318,6 @@ def main():
     timer_thread4 = threading.Thread(target=deal_black_list_simple_tmp_cache_queue,
                                      args=(10,), daemon=True)
     timer_thread4.start()
-    timer_thread5 = threading.Thread(target=deal_black_list_simple_tmp_policy_queue,
-                                     args=(10,), daemon=True)
-    timer_thread5.start()
-    timer_thread6 = threading.Thread(target=deal_white_list_simple_tmp_cache_queue,
-                                     args=(10,), daemon=True)
-    timer_thread6.start()
-    timer_thread7 = threading.Thread(target=deal_white_list_simple_tmp_policy_queue,
-                                     args=(10,), daemon=True)
-    timer_thread7.start()
-    timer_thread8 = threading.Thread(target=deal_black_list_tmp_cache_queue,
-                                     args=(10,), daemon=True)
-    timer_thread8.start()
-    timer_thread9 = threading.Thread(target=deal_black_list_tmp_policy_queue,
-                                     args=(10,), daemon=True)
-    timer_thread9.start()
-    timer_thread10 = threading.Thread(target=deal_white_list_tmp_cache_queue,
-                                      args=(10,), daemon=True)
-    timer_thread10.start()
-    timer_thread11 = threading.Thread(target=deal_white_list_tmp_policy_queue,
-                                      args=(10,), daemon=True)
-    timer_thread11.start()
     timer_thread12 = threading.Thread(target=clearCacheFast,
                                       args=(3613,), daemon=True)
     timer_thread12.start()

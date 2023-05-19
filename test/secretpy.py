@@ -1,3 +1,2 @@
-import pyinstaller as pyinstaller
-
-pyinstaller -F -w dns.py
+for i in range(10):
+    print(i)

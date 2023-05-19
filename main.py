@@ -235,6 +235,10 @@ true_webdav_m3u_dict_raw = {}
 REDIS_KEY_webdav_M3U_TYPE = 'redisKeyWebdavM3uType'
 # webdav uuid,视频格式
 redisKeyWebdavM3uType = {}
+# webdav视频同组联播uuid
+REDIS_KEY_webdav_M3U_GROUP_NEXT_UUID = 'redisKeyWebdavM3uGroupNextUuid'
+# webdav uuid,同组视频的下一个uuid
+redisKeyWebdavM3uGroupNextUuid = {}
 
 # webdav路径备份
 REDIS_KEY_WEBDAV_PATH_LIST = 'redisKeyWebdavPathList'
@@ -533,7 +537,8 @@ def cleanup(uuid):
 
 # 确保销毁ffmpeg
 atexit.register(cleanupExit)
-recordPath = {'past': 'nope'}
+# past-当前uuid,lastuuid-轮播的前一个uuid,nextuuid-轮播的下一个uuid
+recordPath = {'latest': 'nope', 'nextuuid': 'nope', 'lastuuid': 'nope', 'sumSec': '0.0', 'lastTs': 'nope'}
 
 
 # 看完一个ts就删除一个，删除已经看过超过60秒的
@@ -562,6 +567,12 @@ def safe_delete_single_ts(tsfies):
             tsfies.extend(result)
 
 
+def is_in_list(filename, list):
+    for line in list:
+        if filename in line:
+            return True
+
+
 # 尽可能安全地删除切片
 def safe_delete_ts(uuid):
     errPathList = []
@@ -571,7 +582,10 @@ def safe_delete_ts(uuid):
         if os.path.exists(SLICES_DIR):
             # 目录下全部文件
             removePaths = os.listdir(SLICES_DIR)
+            jumplist = recordPath['lastTs'].split('+')
             for filename in removePaths:
+                if is_in_list(filename, jumplist):
+                    continue
                 # 不是以uuid开始的文件，包括m3u8和ts文件
                 if not filename.startswith(uuid):
                     removePath = os.path.join(SLICES_DIR, filename)
@@ -630,7 +644,7 @@ def dealRemoveErrTsPath(errPathList):
 def checkAndRemovePastData(uuid):
     global recordPath
     # 新的请求文件不是相同的，神父换碟了，终止ffmpeg,清除路径下全部数据
-    oldname = recordPath['past']
+    oldname = recordPath['latest']
     if oldname != uuid:
         try:
             # 关闭除新切片外的全部进程
@@ -639,7 +653,7 @@ def checkAndRemovePastData(uuid):
             safe_delete_ts(uuid)
         except Exception as e:
             pass
-        recordPath['past'] = uuid
+        recordPath['latest'] = uuid
 
 
 # 删除异常文件夹
@@ -659,7 +673,7 @@ slice_path_fail_default = os.path.join('/app/secret', f"none.ts")
 # 'Connection': 'Keep-Alive',又名 HTTP 持久连接，是一种允许单个 TCP 连接为多个 HTTP 请求/响应保持打开状态的指令。 默认情况下，HTTP 连接在每次请求后关闭。
 headers_default = {'Content-Type': 'application/vnd.apple.mpegurl',
                    'Expect': '100-continue',
-                   'Connection': 'Keep-Alive'
+                   'Connection': 'Keep-Alive',
                    }
 headers_default_mp4 = {
     'Content-Type': 'video/mp4',
@@ -744,6 +758,40 @@ fail_m3u8 = f'#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-ALLOW-C
 user_agent = '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"'
 
 # lock_m3u8 = threading.Lock()
+lock = threading.Lock()
+# 存储m3u8列表数据
+m3u8_data_past = {'past': b''}
+
+
+def check_is_rank_or_switch_m3u8(uuid):
+    # 初次
+    if recordPath['lastuuid'] == 'nope':
+        # recordPath['sumSec'] = '0.0'
+        return uuid
+    # 轮播
+    if uuid == recordPath['lastuuid']:
+        return recordPath['nextuuid']
+    # 换片
+    else:
+        recordPath['lastTs']=b''
+        # recordPath['sumSec'] = '0.0'
+        return uuid
+
+
+def get_new_m3u8_data(m3u8_data):
+    if b'#EXT-X-ENDLIST' in m3u8_data:
+        # 拆分成一行一行的字符串
+        lines = m3u8_data.splitlines()
+        # 计算要截取的行数
+        num_lines_to_keep = len(lines) - 1
+        # 重新组合剩余的字符串
+        new_m3u8_data = b'\n'.join(lines[:num_lines_to_keep])
+    else:
+        new_m3u8_data = m3u8_data
+    return new_m3u8_data
+
+
+stupid_lock = threading.Lock()
 
 
 # bug:ffmpeg写m3u8和读取它会产生竞争
@@ -756,6 +804,7 @@ def video_m3u8(path):
         # if path not in VIDEO_MAPPING.keys():
         return send_heartbeat()
         # return "Video not found", 404
+    path = check_is_rank_or_switch_m3u8(path)
     slices_dir = os.environ.get('SLICES_DIR', '/app/slices')
     if path not in ffmpeg_processes.keys():
         # 使用ffmpeg命令行工具对视频进行实时切片，并生成M3U8格式的播放列表文件
@@ -806,11 +855,12 @@ def video_m3u8(path):
     if not isSuccess:
         return send_heartbeat()
         # return "Video not found", 404
+    m3u8_data_past['past'] = m3u8_data
+    new_m3u8_data = get_new_m3u8_data(m3u8_data)
     try:
-        return Response(m3u8_data, headers=headers_default)
+        return Response(new_m3u8_data, headers=headers_default)
     except:
         return send_heartbeat()
-        # return "Video not found", 404
 
 
 def send_heartbeat():
@@ -935,7 +985,30 @@ def check_ts_jump(path):
         return str11
 
 
-lock = threading.Lock()
+def is_over_ts(ts):
+    with stupid_lock:
+        # 最后一个切片到达，已经放完了
+        if b'#EXT-X-ENDLIST' in m3u8_data_past['past']:
+            arr = m3u8_data_past['past'].splitlines()
+            if ts.encode() in arr[len(arr) - 2]:
+                now_uuid = recordPath['latest']
+                try:
+                    next_uuid = redisKeyWebdavM3uGroupNextUuid[now_uuid]
+                    recordPath['lastuuid'] = now_uuid
+                    recordPath['nextuuid'] = next_uuid
+                    start = False
+                    result = b''
+                    for line in arr:
+                        if ts.encode() in line:
+                            start = True
+                        if start and not line.startswith(b'#EXT-X-ENDLIST') and not line.startswith(b'#EXTINF:'):
+                            result = result + b'+' + line
+                    recordPath['lastTs'] = result.decode()
+                    m3u8_data_past['past'] = b''
+                except:
+                    pass
+                return True
+    return False
 
 
 # 客户端读表，依据顺序读取ts,
@@ -951,6 +1024,7 @@ def video_ts(path):
     # with lock:
     # ts前进一次，除了切片和第一次找不到是强制归0
     path2 = check_ts_jump(path)
+    is_over_ts(path2)
     slice_path = os.path.join(SLICES_DIR, f"{path2}.ts")
     now = time.time()  # 获取当前时间戳
     # 使用Flask的send_file函数将切片文件作为流推送给客户端
@@ -989,14 +1063,10 @@ def video_ts(path):
     ts_dict[slice_path] = now
     # ts成功时间戳记录
     ts_dict[mark] = now
-    count = 0
-    while count < 10:
-        try:
-            return send_file(slice_path, mimetype='video/MP2T')
-        except:
-            time.sleep(1)
-            count += 1
-            continue
+    try:
+        return send_file(slice_path, mimetype='video/MP2T')
+    except:
+        pass
 
 
 @app.route('/videosfail/<path:path>.ts')
@@ -1072,90 +1142,25 @@ def redis_del_map(key):
 
 #########################################################通用工具区#################################################
 # 上传订阅配置
-def upload_json(request, rediskey, filename):
+def upload_json_base(rediskey, file_content):
     try:
-        json_dict = json.loads(request.get_data())
+        json_dict = json.loads(file_content)
         if rediskey not in specialRedisKey:
             redis_add_map(rediskey, json_dict)
             importToReloadCache(rediskey, json_dict)
         else:
             importToReloadCacheForSpecial(rediskey, json_dict)
-        try:
-            os.remove(filename)
-        except Exception as e:
-            pass
         return jsonify({'success': True})
     except Exception as e:
         print("An error occurred: ", e)
         return jsonify({'success': False})
 
 
-# def execute(method_name, sleepSecond):
-#     while True:
-#         # m3u
-#         if method_name == 'chaoronghe':
-#             if not isOpenFunction('switch25'):
-#                 time.sleep(sleepSecond)
-#                 continue
-#         # 域名白名单
-#         elif method_name == 'chaoronghe2':
-#             if not isOpenFunction('switch26'):
-#                 time.sleep(sleepSecond)
-#                 continue
-#         # 域名黑名单
-#         elif method_name == 'chaoronghe3':
-#             if not isOpenFunction('switch13'):
-#                 time.sleep(sleepSecond)
-#                 continue
-#         # ipv4
-#         elif method_name == 'chaoronghe4':
-#             if not isOpenFunction('switch27'):
-#                 time.sleep(sleepSecond)
-#                 continue
-#         # ipv6
-#         elif method_name == 'chaoronghe5':
-#             if not isOpenFunction('switch28'):
-#                 time.sleep(sleepSecond)
-#                 continue
-#         # 节点订阅
-#         elif method_name == 'chaoronghe6':
-#             if not isOpenFunction('switch29'):
-#                 time.sleep(sleepSecond)
-#                 continue
-#         method = globals().get(method_name)
-#         # 判断方法是否存在
-#         if not method:
-#             break
-#         # 执行方法
-#         method()
-#         time.sleep(sleepSecond)
-
-
-# 直播源线程阻塞开关
-timer_condition_m3u = threading.Condition()
-# 域名白名单线程阻塞开关
-timer_condition_whitelist = threading.Condition()
-# 域名黑名单线程阻塞开关
-timer_condition_blacklist = threading.Condition()
-# ipv4线程阻塞开关
-timer_condition_ipv4list = threading.Condition()
-# ipv6线程阻塞开关
-timer_condition_ipv6list = threading.Condition()
-# 节点订阅线程阻塞开关
-timer_condition_proxylist = threading.Condition()
-# 下载加密上传线程阻塞开关
-timer_condition_downUpload = threading.Condition()
-# 下载解密线程阻塞开关
-timer_condition_download = threading.Condition()
-# youtube直播源线程阻塞开关
-timer_condition_youtube = threading.Condition()
-
-
-def executeYoutube(sleepSecond):
+def executeProxylist(sleepSecond):
     while True:
-        with timer_condition_youtube:
-            if not isOpenFunction('switch35'):
-                timer_condition_youtube.wait(sleepSecond)
+        # 执行方法
+        chaoronghe6()
+        if isOpenFunction('switch35'):
             # 执行方法
             chaoronghe24()
             chaoronghe25()
@@ -1164,86 +1169,29 @@ def executeYoutube(sleepSecond):
             chaoronghe29()
             chaoronghe30()
             print("直播源定时器执行成功")
-            timer_condition_youtube.wait(sleepSecond)
-        time.sleep(sleepSecond)
-
-
-def executeDown(sleepSecond):
-    while True:
-        with timer_condition_download:
-            if not isOpenFunction('switch34'):
-                timer_condition_download.wait(sleepSecond)
-            # 执行方法
-            chaoronghe10()
-            print("下载解密定时器执行成功")
-            timer_condition_download.wait(sleepSecond)
-        time.sleep(sleepSecond)
-
-
-def executeDownUpload(sleepSecond):
-    while True:
-        with timer_condition_downUpload:
-            if not isOpenFunction('switch33'):
-                timer_condition_downUpload.wait(sleepSecond)
-            # 执行方法
-            chaoronghe9()
-            print("下载加密上传定时器执行成功")
-            timer_condition_downUpload.wait(sleepSecond)
-        time.sleep(sleepSecond)
-
-
-def executeProxylist(sleepSecond):
-    while True:
-        with timer_condition_proxylist:
-            if not isOpenFunction('switch29'):
-                timer_condition_proxylist.wait(sleepSecond)
-            # 执行方法
-            chaoronghe6()
-            timer_condition_proxylist.wait(sleepSecond)
-        time.sleep(sleepSecond)
-
-
-def executeIPV6list(sleepSecond):
-    while True:
-        with timer_condition_ipv6list:
-            if not isOpenFunction('switch28'):
-                timer_condition_ipv6list.wait(sleepSecond)
-            # 执行方法
-            chaoronghe5()
-            timer_condition_ipv6list.wait(sleepSecond)
-        time.sleep(sleepSecond)
-
-
-def executeIPV4list(sleepSecond):
-    while True:
-        with timer_condition_ipv4list:
-            if not isOpenFunction('switch27'):
-                timer_condition_ipv4list.wait(sleepSecond)
-            # 执行方法
-            chaoronghe4()
-            timer_condition_ipv4list.wait(sleepSecond)
-        time.sleep(sleepSecond)
-
-
-def executeBlacklist(sleepSecond):
-    while True:
-        with timer_condition_blacklist:
-            if not isOpenFunction('switch13'):
-                timer_condition_blacklist.wait(sleepSecond)
-            # 执行方法
-            chaoronghe3()
-            timer_condition_blacklist.wait(sleepSecond)
         time.sleep(sleepSecond)
 
 
 def executeWhitelist(sleepSecond):
     while True:
-        with timer_condition_whitelist:
-            if not isOpenFunction('switch26'):
-                timer_condition_whitelist.wait(sleepSecond)
+        if isOpenFunction('switch26'):
             # 执行方法
             chaoronghe2()
-            timer_condition_whitelist.wait(sleepSecond)
+        if isOpenFunction('switch13'):
+            # 执行方法
+            chaoronghe3()
+        if isOpenFunction('switch27'):
+            # 执行方法
+            chaoronghe4()
+        if isOpenFunction('switch28'):
+            # 执行方法
+            chaoronghe5()
+        if isOpenFunction('switch33'):
+            # 执行方法
+            chaoronghe9()
+        if isOpenFunction('switch34'):
+            # 执行方法
+            chaoronghe10()
         time.sleep(sleepSecond)
 
 
@@ -1254,60 +1202,36 @@ def toggle_m3u(functionId, value):
         redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
         redis_add(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG, 1)
     elif functionId == 'switch25':
-        with timer_condition_m3u:
-            function_dict[functionId] = str(value)
-            redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
-            timer_condition_m3u.notify()
+        function_dict[functionId] = str(value)
+        redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
     elif functionId == 'switch26':
-        with timer_condition_whitelist:
-            function_dict[functionId] = str(value)
-            redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
-            timer_condition_whitelist.notify()
+        function_dict[functionId] = str(value)
+        redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
     elif functionId == 'switch13':
-        with timer_condition_blacklist:
-            function_dict[functionId] = str(value)
-            redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
-            timer_condition_blacklist.notify()
+        function_dict[functionId] = str(value)
+        redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
     elif functionId == 'switch27':
-        with timer_condition_ipv4list:
-            function_dict[functionId] = str(value)
-            redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
-            timer_condition_ipv4list.notify()
+        function_dict[functionId] = str(value)
+        redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
     elif functionId == 'switch28':
-        with timer_condition_ipv6list:
-            function_dict[functionId] = str(value)
-            redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
-            timer_condition_ipv6list.notify()
-    elif functionId == 'switch29':
-        with timer_condition_proxylist:
-            function_dict[functionId] = str(value)
-            redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
-            timer_condition_proxylist.notify()
+        function_dict[functionId] = str(value)
+        redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
     elif functionId == 'switch33':
-        with timer_condition_downUpload:
-            function_dict[functionId] = str(value)
-            redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
-            timer_condition_downUpload.notify()
+        function_dict[functionId] = str(value)
+        redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
     elif functionId == 'switch34':
-        with timer_condition_download:
-            function_dict[functionId] = str(value)
-            redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
-            timer_condition_download.notify()
+        function_dict[functionId] = str(value)
+        redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
     elif functionId == 'switch35':
-        with timer_condition_youtube:
-            function_dict[functionId] = str(value)
-            redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
-            timer_condition_youtube.notify()
+        function_dict[functionId] = str(value)
+        redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
 
 
 def executeM3u(sleepSecond):
     while True:
-        with timer_condition_m3u:
-            if not isOpenFunction('switch25'):
-                timer_condition_m3u.wait(sleepSecond)
+        if isOpenFunction('switch25'):
             # 执行方法
             chaoronghe()
-            timer_condition_m3u.wait(sleepSecond)
         time.sleep(sleepSecond)
 
 
@@ -2208,39 +2132,29 @@ task_queue_github = queue.Queue()
 task_queue_webdav = queue.Queue()
 
 
-def worker_webdav():
-    while True:
-        # 从任务队列中获取一个任务
-        task = task_queue_webdav.get()
-        if task is None:
-            continue
-        # 执行上传文件操作
-        file_name = task
-        updateFileToWebDAV(file_name)
-        time.sleep(10)
-
-
-def worker_gitee():
-    while True:
-        # 从任务队列中获取一个任务
-        task = task_queue.get()
-        if task is None:
-            continue
-        # 执行上传文件操作
-        file_name = task
-        updateFileToGitee(file_name)
-        time.sleep(10)
-
-
 def worker_github():
     while True:
-        # 从任务队列中获取一个任务
-        task = task_queue_github.get()
-        if task is None:
-            continue
-        # 执行上传文件操作
-        file_name = task
-        updateFileToGithub(file_name)
+        for i in range(10):
+            # 从任务队列中获取一个任务
+            if not task_queue_webdav.empty():
+                task = task_queue_webdav.get()
+                # 执行上传文件操作
+                file_name = task
+                updateFileToWebDAV(file_name)
+        for i in range(10):
+            # 从任务队列中获取一个任务
+            if not task_queue.empty():
+                task = task_queue.get()
+                # 执行上传文件操作
+                file_name = task
+                updateFileToGitee(file_name)
+        for i in range(10):
+            # 从任务队列中获取一个任务
+            if not task_queue_github.empty():
+                task = task_queue_github.get()
+                # 执行上传文件操作
+                file_name = task
+                updateFileToGithub(file_name)
         time.sleep(10)
 
 
@@ -2424,9 +2338,6 @@ def init_function_dict():
         # ipv6-定时器
         if 'switch28' not in keys:
             dict['switch28'] = '0'
-        # 节点订阅-定时器
-        if 'switch29' not in keys:
-            dict['switch29'] = '1'
         # 上传至Gitee
         if 'switch30' not in keys:
             dict['switch30'] = '0'
@@ -2455,7 +2366,7 @@ def init_function_dict():
                 'switch15': '0', 'switch16': '0', 'switch17': '0', 'switch18': '0', 'switch19': '0', 'switch20': '0',
                 'switch21': '0',
                 'switch22': '1', 'switch23': '1', 'switch24': '1', 'switch25': '0', 'switch26': '0', 'switch27': '0'
-            , 'switch28': '0', 'switch29': '1', 'switch30': '0', 'switch31': '0', 'switch32': '0', 'switch33': '0',
+            , 'switch28': '0', 'switch30': '0', 'switch31': '0', 'switch32': '0', 'switch33': '0',
                 'switch34': '0', 'switch35': '0'}
         redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
         function_dict = dict.copy()
@@ -3467,9 +3378,10 @@ def dellist(request, rediskey):
     return jsonify({'deleteresult': "delete success"})
 
 
-def download_json_file_base(redislinkKey, filename):
+def download_json_file_base(redislinkKey):
     # 生成JSON文件数据
     json_data = generate_json_string(redislinkKey)
+    filename = f'{secret_path}{redislinkKey}.json'
     if os.path.exists(filename):
         os.remove(filename)
     # 保存JSON数据到临时文件
@@ -5073,6 +4985,11 @@ def init_webdav_m3u():
         global redisKeyWebdavM3uType
         redisKeyWebdavM3uType.clear()
         redisKeyWebdavM3uType = dict3.copy()
+    dict4 = redis_get_map(REDIS_KEY_webdav_M3U_GROUP_NEXT_UUID)
+    if dict4:
+        global redisKeyWebdavM3uGroupNextUuid
+        redisKeyWebdavM3uGroupNextUuid.clear()
+        redisKeyWebdavM3uGroupNextUuid = dict4.copy()
 
 
 def init_webdav_m3u_True_Data():
@@ -5157,15 +5074,6 @@ def getThreadNum2():
     return jsonify({'button': num})
 
 
-# 导出加密订阅密码历史记录配置
-@app.route('/api/download_json_file14', methods=['GET'])
-@requires_auth
-def download_json_file14():
-    return download_json_file_base(REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS,
-                                   f"{secret_path}temp_historysubscribepasslist.json"
-                                   )
-
-
 # 删除加密订阅密码历史记录
 @app.route('/api/deletewm3u14', methods=['POST'])
 @requires_auth
@@ -5180,215 +5088,18 @@ def getall14():
     return jsonify(redis_get_map(REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS))
 
 
-# 加密订阅密码历史记录-导入json配置
-@app.route('/api/upload_json_file14', methods=['POST'])
+@app.route('/api/upload_json', methods=['POST'])
 @requires_auth
-def upload_json_file14():
-    return upload_json(request, REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS, f"{secret_path}tmp_data14.json")
-
-
-# 上传简易DNS黑名单json文件
-@app.route('/api/upload_json_file13', methods=['POST'])
-@requires_auth
-def upload_json_file13():
-    redis_add(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG, 1)
-    return upload_json(request, REDIS_KEY_DNS_SIMPLE_BLACKLIST, f"{secret_path}tmp_data13.json")
-
-
-# 上传直播源订阅配置集合文件
-@app.route('/api/upload_json_file', methods=['POST'])
-@requires_auth
-def upload_json_file():
-    return upload_json(request, REDIS_KEY_M3U_LINK, f"{secret_path}tmp_data.json")
-
-
-# 上传白名单订阅配置集合文件
-@app.route('/api/upload_json_file2', methods=['POST'])
-@requires_auth
-def upload_json_file2():
-    return upload_json(request, REDIS_KEY_WHITELIST_LINK, f"{secret_path}tmp_data2.json")
-
-
-# 上传黑名单订阅配置集合文件
-@app.route('/api/upload_json_file3', methods=['POST'])
-@requires_auth
-def upload_json_file3():
-    return upload_json(request, REDIS_KEY_BLACKLIST_LINK, f"{secret_path}tmp_data3.json")
-
-
-# 上传中国ipv4订阅配置集合文件
-@app.route('/api/upload_json_file4', methods=['POST'])
-@requires_auth
-def upload_json_file4():
-    return upload_json(request, REDIS_KEY_WHITELIST_IPV4_LINK, f"{secret_path}tmp_data4.json")
-
-
-# 上传中国ipv6订阅配置集合文件
-@app.route('/api/upload_json_file5', methods=['POST'])
-@requires_auth
-def upload_json_file5():
-    return upload_json(request, REDIS_KEY_WHITELIST_IPV6_LINK, f"{secret_path}tmp_data5.json")
-
-
-# 上传密码本配置集合文件
-@app.route('/api/upload_json_file6', methods=['POST'])
-def upload_json_file6():
-    return upload_json(request, REDIS_KEY_PASSWORD_LINK, f"{secret_path}tmp_data6.json")
-
-
-# 上传简易DNS白名单json文件
-@app.route('/api/upload_json_file12', methods=['POST'])
-@requires_auth
-def upload_json_file12():
-    redis_add(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG, 1)
-    return upload_json(request, REDIS_KEY_DNS_SIMPLE_WHITELIST, f"{secret_path}tmp_data12.json")
-
-
-# 上传m3u白名单json文件
-@app.route('/api/upload_json_file11', methods=['POST'])
-@requires_auth
-def upload_json_file11():
-    return upload_json(request, REDIS_KEY_M3U_WHITELIST, f"{secret_path}tmp_data11.json")
-
-
-# 上传m3u白名单json文件
-@app.route('/api/upload_json_file16', methods=['POST'])
-@requires_auth
-def upload_json_file16():
-    return upload_json(request, REDIS_KEY_M3U_WHITELIST_RANK, f"{secret_path}tmp_data16.json")
-
-
-# 上传下载加密上传json文件
-@app.route('/api/upload_json_file17', methods=['POST'])
-@requires_auth
-def upload_json_file17():
-    return upload_json(request, REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME, f"{secret_path}tmp_data17.json")
-
-
-# 上传下载解密密json文件
-@app.route('/api/upload_json_file18', methods=['POST'])
-@requires_auth
-def upload_json_file18():
-    return upload_json(request, REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME, f"{secret_path}tmp_data18.json")
-
-
-# 上传m3u黑名单json文件
-@app.route('/api/upload_json_file15', methods=['POST'])
-@requires_auth
-def upload_json_file15():
-    return upload_json(request, REDIS_KEY_M3U_BLACKLIST, f"{secret_path}tmp_data15.json")
-
-
-# 上传加密订阅重命名json文件
-@app.route('/api/upload_json_file19', methods=['POST'])
-@requires_auth
-def upload_json_file19():
-    return upload_json(request, REDIS_KEY_FILE_NAME, f"{secret_path}tmp_data19.json")
-
-
-# 上传订阅密码锁json文件
-@app.route('/api/upload_json_file20', methods=['POST'])
-@requires_auth
-def upload_json_file20():
-    return upload_json(request, REDIS_KEY_SECRET_PASS_NOW, f"{secret_path}tmp_data20.json")
-
-
-# 上传gitee同步账号json文件
-@app.route('/api/upload_json_file21', methods=['POST'])
-@requires_auth
-def upload_json_file21():
-    return upload_json(request, REDIS_KEY_GITEE, f"{secret_path}tmp_data21.json")
-
-
-# 上传gitee同步账号json文件
-@app.route('/api/upload_json_file22', methods=['POST'])
-@requires_auth
-def upload_json_file22():
-    return upload_json(request, REDIS_KEY_GITHUB, f"{secret_path}tmp_data22.json")
-
-
-# 上传webdav同步账号json文件
-@app.route('/api/upload_json_file23', methods=['POST'])
-@requires_auth
-def upload_json_file23():
-    return upload_json(request, REDIS_KEY_WEBDAV, f"{secret_path}tmp_data23.json")
-
-
-# 上传youtube直播源json文件
-@app.route('/api/upload_json_file24', methods=['POST'])
-@requires_auth
-def upload_json_file24():
-    return upload_json(request, REDIS_KEY_YOUTUBE, f"{secret_path}tmp_data24.json")
-
-
-# 上传bilibili直播源json文件
-@app.route('/api/upload_json_file25', methods=['POST'])
-@requires_auth
-def upload_json_file25():
-    return upload_json(request, REDIS_KEY_BILIBILI, f"{secret_path}tmp_data25.json")
-
-
-# 上传douyu直播源json文件
-@app.route('/api/upload_json_file29', methods=['POST'])
-@requires_auth
-def upload_json_file29():
-    return upload_json(request, REDIS_KEY_DOUYU, f"{secret_path}tmp_data30.json")
-
-
-# 上传alist直播源json文件
-@app.route('/api/upload_json_file30', methods=['POST'])
-@requires_auth
-def upload_json_file30():
-    return upload_json(request, REDIS_KEY_ALIST, f"{secret_path}tmp_data31.json")
-
-
-# 上传huya直播源json文件
-@app.route('/api/upload_json_file26', methods=['POST'])
-@requires_auth
-def upload_json_file26():
-    return upload_json(request, REDIS_KEY_HUYA, f"{secret_path}tmp_data26.json")
-
-
-# 上传YY直播源json文件
-@app.route('/api/upload_json_file27', methods=['POST'])
-@requires_auth
-def upload_json_file27():
-    return upload_json(request, REDIS_KEY_YY, f"{secret_path}tmp_data27.json")
-
-
-# 上传webdav直播源账号密码json文件
-@app.route('/api/upload_json_file28', methods=['POST'])
-@requires_auth
-def upload_json_file28():
-    return upload_json(request, REDIS_KEY_WEBDAV_M3U, f"{secret_path}tmp_data28.json")
-
-
-# 上传webdav直播源子目录json文件
-@app.route('/api/upload_json_file282', methods=['POST'])
-@requires_auth
-def upload_json_file282():
-    return upload_json(request, REDIS_KEY_WEBDAV_PATH_LIST, f"{secret_path}tmp_data29.json")
-
-
-# 上传节点后端服务器json文件
-@app.route('/api/upload_json_file10', methods=['POST'])
-@requires_auth
-def upload_json_file10():
-    return upload_json(request, REDIS_KEY_PROXIES_SERVER, f"{secret_path}tmp_data10.json")
-
-
-# 上传节点远程配置json文件
-@app.route('/api/upload_json_file9', methods=['POST'])
-@requires_auth
-def upload_json_file9():
-    return upload_json(request, REDIS_KEY_PROXIES_MODEL, f"{secret_path}tmp_data9.json")
-
-
-# 上传节点配置json文件
-@app.route('/api/upload_json_file8', methods=['POST'])
-@requires_auth
-def upload_json_file8():
-    return upload_json(request, REDIS_KEY_PROXIES_LINK, f"{secret_path}tmp_data8.json")
+def upload_json():
+    # 从请求体中获取 rediskey 和文件内容
+    data = request.get_json()
+    rediskey = data.get('rediskey')
+    file_content = data.get('content')
+    if 'dnssimpleblacklist' == rediskey:
+        redis_add(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG, 1)
+    elif 'dnssimplewhitelist' == rediskey:
+        redis_add(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG, 1)
+    return upload_json_base(rediskey, file_content)
 
 
 # 一键上传全部配置集合文件
@@ -5416,7 +5127,7 @@ def getSwitchstate():
 
 
 # 需要额外操作的
-clockArr = ['switch25', 'switch26', 'switch27', 'switch28', 'switch29', 'switch13', 'switch25', 'switch33', 'switch34',
+clockArr = ['switch25', 'switch26', 'switch27', 'switch28', 'switch13', 'switch25', 'switch33', 'switch34',
             'switch35']
 
 
@@ -5473,7 +5184,6 @@ def serverMode():
         switchSingleFunction('switch26', '1')
         switchSingleFunction('switch27', '1')
         switchSingleFunction('switch28', '1')
-        switchSingleFunction('switch29', '1')
         switchSingleFunction('switch30', '1')
         switchSingleFunction('switch31', '1')
         switchSingleFunction('switch32', '1')
@@ -5509,7 +5219,6 @@ def serverMode():
         switchSingleFunction('switch26', '1')
         switchSingleFunction('switch27', '1')
         switchSingleFunction('switch28', '1')
-        switchSingleFunction('switch29', '1')
         switchSingleFunction('switch30', '0')
         switchSingleFunction('switch31', '0')
         switchSingleFunction('switch32', '0')
@@ -5553,13 +5262,6 @@ def savequeryThreadNum():
 def getQueryThreadNum():
     num = init_dns_query_num()
     return jsonify({'button': num})
-
-
-# 导出简易DNS黑名单配置
-@app.route('/api/download_json_file13', methods=['GET'])
-@requires_auth
-def download_json_file13():
-    return download_json_file_base(REDIS_KEY_DNS_SIMPLE_BLACKLIST, f"{secret_path}temp_dnssimpleblacklist.json")
 
 
 # 删除DNS简易黑名单
@@ -5719,13 +5421,6 @@ def returnDictCache(redisKey, cacheDict):
     return jsonify(cacheDict)
 
 
-# 导出简易DNS白名单配置
-@app.route('/api/download_json_file12', methods=['GET'])
-@requires_auth
-def download_json_file12():
-    return download_json_file_base(REDIS_KEY_DNS_SIMPLE_WHITELIST, f"{secret_path}temp_dnssimplewhitelist.json")
-
-
 # 删除DNS简易白名单
 @app.route('/api/deletewm3u12', methods=['POST'])
 @requires_auth
@@ -5776,144 +5471,11 @@ def changeIP():
     return "数据已经保存"
 
 
-# 导出m3u白名单配置
-@app.route('/api/download_json_file11', methods=['GET'])
+@app.route('/api/download_config', methods=['POST'])
 @requires_auth
-def download_json_file11():
-    return download_json_file_base(REDIS_KEY_M3U_WHITELIST, f"{secret_path}temp_m3uwhitelist.json")
-
-
-# 导出m3u白名单分组优先级配置
-@app.route('/api/download_json_file16', methods=['GET'])
-@requires_auth
-def download_json_file16():
-    return download_json_file_base(REDIS_KEY_M3U_WHITELIST_RANK, f"{secret_path}temp_m3uwhiteranklist.json")
-
-
-# 导出下载加密上传配置
-@app.route('/api/download_json_file17', methods=['GET'])
-@requires_auth
-def download_json_file17():
-    return download_json_file_base(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME,
-                                   f"{secret_path}temp_downloadAndSecretUpload.json")
-
-
-# 导出下载解密配置
-@app.route('/api/download_json_file18', methods=['GET'])
-@requires_auth
-def download_json_file18():
-    return download_json_file_base(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME,
-                                   f"{secret_path}temp_downloadAndDeSecret.json")
-
-
-# 导出订阅重命名配置
-@app.route('/api/download_json_file19', methods=['GET'])
-@requires_auth
-def download_json_file19():
-    return download_json_file_base(REDIS_KEY_FILE_NAME,
-                                   f"{secret_path}temp_subscribeName.json")
-
-
-# 导出订阅密码锁配置
-@app.route('/api/download_json_file20', methods=['GET'])
-@requires_auth
-def download_json_file20():
-    return download_json_file_base(REDIS_KEY_SECRET_PASS_NOW,
-                                   f"{secret_path}temp_subscribePass.json")
-
-
-# 导出gitee账号配置
-@app.route('/api/download_json_file21', methods=['GET'])
-@requires_auth
-def download_json_file21():
-    return download_json_file_base(REDIS_KEY_GITEE,
-                                   f"{secret_path}temp_outputGitee.json")
-
-
-# 导出github账号配置
-@app.route('/api/download_json_file22', methods=['GET'])
-@requires_auth
-def download_json_file22():
-    return download_json_file_base(REDIS_KEY_GITHUB,
-                                   f"{secret_path}temp_outputGithub.json")
-
-
-# 导出webdav账号配置
-@app.route('/api/download_json_file23', methods=['GET'])
-@requires_auth
-def download_json_file23():
-    return download_json_file_base(REDIS_KEY_WEBDAV,
-                                   f"{secret_path}temp_outputWebdav.json")
-
-
-# 导出youtube直播源配置
-@app.route('/api/download_json_file24', methods=['GET'])
-@requires_auth
-def download_json_file24():
-    return download_json_file_base(REDIS_KEY_YOUTUBE,
-                                   f"{secret_path}temp_youtube_m3u.json")
-
-
-# 导出bilibili直播源配置
-@app.route('/api/download_json_file25', methods=['GET'])
-@requires_auth
-def download_json_file25():
-    return download_json_file_base(REDIS_KEY_BILIBILI,
-                                   f"{secret_path}temp_bilibili_m3u.json")
-
-
-# 导出douyu直播源配置
-@app.route('/api/download_json_file29', methods=['GET'])
-@requires_auth
-def download_json_file29():
-    return download_json_file_base(REDIS_KEY_DOUYU,
-                                   f"{secret_path}temp_douyu_m3u.json")
-
-
-# 导出alist直播源配置
-@app.route('/api/download_json_file30', methods=['GET'])
-def download_json_file30():
-    return download_json_file_base(REDIS_KEY_ALIST,
-                                   f"{secret_path}temp_alist_m3u.json")
-
-
-# 导出huya直播源配置
-@app.route('/api/download_json_file26', methods=['GET'])
-@requires_auth
-def download_json_file26():
-    return download_json_file_base(REDIS_KEY_HUYA,
-                                   f"{secret_path}temp_huya_m3u.json")
-
-
-# 导出YY直播源配置
-@app.route('/api/download_json_file27', methods=['GET'])
-@requires_auth
-def download_json_file27():
-    return download_json_file_base(REDIS_KEY_YY,
-                                   f"{secret_path}temp_YY_m3u.json")
-
-
-# 导出WEBDAV直播源账号密码配置
-@app.route('/api/download_json_file28', methods=['GET'])
-@requires_auth
-def download_json_file28():
-    return download_json_file_base(REDIS_KEY_WEBDAV_M3U,
-                                   f"{secret_path}temp_WEBDAV_m3u.json")
-
-
-# 导出WEBDAV直播源子路径配置
-@app.route('/api/download_json_file282', methods=['GET'])
-@requires_auth
-def download_json_file282():
-    return download_json_file_base(REDIS_KEY_WEBDAV_PATH_LIST,
-                                   f"{secret_path}temp_WEBDAV_m3u_path.json")
-
-
-# 导出m3u黑名单配置
-@app.route('/api/download_json_file15', methods=['GET'])
-@requires_auth
-def download_json_file15():
-    return download_json_file_base(REDIS_KEY_M3U_BLACKLIST, f"{secret_path}temp_m3ublacklist.json")
+def handle_post_request():
+    protocol = request.json.get('protocol')
+    return download_json_file_base(protocol)
 
 
 # 删除M3U白名单
@@ -6562,13 +6124,6 @@ def reloadProxyModels():
     return jsonify(redis_get_map(REDIS_KEY_PROXIES_SERVER))
 
 
-# 导出节点远程订阅配置
-@app.route('/api/download_json_file10', methods=['GET'])
-@requires_auth
-def download_json_file10():
-    return download_json_file_base(REDIS_KEY_PROXIES_SERVER, f"{secret_path}temp_proxyserverlistlink.json")
-
-
 # 删除节点远程后端服务器订阅
 @app.route('/api/deletewm3u10', methods=['POST'])
 @requires_auth
@@ -6590,13 +6145,6 @@ def addnewm3u10():
 @requires_auth
 def getall10():
     return jsonify(redis_get_map(REDIS_KEY_PROXIES_SERVER))
-
-
-# 导出节点远程订阅配置
-@app.route('/api/download_json_file9', methods=['GET'])
-@requires_auth
-def download_json_file9():
-    return download_json_file_base(REDIS_KEY_PROXIES_MODEL, f"{secret_path}temp_proxyremotemodellistlink.json")
 
 
 # 删除节点远程配置订阅
@@ -6662,18 +6210,12 @@ def getall8():
     return jsonify(redis_get_map(REDIS_KEY_PROXIES_LINK))
 
 
-# 导出节点订阅配置
-@app.route('/api/download_json_file8', methods=['GET'])
-@requires_auth
-def download_json_file8():
-    return download_json_file_base(REDIS_KEY_PROXIES_LINK, f"{secret_path}temp_proxieslistlink.json")
-
-
 # 全部节点订阅链接超融合
 @app.route('/api/chaoronghe6', methods=['GET'])
 @requires_auth
 def chaoronghe_proxy():
     return chaoronghe6()
+
 
 def chaoronghe6():
     try:
@@ -6708,6 +6250,7 @@ def chaoronghe7():
 @requires_auth
 def chaoronghe_simpleWhitelist():
     return chaoronghe8()
+
 
 def chaoronghe8():
     path1 = f"{secret_path}{getFileNameByTagName('simpleDnsmasq')}.conf"
@@ -7515,6 +7058,7 @@ async def grab(session, id, m3u_dict, sem, mintimeout, maxTimeout):
 def chaoronghe_bilibili():
     return chaoronghe25()
 
+
 def chaoronghe25():
     try:
         loop = asyncio.new_event_loop()
@@ -7630,6 +7174,7 @@ def chaoronghe30():
 def chaoronghe_huya():
     return chaoronghe26()
 
+
 def chaoronghe26():
     try:
         loop = asyncio.new_event_loop()
@@ -7669,6 +7214,7 @@ def chaoronghe26():
 @requires_auth
 def chaoronghe_yy():
     return chaoronghe27()
+
 
 def chaoronghe27():
     try:
@@ -7722,6 +7268,8 @@ def getWebDavFileName(filePath):
 async def process_child(url, child_list_chunk, fakeurl,
                         redisKeyWebDavPathList):
     groupName = redisKeyWebDavPathList[url]
+    # uuid,
+    uuid_list = []
     for child in child_list_chunk:
         href = child.find('{DAV:}href').text
         if not href.endswith('/'):  # Process only files (not directories)
@@ -7734,7 +7282,6 @@ async def process_child(url, child_list_chunk, fakeurl,
                 continue
             name = getWebDavFileName(file_path)
             link = f'#EXTINF:-1 group-title="{groupName}"  tvg-name="{name}",{name}\n'
-            # http://127.0.0.1:5000/videos/video1.mp4.m3u8
             str_id = str(uuid.uuid4())
             fake_m3u8 = f'{fakeurl}{str_id}.m3u8'
             # fake_webdav_m3u_dict[fake_m3u8] = link
@@ -7750,6 +7297,15 @@ async def process_child(url, child_list_chunk, fakeurl,
             redisKeyWebdavM3uType[str_id] = type
             redis_add_map(REDIS_KEY_webdav_M3U_TYPE, {str_id: type})
             redis_add_map(REDIS_KEY_WEBDAV_M3U_DICT_RAW, {str_id: finalTrueUrl})
+            uuid_list.append(str_id)
+    length_list = len(uuid_list)
+    if length_list > 0:
+        dict_update = {}
+        for index in range(length_list - 1):
+            next_index = index + 1
+            redisKeyWebdavM3uGroupNextUuid[uuid_list[index]] = uuid_list[next_index]
+            dict_update[uuid_list[index]] = uuid_list[next_index]
+        redis_add_map(REDIS_KEY_webdav_M3U_GROUP_NEXT_UUID, dict_update)
 
 
 async def deal_mutil_webdav_path_m3u(session, url, fakeurl,
@@ -7769,7 +7325,7 @@ async def download_files28():
     password = redisKeyWebDavM3u['password']
     auth_header = aiohttp.BasicAuth(login=username, password=password)
     fakeurl = getNowWebDavFakeUrl()
-    # fakeurl = default_video_prefix
+    #fakeurl = default_video_prefix
     # http://127.0.0.1:5000/videos/video1.mp4.m3u8
     global redisKeyWebDavPathList
     urls = redisKeyWebDavPathList.keys()
@@ -7798,11 +7354,13 @@ def chaoronghe28():
         # webdav名字，真实地址
         global true_webdav_m3u_dict_raw
         global redisKeyWebdavM3uType
+        global redisKeyWebdavM3uGroupNextUuid
+        redisKeyWebdavM3uGroupNextUuid.clear()
         true_webdav_m3u_dict_raw.clear()
         redisKeyWebdavM3uType.clear()
         redis_del_map(REDIS_KEY_webdav_M3U_TYPE)
         redis_del_map(REDIS_KEY_WEBDAV_M3U_DICT_RAW)
-
+        redis_del_map(REDIS_KEY_webdav_M3U_GROUP_NEXT_UUID)
         # fake_webdav_m3u_dict = {}
         # true_webdav_m3u_dict_raw_tmp = {}
 
@@ -7828,6 +7386,7 @@ def chaoronghe28():
 @requires_auth
 def chaoronghe_youtube():
     return chaoronghe24()
+
 
 def chaoronghe24():
     try:
@@ -7929,13 +7488,6 @@ def addnewm3u6():
     return addlist(request, REDIS_KEY_PASSWORD_LINK)
 
 
-# 导出密码配置
-@app.route('/api/download_json_file6', methods=['GET'])
-@requires_auth
-def download_json_file6():
-    return download_json_file_base(REDIS_KEY_PASSWORD_LINK, f"{secret_path}temp_passwordlist.json")
-
-
 # 拉取全部密码
 @app.route('/api/getall6', methods=['GET'])
 @requires_auth
@@ -7949,19 +7501,13 @@ def getall6():
 def chaoronghe_ipv6():
     return chaoronghe5()
 
+
 def chaoronghe5():
     try:
         return chaorongheBase(REDIS_KEY_WHITELIST_IPV6_LINK, 'process_data_abstract6',
                               REDIS_KEY_WHITELIST_IPV6_DATA, f"{secret_path}{getFileNameByTagName('ipv6')}.txt")
     except:
         return "empty"
-
-
-# 导出ipv6订阅配置
-@app.route('/api/download_json_file5', methods=['GET'])
-@requires_auth
-def download_json_file5():
-    return download_json_file_base(REDIS_KEY_WHITELIST_IPV6_LINK, f"{secret_path}temp_ipv6listlink.json")
 
 
 # 拉取全部ipv6订阅
@@ -8014,13 +7560,6 @@ def chaoronghe4():
         return "empty"
 
 
-# 导出ipv4订阅配置
-@app.route('/api/download_json_file4', methods=['GET'])
-@requires_auth
-def download_json_file4():
-    return download_json_file_base(REDIS_KEY_WHITELIST_IPV4_LINK, f"{secret_path}temp_ipv4listlink.json")
-
-
 # 拉取全部ipv4订阅
 @app.route('/api/getall4', methods=['GET'])
 @requires_auth
@@ -8046,13 +7585,6 @@ def chaoronghe3():
         return "empty"
 
 
-# 导出域名黑名单订阅配置
-@app.route('/api/download_json_file3', methods=['GET'])
-@requires_auth
-def download_json_file3():
-    return download_json_file_base(REDIS_KEY_BLACKLIST_LINK, f"{secret_path}temp_blacklistlink.json")
-
-
 # 删除黑名单订阅
 @app.route('/api/deletewm3u3', methods=['POST'])
 @requires_auth
@@ -8074,18 +7606,12 @@ def getall3():
     return jsonify(redis_get_map(REDIS_KEY_BLACKLIST_LINK))
 
 
-# 导出域名白名单订阅配置
-@app.route('/api/download_json_file2', methods=['GET'])
-@requires_auth
-def download_json_file2():
-    return download_json_file_base(REDIS_KEY_WHITELIST_LINK, f"{secret_path}temp_whitelistlink.json")
-
-
 # 全部域名白名单订阅链接超融合
 @app.route('/api/chaoronghe2', methods=['GET'])
 @requires_auth
 def chaoronghe_whitelist():
     return chaoronghe2()
+
 
 def chaoronghe2():
     try:
@@ -8462,19 +7988,13 @@ def getall():
 def chaoronghe_m3u():
     return chaoronghe()
 
+
 def chaoronghe():
     try:
         return chaorongheBase(REDIS_KEY_M3U_LINK, 'process_data_abstract', REDIS_KEY_M3U_DATA,
                               f"{secret_path}{getFileNameByTagName('allM3u')}.m3u")
     except:
         return "empty"
-
-
-# 导出直播源订阅配置
-@app.route('/api/download_json_file', methods=['GET'])
-@requires_auth
-def download_json_file():
-    return download_json_file_base(REDIS_KEY_M3U_LINK, f"{secret_path}temp_m3ulink.json")
 
 
 # 手动上传m3u文件格式化统一转换
@@ -8492,15 +8012,12 @@ def process_file():
     return send_file(f"{secret_path}tmp.m3u", as_attachment=True)
 
 
+# 自动简易dns
 def thread_recall_chaoronghe7(second):
     while True:
-        chaoronghe7()
-        time.sleep(second)
-
-
-def thread_recall_chaoronghe8(second):
-    while True:
-        chaoronghe8()
+        if isOpenFunction('switch24'):
+            chaoronghe7()
+            chaoronghe8()
         time.sleep(second)
 
 
@@ -8510,7 +8027,7 @@ def thread_webdav_m3u_killer(second):
         # 最近一次ts时间
         lastTsTime = ts_dict[mark]
         # 最近一次uuid
-        uuid = recordPath['past']
+        uuid = recordPath['latest']
         maxTimeoutIgnoreLastUUID = int(getFileNameByTagName('maxTimeoutIgnoreLastUUID'))
         maxTimeoutIgnoreAllUUID = int(getFileNameByTagName('maxTimeoutIgnoreAllUUID'))
         maxTimeoutTsSeen = int(getFileNameByTagName('maxTimeoutTsSeen'))
@@ -8547,37 +8064,17 @@ def main():
     init_db()
     timer_thread1 = threading.Thread(target=executeM3u, args=(7200,), daemon=True)
     timer_thread1.start()
-    timer_thread2 = threading.Thread(target=executeWhitelist, args=(86400,), daemon=True)
+    timer_thread2 = threading.Thread(target=executeWhitelist, args=(10800,), daemon=True)
     timer_thread2.start()
-    timer_thread3 = threading.Thread(target=executeBlacklist, args=(86400,), daemon=True)
-    timer_thread3.start()
-    timer_thread4 = threading.Thread(target=executeIPV4list, args=(86400,), daemon=True)
-    timer_thread4.start()
-    timer_thread5 = threading.Thread(target=executeIPV6list, args=(86400,), daemon=True)
-    timer_thread5.start()
-    timer_thread6 = threading.Thread(target=executeProxylist, args=(10800,), daemon=True)
+    timer_thread6 = threading.Thread(target=executeProxylist, args=(3600,), daemon=True)
     timer_thread6.start()
     timer_thread7 = threading.Thread(target=thread_recall_chaoronghe7, args=(600,), daemon=True)
     timer_thread7.start()
-    timer_thread8 = threading.Thread(target=thread_recall_chaoronghe8, args=(600,), daemon=True)
-    timer_thread8.start()
-    timer_thread9 = threading.Thread(target=executeDownUpload, args=(86400,), daemon=True)
-    timer_thread9.start()
-    timer_thread10 = threading.Thread(target=executeDown, args=(86400,), daemon=True)
-    timer_thread10.start()
-    timer_thread11 = threading.Thread(target=executeYoutube, args=(3600,), daemon=True)
-    timer_thread11.start()
     timer_thread12 = threading.Thread(target=thread_webdav_m3u_killer, args=(10,), daemon=True)
     timer_thread12.start()
-    # 启动工作线程消费上传数据至gitee
-    t = threading.Thread(target=worker_gitee, daemon=True)
-    t.start()
     # 启动工作线程消费上传数据至github
     t2 = threading.Thread(target=worker_github, daemon=True)
     t2.start()
-    # 启动工作线程消费上传数据至webdav
-    t3 = threading.Thread(target=worker_webdav, daemon=True)
-    t3.start()
     try:
         app.run(debug=True, host='0.0.0.0', port=5000)
     finally:
