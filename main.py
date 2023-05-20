@@ -416,7 +416,7 @@ def serve_files3(filename):
 
     @after_this_request
     def add_header(response):
-        response.headers['Cache-Control'] = 'public, max-age=86400'
+        response.headers['Cache-Control'] = 'public, max-age=3600'
         return response
 
     return redirect(url)
@@ -430,7 +430,7 @@ def serve_files4(filename):
 
     @after_this_request
     def add_header(response):
-        response.headers['Cache-Control'] = 'public, max-age=86400'
+        response.headers['Cache-Control'] = 'public, max-age=3600'
         return response
 
     return redirect(url)
@@ -444,7 +444,7 @@ def serve_files_douyu(filename):
 
     @after_this_request
     def add_header(response):
-        response.headers['Cache-Control'] = 'public, max-age=86400'
+        response.headers['Cache-Control'] = 'public, max-age=3600'
         return response
 
     return redirect(url)
@@ -458,7 +458,7 @@ def serve_files5(filename):
 
     @after_this_request
     def add_header(response):
-        response.headers['Cache-Control'] = 'public, max-age=86400'
+        response.headers['Cache-Control'] = 'public, max-age=3600'
         return response
 
     return redirect(url)
@@ -472,7 +472,7 @@ def serve_files6(filename):
 
     @after_this_request
     def add_header(response):
-        response.headers['Cache-Control'] = 'public, max-age=86400'
+        response.headers['Cache-Control'] = 'public, max-age=3600'
         return response
 
     return redirect(url)
@@ -561,7 +561,6 @@ def safe_delete_single_ts(tsfies):
             # 已经过期的ts文件，真正被删除掉的
             tsfies.clear()
             tsfies.extend(result)
-
 
 
 # 尽可能安全地删除切片
@@ -766,7 +765,6 @@ def get_new_m3u8_data(m3u8_data):
     return new_m3u8_data
 
 
-
 # bug:ffmpeg写m3u8和读取它会产生竞争
 @app.route('/videos/<path:path>.m3u8')
 def video_m3u8(path):
@@ -786,7 +784,7 @@ def video_m3u8(path):
             credentials = f"{redisKeyWebDavM3u['username']}:{redisKeyWebDavM3u['password']}"
             encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
             hls_url = getNowWebDavFakeUrl()
-            #hls_url = default_video_prefix
+            # hls_url = default_video_prefix
             audioType = getFileNameByTagName('audioType')
             try:
                 videoType = redisKeyWebdavM3uType[path]
@@ -828,7 +826,7 @@ def video_m3u8(path):
         return send_heartbeat()
         # return "Video not found", 404
     m3u8_data_past['past'] = m3u8_data
-    #new_m3u8_data = get_new_m3u8_data(m3u8_data)
+    # new_m3u8_data = get_new_m3u8_data(m3u8_data)
     try:
         return Response(m3u8_data, headers=headers_default)
     except:
@@ -6287,12 +6285,6 @@ async def download_files5():
     mintimeout = int(getFileNameByTagName('minTimeout'))
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
     m3u_dict = await download_file5_single(ids, mintimeout, maxTimeout)
-    left_dict = {k: v for k, v in redisKeyBilili.items() if k not in m3u_dict}
-    if len(left_dict) == 0:
-        return m3u_dict
-    m3u_dict2 = await download_file5_single(left_dict.keys(), mintimeout, maxTimeout)
-    if len(m3u_dict2) > 0:
-        m3u_dict.update(m3u_dict2)
     return m3u_dict
 
 
@@ -6320,12 +6312,6 @@ async def download_files10():
     mintimeout = int(getFileNameByTagName('minTimeout'))
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
     m3u_dict = await download_files10_single(ids, mintimeout, maxTimeout)
-    left_dict = {k: v for k, v in redisKeyDouyu.items() if k not in m3u_dict}
-    if len(left_dict) == 0:
-        return m3u_dict
-    m3u_dict2 = await download_files10_single(left_dict.keys(), mintimeout, maxTimeout)
-    if len(m3u_dict2) > 0:
-        m3u_dict.update(m3u_dict2)
     return m3u_dict
 
 
@@ -6350,12 +6336,6 @@ async def download_files6():
     mintimeout = int(getFileNameByTagName('minTimeout'))
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
     m3u_dict = await download_files6_single(ids, mintimeout, maxTimeout)
-    left_dict = {k: v for k, v in redisKeyHuya.items() if k not in m3u_dict}
-    if len(left_dict) == 0:
-        return m3u_dict
-    m3u_dict2 = await download_files6_single(left_dict.keys(), mintimeout, maxTimeout)
-    if len(m3u_dict2) > 0:
-        m3u_dict.update(m3u_dict2)
     return m3u_dict
 
 
@@ -6380,12 +6360,6 @@ async def download_files7():
     mintimeout = int(getFileNameByTagName('minTimeout'))
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
     m3u_dict = await download_files7_single(ids, mintimeout, maxTimeout)
-    left_dict = {k: v for k, v in redisKeyYY.items() if k not in m3u_dict}
-    if len(left_dict) == 0:
-        return m3u_dict
-    m3u_dict2 = await download_files7_single(left_dict.keys(), mintimeout, maxTimeout)
-    if len(m3u_dict2) > 0:
-        m3u_dict.update(m3u_dict2)
     return m3u_dict
 
 
@@ -6611,9 +6585,9 @@ async def grab10(session, id, m3u_dict, sem, mintimeout, maxTimeout):
         real_lists = []
         real_dict = {}
         if not rate_list:
-            # rate_list = [{'name': '蓝光', 'rate': 0, 'high_bit': 1}, {'name': '超清', 'rate': 3, 'high_bit': 0},
-            #              {'name': '高清', 'rate': 2, 'high_bit': 0}]
-            rate_list = [{'name': '蓝光', 'rate': 0, 'high_bit': 1}]
+            rate_list = [{'name': '蓝光', 'rate': 0, 'high_bit': 1}, {'name': '超清', 'rate': 3, 'high_bit': 0},
+                        {'name': '高清', 'rate': 2, 'high_bit': 0}]
+            #rate_list = [{'name': '蓝光', 'rate': 0, 'high_bit': 1}]
         for rate in rate_list:
             flyName = "{}_flv".format(rate['name'])
             m3u8Name = "{}_m3u8".format(rate['name'])
@@ -6918,12 +6892,6 @@ async def download_files4():
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
     ids = redisKeyYoutube.keys()
     m3u_dict = await download_files4_single(ids, mintimeout, maxTimeout)
-    left_dict = {k: v for k, v in redisKeyYoutube.items() if k not in m3u_dict}
-    if len(left_dict) == 0:
-        return m3u_dict
-    m3u_dict2 = await download_files4_single(left_dict.keys(), mintimeout, maxTimeout)
-    if len(m3u_dict2) > 0:
-        m3u_dict.update(m3u_dict2)
     return m3u_dict
 
 
@@ -7054,7 +7022,7 @@ def chaoronghe29():
         global redisKeyDouyuM3u
         global redisKeyDouyu
         redisKeyDouyuM3uFake = {}
-        # fakeurl = f"http://127.0.0.1:5000/douyu/"
+        #fakeurl = f"http://127.0.0.1:5000/douyu/"
         fakeurl = f"http://{ip}:{port_live}/douyu/"
         for id, url in m3u_dict.items():
             try:
@@ -7254,7 +7222,7 @@ async def download_files28():
     password = redisKeyWebDavM3u['password']
     auth_header = aiohttp.BasicAuth(login=username, password=password)
     fakeurl = getNowWebDavFakeUrl()
-    #fakeurl = default_video_prefix
+    # fakeurl = default_video_prefix
     # http://127.0.0.1:5000/videos/video1.mp4.m3u8
     global redisKeyWebDavPathList
     urls = redisKeyWebDavPathList.keys()
