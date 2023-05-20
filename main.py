@@ -37,7 +37,7 @@ import time
 from urllib.parse import urlparse, quote
 # import yaml
 from flask import Flask, jsonify, request, send_file, render_template, send_from_directory, \
-     Response, make_response
+    Response, make_response, after_this_request, redirect
 
 import chardet
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -412,75 +412,71 @@ def serve_files2(filename):
 @app.route('/youtube/<path:filename>')
 def serve_files3(filename):
     id = filename.split('.')[0]
-    url = redisKeyYoutubeM3u.get(id)
+    url = redisKeyYoutubeM3u[id]
 
-    if not url:
-        return 'ID not found', 404
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'public, max-age=86400'
+        return response
 
-    response = make_response('')
-    response.headers['Location'] = url
-    response.headers['Cache-Control'] = 'public, max-age=86400'
-    return response, 302
+    return redirect(url)
 
 
 # 路由bilibili
 @app.route('/bilibili/<path:filename>')
 def serve_files4(filename):
     id = filename.split('.')[0]
-    url = redisKeyBililiM3u.get(id)
+    url = redisKeyBililiM3u[id]
 
-    if not url:
-        return 'ID not found', 404
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'public, max-age=86400'
+        return response
 
-    response = make_response('')
-    response.headers['Location'] = url
-    response.headers['Cache-Control'] = 'public, max-age=86400'
-    return response, 302
+    return redirect(url)
 
 
 # 路由douyu
 @app.route('/douyu/<path:filename>')
 def serve_files_douyu(filename):
     id = filename.split('.')[0]
-    url = redisKeyDouyuM3u.get(id)
+    url = redisKeyDouyuM3u[id]
 
-    if not url:
-        return 'ID not found', 404
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'public, max-age=86400'
+        return response
 
-    response = make_response('')
-    response.headers['Location'] = url
-    response.headers['Cache-Control'] = 'public, max-age=86400'
-    return response, 302
+    return redirect(url)
 
 
 # 路由huya
 @app.route('/huya/<path:filename>')
 def serve_files5(filename):
     id = filename.split('.')[0]
-    url = redisKeyHuyaM3u.get(id)
+    url = redisKeyHuyaM3u[id]
 
-    if not url:
-        return 'ID not found', 404
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'public, max-age=86400'
+        return response
 
-    response = make_response('')
-    response.headers['Location'] = url
-    response.headers['Cache-Control'] = 'public, max-age=86400'
-    return response, 302
+    return redirect(url)
 
 
 # 路由YY
 @app.route('/YY/<path:filename>')
 def serve_files6(filename):
     id = filename.split('.')[0]
-    url = redisKeyYYM3u.get(id)
+    url = redisKeyYYM3u[id]
 
-    if not url:
-        return 'ID not found', 404
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'public, max-age=86400'
+        return response
 
-    response = make_response('')
-    response.headers['Location'] = url
-    response.headers['Cache-Control'] = 'public, max-age=86400'
-    return response, 302
+    return redirect(url)
+
 
 # 切片后的目录，此处需要替换为真实值
 SLICES_DIR = "/app/slices"
