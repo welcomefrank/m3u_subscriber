@@ -36,8 +36,8 @@ import requests
 import time
 from urllib.parse import urlparse, quote
 # import yaml
-from flask import Flask, jsonify, request, send_file, render_template, send_from_directory, redirect, \
-    after_this_request, Response
+from flask import Flask, jsonify, request, send_file, render_template, send_from_directory, \
+     Response, make_response
 
 import chardet
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -235,10 +235,6 @@ true_webdav_m3u_dict_raw = {}
 REDIS_KEY_webdav_M3U_TYPE = 'redisKeyWebdavM3uType'
 # webdav uuid,视频格式
 redisKeyWebdavM3uType = {}
-# webdav视频同组联播uuid
-REDIS_KEY_webdav_M3U_GROUP_NEXT_UUID = 'redisKeyWebdavM3uGroupNextUuid'
-# webdav uuid,同组视频的下一个uuid
-redisKeyWebdavM3uGroupNextUuid = {}
 
 # webdav路径备份
 REDIS_KEY_WEBDAV_PATH_LIST = 'redisKeyWebdavPathList'
@@ -416,71 +412,75 @@ def serve_files2(filename):
 @app.route('/youtube/<path:filename>')
 def serve_files3(filename):
     id = filename.split('.')[0]
-    url = redisKeyYoutubeM3u[id]
+    url = redisKeyYoutubeM3u.get(id)
 
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'public, max-age=3600'
-        return response
+    if not url:
+        return 'ID not found', 404
 
-    return redirect(url)
+    response = make_response('')
+    response.headers['Location'] = url
+    response.headers['Cache-Control'] = 'public, max-age=86400'
+    return response, 302
 
 
 # 路由bilibili
 @app.route('/bilibili/<path:filename>')
 def serve_files4(filename):
     id = filename.split('.')[0]
-    url = redisKeyBililiM3u[id]
+    url = redisKeyBililiM3u.get(id)
 
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'public, max-age=3600'
-        return response
+    if not url:
+        return 'ID not found', 404
 
-    return redirect(url)
+    response = make_response('')
+    response.headers['Location'] = url
+    response.headers['Cache-Control'] = 'public, max-age=86400'
+    return response, 302
 
 
 # 路由douyu
 @app.route('/douyu/<path:filename>')
 def serve_files_douyu(filename):
     id = filename.split('.')[0]
-    url = redisKeyDouyuM3u[id]
+    url = redisKeyDouyuM3u.get(id)
 
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'public, max-age=3600'
-        return response
+    if not url:
+        return 'ID not found', 404
 
-    return redirect(url)
+    response = make_response('')
+    response.headers['Location'] = url
+    response.headers['Cache-Control'] = 'public, max-age=86400'
+    return response, 302
 
 
 # 路由huya
 @app.route('/huya/<path:filename>')
 def serve_files5(filename):
     id = filename.split('.')[0]
-    url = redisKeyHuyaM3u[id]
+    url = redisKeyHuyaM3u.get(id)
 
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'public, max-age=3600'
-        return response
+    if not url:
+        return 'ID not found', 404
 
-    return redirect(url)
+    response = make_response('')
+    response.headers['Location'] = url
+    response.headers['Cache-Control'] = 'public, max-age=86400'
+    return response, 302
 
 
 # 路由YY
 @app.route('/YY/<path:filename>')
 def serve_files6(filename):
     id = filename.split('.')[0]
-    url = redisKeyYYM3u[id]
+    url = redisKeyYYM3u.get(id)
 
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'public, max-age=3600'
-        return response
+    if not url:
+        return 'ID not found', 404
 
-    return redirect(url)
-
+    response = make_response('')
+    response.headers['Location'] = url
+    response.headers['Cache-Control'] = 'public, max-age=86400'
+    return response, 302
 
 # 切片后的目录，此处需要替换为真实值
 SLICES_DIR = "/app/slices"
@@ -537,8 +537,8 @@ def cleanup(uuid):
 
 # 确保销毁ffmpeg
 atexit.register(cleanupExit)
-# past-当前uuid,lastuuid-轮播的前一个uuid,nextuuid-轮播的下一个uuid
-recordPath = {'latest': 'nope', 'nextuuid': 'nope', 'lastuuid': 'nope', 'sumSec': '0.0', 'lastTs': 'nope'}
+# past-当前uuid
+recordPath = {'latest': 'nope'}
 
 
 # 看完一个ts就删除一个，删除已经看过超过60秒的
@@ -567,11 +567,6 @@ def safe_delete_single_ts(tsfies):
             tsfies.extend(result)
 
 
-def is_in_list(filename, list):
-    for line in list:
-        if filename in line:
-            return True
-
 
 # 尽可能安全地删除切片
 def safe_delete_ts(uuid):
@@ -582,10 +577,7 @@ def safe_delete_ts(uuid):
         if os.path.exists(SLICES_DIR):
             # 目录下全部文件
             removePaths = os.listdir(SLICES_DIR)
-            jumplist = recordPath['lastTs'].split('+')
             for filename in removePaths:
-                if is_in_list(filename, jumplist):
-                    continue
                 # 不是以uuid开始的文件，包括m3u8和ts文件
                 if not filename.startswith(uuid):
                     removePath = os.path.join(SLICES_DIR, filename)
@@ -670,10 +662,12 @@ def deletePathAndRebuild():
 slice_path_fail_default = os.path.join('/app/secret', f"none.ts")
 # mp4
 # HTTP 100 Continue 信息状态响应代码表示到目前为止一切正常，客户端应该继续请求，如果已经完成则忽略它
+# 'Cache-Control': 'no-cache'  强制客户端频繁更新列表数据，不进行客户端缓存列表
 # 'Connection': 'Keep-Alive',又名 HTTP 持久连接，是一种允许单个 TCP 连接为多个 HTTP 请求/响应保持打开状态的指令。 默认情况下，HTTP 连接在每次请求后关闭。
 headers_default = {'Content-Type': 'application/vnd.apple.mpegurl',
                    'Expect': '100-continue',
                    'Connection': 'Keep-Alive',
+                   'Cache-Control': 'no-cache'
                    }
 headers_default_mp4 = {
     'Content-Type': 'video/mp4',
@@ -763,21 +757,6 @@ lock = threading.Lock()
 m3u8_data_past = {'past': b''}
 
 
-def check_is_rank_or_switch_m3u8(uuid):
-    # 初次
-    if recordPath['lastuuid'] == 'nope':
-        # recordPath['sumSec'] = '0.0'
-        return uuid
-    # 轮播
-    if uuid == recordPath['lastuuid']:
-        return recordPath['nextuuid']
-    # 换片
-    else:
-        recordPath['lastTs']=b''
-        # recordPath['sumSec'] = '0.0'
-        return uuid
-
-
 def get_new_m3u8_data(m3u8_data):
     if b'#EXT-X-ENDLIST' in m3u8_data:
         # 拆分成一行一行的字符串
@@ -791,8 +770,6 @@ def get_new_m3u8_data(m3u8_data):
     return new_m3u8_data
 
 
-stupid_lock = threading.Lock()
-
 
 # bug:ffmpeg写m3u8和读取它会产生竞争
 @app.route('/videos/<path:path>.m3u8')
@@ -804,7 +781,6 @@ def video_m3u8(path):
         # if path not in VIDEO_MAPPING.keys():
         return send_heartbeat()
         # return "Video not found", 404
-    path = check_is_rank_or_switch_m3u8(path)
     slices_dir = os.environ.get('SLICES_DIR', '/app/slices')
     if path not in ffmpeg_processes.keys():
         # 使用ffmpeg命令行工具对视频进行实时切片，并生成M3U8格式的播放列表文件
@@ -856,9 +832,9 @@ def video_m3u8(path):
         return send_heartbeat()
         # return "Video not found", 404
     m3u8_data_past['past'] = m3u8_data
-    new_m3u8_data = get_new_m3u8_data(m3u8_data)
+    #new_m3u8_data = get_new_m3u8_data(m3u8_data)
     try:
-        return Response(new_m3u8_data, headers=headers_default)
+        return Response(m3u8_data, headers=headers_default)
     except:
         return send_heartbeat()
 
@@ -985,32 +961,6 @@ def check_ts_jump(path):
         return str11
 
 
-def is_over_ts(ts):
-    with stupid_lock:
-        # 最后一个切片到达，已经放完了
-        if b'#EXT-X-ENDLIST' in m3u8_data_past['past']:
-            arr = m3u8_data_past['past'].splitlines()
-            if ts.encode() in arr[len(arr) - 2]:
-                now_uuid = recordPath['latest']
-                try:
-                    next_uuid = redisKeyWebdavM3uGroupNextUuid[now_uuid]
-                    recordPath['lastuuid'] = now_uuid
-                    recordPath['nextuuid'] = next_uuid
-                    start = False
-                    result = b''
-                    for line in arr:
-                        if ts.encode() in line:
-                            start = True
-                        if start and not line.startswith(b'#EXT-X-ENDLIST') and not line.startswith(b'#EXTINF:'):
-                            result = result + b'+' + line
-                    recordPath['lastTs'] = result.decode()
-                    m3u8_data_past['past'] = b''
-                except:
-                    pass
-                return True
-    return False
-
-
 # 客户端读表，依据顺序读取ts,
 # 读取失败-跳
 # 多次请求相同ts-平1
@@ -1024,7 +974,6 @@ def video_ts(path):
     # with lock:
     # ts前进一次，除了切片和第一次找不到是强制归0
     path2 = check_ts_jump(path)
-    is_over_ts(path2)
     slice_path = os.path.join(SLICES_DIR, f"{path2}.ts")
     now = time.time()  # 获取当前时间戳
     # 使用Flask的send_file函数将切片文件作为流推送给客户端
@@ -4985,11 +4934,6 @@ def init_webdav_m3u():
         global redisKeyWebdavM3uType
         redisKeyWebdavM3uType.clear()
         redisKeyWebdavM3uType = dict3.copy()
-    dict4 = redis_get_map(REDIS_KEY_webdav_M3U_GROUP_NEXT_UUID)
-    if dict4:
-        global redisKeyWebdavM3uGroupNextUuid
-        redisKeyWebdavM3uGroupNextUuid.clear()
-        redisKeyWebdavM3uGroupNextUuid = dict4.copy()
 
 
 def init_webdav_m3u_True_Data():
@@ -7268,8 +7212,6 @@ def getWebDavFileName(filePath):
 async def process_child(url, child_list_chunk, fakeurl,
                         redisKeyWebDavPathList):
     groupName = redisKeyWebDavPathList[url]
-    # uuid,
-    uuid_list = []
     for child in child_list_chunk:
         href = child.find('{DAV:}href').text
         if not href.endswith('/'):  # Process only files (not directories)
@@ -7297,15 +7239,6 @@ async def process_child(url, child_list_chunk, fakeurl,
             redisKeyWebdavM3uType[str_id] = type
             redis_add_map(REDIS_KEY_webdav_M3U_TYPE, {str_id: type})
             redis_add_map(REDIS_KEY_WEBDAV_M3U_DICT_RAW, {str_id: finalTrueUrl})
-            uuid_list.append(str_id)
-    length_list = len(uuid_list)
-    if length_list > 0:
-        dict_update = {}
-        for index in range(length_list - 1):
-            next_index = index + 1
-            redisKeyWebdavM3uGroupNextUuid[uuid_list[index]] = uuid_list[next_index]
-            dict_update[uuid_list[index]] = uuid_list[next_index]
-        redis_add_map(REDIS_KEY_webdav_M3U_GROUP_NEXT_UUID, dict_update)
 
 
 async def deal_mutil_webdav_path_m3u(session, url, fakeurl,
@@ -7354,13 +7287,10 @@ def chaoronghe28():
         # webdav名字，真实地址
         global true_webdav_m3u_dict_raw
         global redisKeyWebdavM3uType
-        global redisKeyWebdavM3uGroupNextUuid
-        redisKeyWebdavM3uGroupNextUuid.clear()
         true_webdav_m3u_dict_raw.clear()
         redisKeyWebdavM3uType.clear()
         redis_del_map(REDIS_KEY_webdav_M3U_TYPE)
         redis_del_map(REDIS_KEY_WEBDAV_M3U_DICT_RAW)
-        redis_del_map(REDIS_KEY_webdav_M3U_GROUP_NEXT_UUID)
         # fake_webdav_m3u_dict = {}
         # true_webdav_m3u_dict_raw_tmp = {}
 
