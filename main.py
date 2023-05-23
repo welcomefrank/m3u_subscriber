@@ -6921,12 +6921,13 @@ async def get_resolution(session, liveurl, sem, mintimeout, maxTimeout):
     if len(playlists) < 1:
         return None
     highest_resolution = 0
+    url = ''
     for item in playlists:
-        resolution = item.stream_info.resolution[1]
+        resolution = item.stream_info.resolution[0] * item.stream_info.resolution[1]
         if resolution > highest_resolution:
             highest_resolution = resolution
-
-    return highest_resolution
+            url = item.uri
+    return url
 
 
 async def grab(session, id, m3u_dict, sem, mintimeout, maxTimeout):
@@ -6953,46 +6954,9 @@ async def grab(session, id, m3u_dict, sem, mintimeout, maxTimeout):
                 link = content[end - tuner: end]
                 start = link.find('https://')
                 end = link.find('.m3u8') + 5
-                resolution = await get_resolution(session, link[start: end], sem, mintimeout, maxTimeout)
-                if resolution:
-                    highest_quality_link = link[start: end]
-                    try:
-                        async with sem, session.get(highest_quality_link, timeout=mintimeout) as response:
-                            content = await response.text()
-                    except asyncio.TimeoutError:
-                        async with sem, session.get(highest_quality_link, timeout=maxTimeout) as response:
-                            content = await response.text()
-                    target_resolution = "1920x1080"
-                    pattern = r'#EXT-X-STREAM-INF:BANDWIDTH=\d+,CODECS=".+",RESOLUTION={0},.*\n(.+)'.format(
-                        target_resolution)
-                    match = re.search(pattern, content)
-                    if not match:
-                        target_resolution = "1280x720"
-                        pattern = r'#EXT-X-STREAM-INF:BANDWIDTH=\d+,CODECS=".+",RESOLUTION={0},.*\n(.+)'.format(
-                            target_resolution)
-                        match = re.search(pattern, content)
-                    if not match:
-                        target_resolution = "854x480"
-                        pattern = r'#EXT-X-STREAM-INF:BANDWIDTH=\d+,CODECS=".+",RESOLUTION={0},.*\n(.+)'.format(
-                            target_resolution)
-                        match = re.search(pattern, content)
-                    if not match:
-                        target_resolution = "640x360"
-                        pattern = r'#EXT-X-STREAM-INF:BANDWIDTH=\d+,CODECS=".+",RESOLUTION={0},.*\n(.+)'.format(
-                            target_resolution)
-                        match = re.search(pattern, content)
-                    if not match:
-                        target_resolution = "426x240"
-                        pattern = r'#EXT-X-STREAM-INF:BANDWIDTH=\d+,CODECS=".+",RESOLUTION={0},.*\n(.+)'.format(
-                            target_resolution)
-                        match = re.search(pattern, content)
-                    if not match:
-                        target_resolution = "256x144"
-                        pattern = r'#EXT-X-STREAM-INF:BANDWIDTH=\d+,CODECS=".+",RESOLUTION={0},.*\n(.+)'.format(
-                            target_resolution)
-                        match = re.search(pattern, content)
-                    if match:
-                        highest_quality_link = match.group(1)
+                match = await get_resolution(session, link[start: end], sem, mintimeout, maxTimeout)
+                if match:
+                    highest_quality_link = match
                 break
             else:
                 tuner += 5
