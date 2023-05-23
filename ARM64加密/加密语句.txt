@@ -1,0 +1,2 @@
+pyinstaller --onefile --noconsole dns.py
+pyinstaller --onefile --noconsole main.py
