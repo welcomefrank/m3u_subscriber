@@ -1110,7 +1110,8 @@ def executeProxylist(sleepSecond):
             chaoronghe26()
             chaoronghe27()
             chaoronghe29()
-            chaoronghe30()
+            if isOpenFunction('switch36'):
+                chaoronghe30()
             print("直播源定时器执行成功")
         time.sleep(sleepSecond)
 
@@ -1166,6 +1167,9 @@ def toggle_m3u(functionId, value):
         function_dict[functionId] = str(value)
         redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
     elif functionId == 'switch35':
+        function_dict[functionId] = str(value)
+        redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
+    elif functionId == 'switch36':
         function_dict[functionId] = str(value)
         redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
 
@@ -1756,6 +1760,8 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
     if ism3u:
         old_dict = redis_get_map(redisKeyData)
         my_dict.update(old_dict)
+    else:
+        redis_del_map(redisKeyData)
     if ism3u:
         if isOpenFunction('switch4'):
             if len(my_dict) > 0:
@@ -2299,6 +2305,9 @@ def init_function_dict():
         # YOUTUBE-定时器
         if 'switch35' not in keys:
             dict['switch35'] = '0'
+        # YOUTUBE-定时器
+        if 'switch36' not in keys:
+            dict['switch36'] = '0'
         redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
         function_dict = dict.copy()
     else:
@@ -2310,7 +2319,7 @@ def init_function_dict():
                 'switch21': '0',
                 'switch22': '1', 'switch23': '1', 'switch24': '1', 'switch25': '0', 'switch26': '0', 'switch27': '0'
             , 'switch28': '0', 'switch30': '0', 'switch31': '0', 'switch32': '0', 'switch33': '0',
-                'switch34': '0', 'switch35': '0'}
+                'switch34': '0', 'switch35': '0', 'switch36': '0'}
         redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
         function_dict = dict.copy()
 
@@ -5066,7 +5075,7 @@ def getSwitchstate():
 
 # 需要额外操作的
 clockArr = ['switch25', 'switch26', 'switch27', 'switch28', 'switch13', 'switch25', 'switch33', 'switch34',
-            'switch35']
+            'switch35', 'switch36']
 
 
 # 切换功能开关
@@ -5128,6 +5137,7 @@ def serverMode():
         switchSingleFunction('switch33', '0')
         switchSingleFunction('switch34', '0')
         switchSingleFunction('switch35', '0')
+        switchSingleFunction('switch36', '0')
     elif mode == 'client':
         switchSingleFunction('switch2', '0')
         switchSingleFunction('switch3', '0')
@@ -5163,6 +5173,7 @@ def serverMode():
         switchSingleFunction('switch33', '0')
         switchSingleFunction('switch34', '0')
         switchSingleFunction('switch35', '0')
+        switchSingleFunction('switch36', '0')
     return 'success'
 
 
@@ -6586,8 +6597,8 @@ async def grab10(session, id, m3u_dict, sem, mintimeout, maxTimeout):
         real_dict = {}
         if not rate_list:
             rate_list = [{'name': '蓝光', 'rate': 0, 'high_bit': 1}, {'name': '超清', 'rate': 3, 'high_bit': 0},
-                        {'name': '高清', 'rate': 2, 'high_bit': 0}]
-            #rate_list = [{'name': '蓝光', 'rate': 0, 'high_bit': 1}]
+                         {'name': '高清', 'rate': 2, 'high_bit': 0}]
+            # rate_list = [{'name': '蓝光', 'rate': 0, 'high_bit': 1}]
         for rate in rate_list:
             flyName = "{}_flv".format(rate['name'])
             m3u8Name = "{}_m3u8".format(rate['name'])
@@ -6937,17 +6948,51 @@ async def grab(session, id, m3u_dict, sem, mintimeout, maxTimeout):
         end = content.find('.m3u8') + 5
         tuner = 100
         highest_quality_link = None
-        highest_resolution = 0
         while True:
             if 'https://' in content[end - tuner: end]:
                 link = content[end - tuner: end]
                 start = link.find('https://')
                 end = link.find('.m3u8') + 5
-
                 resolution = await get_resolution(session, link[start: end], sem, mintimeout, maxTimeout)
-                if resolution and resolution > highest_resolution:
+                if resolution:
                     highest_quality_link = link[start: end]
-                    highest_resolution = resolution
+                    try:
+                        async with sem, session.get(highest_quality_link, timeout=mintimeout) as response:
+                            content = await response.text()
+                    except asyncio.TimeoutError:
+                        async with sem, session.get(highest_quality_link, timeout=maxTimeout) as response:
+                            content = await response.text()
+                    target_resolution = "1920x1080"
+                    pattern = r'#EXT-X-STREAM-INF:BANDWIDTH=\d+,CODECS=".+",RESOLUTION={0},.*\n(.+)'.format(
+                        target_resolution)
+                    match = re.search(pattern, content)
+                    if not match:
+                        target_resolution = "1280x720"
+                        pattern = r'#EXT-X-STREAM-INF:BANDWIDTH=\d+,CODECS=".+",RESOLUTION={0},.*\n(.+)'.format(
+                            target_resolution)
+                        match = re.search(pattern, content)
+                    if not match:
+                        target_resolution = "854x480"
+                        pattern = r'#EXT-X-STREAM-INF:BANDWIDTH=\d+,CODECS=".+",RESOLUTION={0},.*\n(.+)'.format(
+                            target_resolution)
+                        match = re.search(pattern, content)
+                    if not match:
+                        target_resolution = "640x360"
+                        pattern = r'#EXT-X-STREAM-INF:BANDWIDTH=\d+,CODECS=".+",RESOLUTION={0},.*\n(.+)'.format(
+                            target_resolution)
+                        match = re.search(pattern, content)
+                    if not match:
+                        target_resolution = "426x240"
+                        pattern = r'#EXT-X-STREAM-INF:BANDWIDTH=\d+,CODECS=".+",RESOLUTION={0},.*\n(.+)'.format(
+                            target_resolution)
+                        match = re.search(pattern, content)
+                    if not match:
+                        target_resolution = "256x144"
+                        pattern = r'#EXT-X-STREAM-INF:BANDWIDTH=\d+,CODECS=".+",RESOLUTION={0},.*\n(.+)'.format(
+                            target_resolution)
+                        match = re.search(pattern, content)
+                    if match:
+                        highest_quality_link = match.group(1)
                 break
             else:
                 tuner += 5
@@ -7022,7 +7067,7 @@ def chaoronghe29():
         global redisKeyDouyuM3u
         global redisKeyDouyu
         redisKeyDouyuM3uFake = {}
-        #fakeurl = f"http://127.0.0.1:5000/douyu/"
+        # fakeurl = f"http://127.0.0.1:5000/douyu/"
         fakeurl = f"http://{ip}:{port_live}/douyu/"
         for id, url in m3u_dict.items():
             try:
