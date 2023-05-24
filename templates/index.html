@@ -95,7 +95,7 @@
             margin-left: 15px;
         }
 
-        .subnameClassName {
+        .subnameClassName,.submit-m3u-group {
             width: 20%;
             background-color: #758a99;
             color: aliceblue;
@@ -113,14 +113,14 @@
         .notice, #upload-m3u, .changePasswordButtonClassName, .suburlclassname2, .subnameClassName2,
         .passwordClassName2, .saveButtonClassName2, .deleteButtonClassName2,
         #sub-m3u, #generatepass, #savem3uareas, .save-m3u-button, .delete-m3u-button, #upload-m3u-btn,
-        #download-m3u-btn, #remove-m3u-btn, #remove-m3u-btn,
-        .uploadjsonbtn,
+        #download-m3u-btn, #remove-m3u-btn, #remove-m3u-btn,.submit-m3u-file,
+        .uploadjsonbtn,.submit-m3u-group-sub,
         #simply, .download-json-btn, .dropdown, #proxy-model-switch, #proxy-model-switch2, .dropdown2, .stubbonsave, .removeallSubscriber, .addNewSubscriber {
             font-size: x-large;
         }
 
         #upload-m3u, #sub-m3u, #generatepass, #savem3uareas, #upload-m3u-btn, #download-m3u-btn, #remove-m3u-btn, #remove-m3u-btn,
-        #simply, .uploadjsonbtn, .removeallSubscriber {
+        #simply, .uploadjsonbtn, .removeallSubscriber ,.submit-m3u-group,.submit-m3u-file,.submit-m3u-group-sub{
             float: right;
             background-color: #4CAF50;
             color: white;
@@ -198,6 +198,15 @@
             color: #fff;
             font-weight: bold;
             cursor: pointer;
+        }
+
+        .m3u-upload-sp{
+            float: right;
+            width: 100%;
+            border-radius: 15px;
+            margin-top: 10px;
+            padding: 2px;
+            border: 2px solid #ccc;
         }
 
         .on {
@@ -405,6 +414,7 @@
             <h3>后台默认24小时自动执行生成操作,同时触发有效直播源在后台缓慢检测</h3>
             <h3>M3U超融合直播源订阅地址:docker主机地址:端口/url/allM3u.m3u</h3>
             <h3 class="urllink">全部直播源-无加密: http://192.168.5.1:22771/secret/allM3u.m3u</h3>
+            <h3 class="urllink">全部直播源-无加密-txt: http://192.168.5.1:22771/secret/allM3u.txt</h3>
             <h3 class="urllink">全部直播源-加密: http://192.168.5.1:22771/url/allM3uSecret.txt</h3>
             <h3 class="urllink">有效直播源-无加密: http://192.168.5.1:22771/secret/aliveM3u.m3u</h3>
             <h3 class="urllink">电视盒子专用-华语电视台-有效直播源-无加密:
@@ -416,7 +426,7 @@
             <h3>上传文件导入合并M3U超融合备份</h3>
         </div>
         <div style="float: right;width: 30%">
-            <h2>m3u文件标准格式转换</h2>
+            <h2>txt转m3u直播源文件+格式规范</h2>
             <form enctype="multipart/form-data" method="post">
                 <input id="upload-m3u" type="file" name="file" style="float: left;width: 80%">
                 <br>
@@ -544,6 +554,38 @@
             <button onclick="decode()">Decode</button>
             <br/>
             <textarea id="output" rows="5" cols="50"></textarea>
+        </div>
+        <div class="m3u-upload-sp">
+            <h2>单个直播源文件数据(tvg_name)提取和分组(group-title)重命名,可以用来喂养m3u白名单和分组语言库</h2>
+            <h2>比如m3u文件里直播源确定都是央视，那么设置分组名字为央视，里面直播源的名字全部归类为央视</h2>
+            <h2>你可以把导出的group.json文件导入m3u白名单补充这个分组的词库</h2>
+            <form enctype="multipart/form-data" method="post">
+                <input class="submit-m3u-file" id="upload-m3u-data" type="file" name="file" style="float: left;width: 60%">
+                <input class="submit-m3u-group" id="upload-m3u-group" type="text"  style="float: left;width: 15%;margin-left: 30px" placeholder="新分组名字">
+                <input class="submit-m3u-group-sub"  type="submit" value="点击上传">
+            </form>
+            <br>
+        </div>
+        <div class="m3u-upload-sp">
+            <h2>单个直播源文件数据提取和分组重命名,可以用来喂养m3u白名单和分组语言库</h2>
+            <h2> 比如txt文件里直播源确定都是央视，那么设置分组名字为央视，里面直播源的名字全部归类为央视</h2>
+            <h2>你可以把导出的group.json文件导入m3u白名单补充这个分组的词库</h2>
+            <form enctype="multipart/form-data" method="post">
+                <input class="submit-m3u-file" id="upload-m3u-data-txt" type="file" name="file" style="float: left;width: 60%">
+                <input class="submit-m3u-group" id="upload-m3u-group-txt" type="text" style="float: left;width: 15%;margin-left: 30px"
+                       placeholder="新分组名字">
+                <input class="submit-m3u-group-sub"  type="submit" value="点击上传">
+            </form>
+            <br>
+        </div>
+        <div class="m3u-upload-sp">
+            <h2>m3u文件转txt文件</h2>
+            <form enctype="multipart/form-data" method="post">
+                <input class="submit-m3u-file" id="upload-m3u-to-txt" type="file" name="file"
+                       style="float: left;width: 60%">
+                <input class="submit-m3u-group-sub" type="submit" value="点击上传">
+            </form>
+            <br>
         </div>
     </div>
     <div id="page5" style="display: none;">
@@ -1490,6 +1532,10 @@
                 <button id="switch36" class="switchfunctionbutton" onclick="toggleSwitch('switch36')">已关闭</button>
                 <input class="toggletext" type="text" value="alist-定时器">
             </div>
+            <div class="grid-item">
+                <button id="switch37" class="switchfunctionbutton" onclick="toggleSwitch('switch37')">已关闭</button>
+                <input class="toggletext" type="text" value="切片销毁-定时器">
+            </div>
         </div>
     </div>
     <div id="page19" style="display: none;">
@@ -1593,6 +1639,7 @@
     </div>
     <div id="page21" style="display: none;">
         <h1>打赏专栏</h1>
+        <h3>作者:paperbluster</h3>
         <a href="https://t.me/+stAaKNYl3mtmN2Zl">https://t.me/+stAaKNYl3mtmN2Zl</a>
         <h3>各位路人朋友可以请我喝一杯咖啡吗^_^,您的支持将给予我更多动力迭代这个项目</h3>
         <h4>比特币(bitcoin)</h4>
@@ -1962,6 +2009,7 @@
             <h3>后台默认1小时自动执行生成操作,需要在功能开关开启</h3>
             <h3>超融合油管订阅地址:参考m3u格式</h3>
             <h3 class="urllink">youtube-无加密:http://192.168.5.1:22771/secret/youtube.m3u</h3>
+            <h3 class="urllink">youtube-无加密-txt:http://192.168.5.1:22771/secret/youtube.txt</h3>
             <h3>上传文件导入合并YouTube频道</h3>
         </div>
         <div style="width:100%">
@@ -2005,6 +2053,7 @@
             <h3>后台默认1小时自动执行生成操作,需要在功能开关开启</h3>
             <h3>超融合哔哩哔哩订阅地址:参考m3u格式</h3>
             <h3 class="urllink">bilibili-无加密:http://192.168.5.1:22771/secret/bilibili.m3u</h3>
+            <h3 class="urllink">bilibili-无加密-txt:http://192.168.5.1:22771/secret/bilibili.txt</h3>
             <h3>上传文件导入合并Bilibili频道</h3>
         </div>
         <div style="width:100%">
@@ -2048,6 +2097,7 @@
             <h3>后台默认1小时自动执行生成操作,需要在功能开关开启</h3>
             <h3>超融合虎牙订阅地址:参考m3u格式</h3>
             <h3 class="urllink">huya-无加密:http://192.168.5.1:22771/secret/huya.m3u</h3>
+            <h3 class="urllink">huya-无加密-txt:http://192.168.5.1:22771/secret/huya.txt</h3>
             <h3>上传文件导入合并Huya频道</h3>
         </div>
         <div style="width:100%">
@@ -2091,6 +2141,7 @@
             <h3>后台默认1小时自动执行生成操作,需要在功能开关开启</h3>
             <h3>超融合YY订阅地址:参考m3u格式</h3>
             <h3 class="urllink">YY-无加密:http://192.168.5.1:22771/secret/YY.m3u</h3>
+            <h3 class="urllink">YY-无加密-txt:http://192.168.5.1:22771/secret/YY.txt</h3>
             <h3>上传文件导入合并YY频道</h3>
         </div>
         <div style="width:100%">
@@ -2130,10 +2181,10 @@
     <div id="page31" style="display: none;">
         <h1>webdav直播源</h1>
         <div style="float: left;width: 70%">
-            <h3>确保docker有充足(内存>一个视频大小),否则docker瞬间内存爆炸</h3>
+            <h3 style="color: crimson">使用该功能时记得开启切片销毁定时器，不使用时记得关闭</h3>
+            <h3 style="color: crimson">使用这个功能一定要在挂载容器时指定外部路径来挂载/app/slices，否则docker会爆内存</h3>
             <h3>定时20秒自动删除除去最近一次观看的视频之外的全部切片</h3>
             <h3>定时5分钟自动删除最近一次观看的视频已经读取的切片</h3>
-            <h3>该切片不做任何转码，提高传输效率和保证原画质量</h3>
             <h3>超融合订阅地址:参考m3u格式</h3>
             <h3 class="urllink">webdav-无加密:http://192.168.5.1:22771/secret/webdav.m3u</h3>
             <h3>上传文件导入webdav账号</h3>
@@ -2216,6 +2267,7 @@
             <h3>后台默认1小时自动执行生成操作,需要在功能开关开启</h3>
             <h3>超融合哔哩哔哩订阅地址:参考m3u格式</h3>
             <h3 class="urllink">douyu-无加密:http://192.168.5.1:22771/secret/douyu.m3u</h3>
+            <h3 class="urllink">douyu-无加密-txt:http://192.168.5.1:22771/secret/douyu.txt</h3>
             <h3>上传文件导入合并Douyu频道</h3>
         </div>
         <div style="width:100%">
@@ -2256,7 +2308,8 @@
     <div id="page33" style="display: none;">
         <h1>Alist直播源</h1>
         <div style="float: left;width: 70%">
-            <h3>暂时不开启定时任务</h3>
+            <h3 style="color: crimson">使用该功能时记得开启切片销毁定时器，不使用时记得关闭</h3>
+            <h3 style="color: crimson">谨慎使用，建议一次只爬取一个站点，死机了我可不管</h3>
             <h3>超融合Alist订阅地址:参考m3u格式</h3>
             <h3 class="urllink">alist-无加密:http://192.168.5.1:22771/secret/alist.m3u</h3>
             <h3>上传文件导入合并Alist订阅</h3>
@@ -2784,6 +2837,10 @@
             var parts3 = tagnamefile.split(".")
             var tagname = parts3[0]
             if (tagname === 'youtube' || tagname === 'bilibili' || tagname === 'huya' || tagname === 'YY' || tagname === 'douyu' || tagname === 'webdav' || tagname === 'alist') {
+                elements[i].innerHTML = prefix + "//" + newIp + suffix2 + "/" + tagname + "." + parts3[1];
+                continue
+            }
+            if (tagname==='allM3u' && parts3[1]==='txt'){
                 elements[i].innerHTML = prefix + "//" + newIp + suffix2 + "/" + tagname + "." + parts3[1];
                 continue
             }
@@ -4307,6 +4364,8 @@
             reloadFunctionOpenButton('switch35')
                         //alist-定时器
             reloadFunctionOpenButton('switch36')
+                                    //切片销毁-定时器
+            reloadFunctionOpenButton('switch37')
         } else if (selectedPage === pages[18].id) {
             reloadDNSSIMPLEWhiteList()
         } else if (selectedPage === pages[19].id) {
@@ -4351,6 +4410,53 @@
 
     // 超融合-工具-上传m3u文件-自动下载格式规整化的m3u文件
     formsAddEventListener(forms[0], '/api/process-file', 'tmp.m3u', 'upload-m3u')
+    // 超融合-工具-上传m3u文件-把直播频道名字全部归类成一类分组并且写入m3u白名单
+    formsAddEventListener2(forms[2], '/api/process-file2', 'group.json', 'upload-m3u-group', 'upload-m3u-data')
+    // 超融合-工具-上传txt文件-把直播频道名字全部归类成一类分组并且写入m3u白名单
+    formsAddEventListener2(forms[3], '/api/process-file3', 'group.json', 'upload-m3u-group-txt', 'upload-m3u-data-txt')
+    // 超融合-工具-上传m3u文件-m3u格式转txt格式
+    formsAddEventListener(forms[4], '/api/process-file4', 'source.txt', 'upload-m3u-to-txt')
+
+    //上传文件+字符串后返回字符串
+    function formsAddEventListener2(formtarget, requestpath, filename, datainputId, uploadbtnId) {
+        formtarget.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // 获取上传文件和输入的字符串
+            const formData = new FormData(formtarget);
+            //const file = formData.get('file');
+            const data = document.getElementById(datainputId).value;
+
+            // 将输入的字符串加入到表单数据中
+            formData.set('data', data);
+
+            const response = await fetch(requestpath, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                // 创建 a 元素
+                const a = document.createElement('a');
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            } else {
+                alert('上传文件失败');
+            }
+
+            // 重置表单数据
+            //formtarget.reset();
+            document.getElementById(uploadbtnId).value = '';
+        });
+    }
+
+
 
     // 上传文件处理后自动下载
     function formsAddEventListener(formtarget, requestpath, filename, uploadbtnId) {

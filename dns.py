@@ -86,16 +86,9 @@ def put_element(q, element):
     #     print("队列已满，不能添加更多元素")
 
 
+# 每天定时清除一次简易dns
 def clearCache(second):
     while True:
-        black_list_simple_tmp_cache.clear()
-        black_list_simple_tmp_policy.clear()
-        white_list_simple_tmp_cache.clear()
-        white_list_simple_tmp_policy.clear()
-        black_list_tmp_cache.clear()
-        black_list_tmp_policy.clear()
-        white_list_tmp_cache.clear()
-        white_list_tmp_policy.clear()
         global black_list_simple_policy
         clearAndStoreAtLeast50DataInRedis(REDIS_KEY_DNS_SIMPLE_BLACKLIST, black_list_simple_policy)
         global white_list_simple_nameserver_policy
@@ -103,6 +96,7 @@ def clearCache(second):
         time.sleep(second)
 
 
+# 快速清除临时缓存
 def clearCacheFast(second):
     while True:
         black_list_simple_tmp_cache.clear()
@@ -137,16 +131,18 @@ def clearAndStoreAtLeast50DataInRedis(redisKey, cacheDict):
         data[key] = ''
         updateSpData(key, cacheDict)
         count = count + 1
-    try:
-        redis_del_map(redisKey)
-    except Exception as e:
-        pass
-    try:
-        redis_add_map(redisKey, data)
-    except Exception as e:
-        pass
+    if len(data.keys()) > 0:
+        try:
+            redis_del_map(redisKey)
+        except Exception as e:
+            pass
+        try:
+            redis_add_map(redisKey, data)
+        except Exception as e:
+            pass
 
 
+# 快速动态更新缓存
 def deal_black_list_simple_tmp_cache_queue(second):
     global black_list_simple_tmp_cache_queue
     global black_list_simple_tmp_cache
@@ -233,7 +229,7 @@ def deal_black_list_simple_policy_queue(second):
 REDIS_KEY_THREADS = "threadsnum"
 threadsNum = {REDIS_KEY_THREADS: 1000}
 
-MAXTHREAD = 100
+MAXTHREAD = 1000
 
 # 中国DNS服务器主键
 REDIS_KEY_CHINA_DNS_SERVER = "chinadnsserver"
@@ -255,7 +251,7 @@ REDIS_KEY_DNS_QUERY_NUM = "dnsquerynum"
 dnsquerynum = {REDIS_KEY_DNS_QUERY_NUM: 150}
 
 REDIS_KEY_DNS_TIMEOUT = "dnstimeout"
-dnstimeout = {REDIS_KEY_DNS_TIMEOUT: 20}
+dnstimeout = {REDIS_KEY_DNS_TIMEOUT: 15}
 
 
 # 获取软路由主路由ip
@@ -916,22 +912,26 @@ def updateSpData(domain_name_str, dict):
             pass
 
 
-def initWhiteListSP():
+# 白名单总表转换成tire树，数据太大，只用这个方法更新
+def initWhiteListSP(redis_key):
     global whitelistSpData
     whitelistSP = redis_get_map(REDIS_KEY_WHITELIST_DATA_SP)
     if whitelistSP and len(whitelistSP) > 0:
         whitelistSpData.clear()
         for domain in whitelistSP:
             updateSpData(domain, whitelistSpData)
+        redis_add(redis_key, 0)
 
 
-def initBlackListSP():
+# 黑名单总表转换成tire树，数据太大，只用这个方法更新
+def initBlackListSP(redis_key):
     global blacklistSpData
     blacklistSP = redis_get_map(REDIS_KEY_BLACKLIST_DATA_SP)
     if blacklistSP and len(blacklistSP) > 0:
         blacklistSpData.clear()
         for domain in blacklistSP:
             updateSpData(domain, blacklistSpData)
+        redis_add(redis_key, 0)
 
 
 # 将CIDR表示的IP地址段转换为IP网段数组
@@ -1073,14 +1073,15 @@ def needUpdate(redis_key):
         # 数据没有更新
         if flag == 0:
             return False
-        # 服务器全部更新完毕(逻辑不严谨感觉)
-        if flag >= 2:
-            redis_add(redis_key, 0)
-            return False
-        # 服务器未全部完成更新(逻辑不严谨，一个服务器的话还能用用)
-        else:
-            redis_add(redis_key, flag + 1)
-            return True
+        return True
+        # # 服务器全部更新完毕(逻辑不严谨感觉)
+        # if flag >= 2:
+        #     redis_add(redis_key, 0)
+        #     return False
+        # # 服务器未全部完成更新(逻辑不严谨，一个服务器的话还能用用)
+        # else:
+        #     redis_add(redis_key, flag + 1)
+        #     return True
     return False
 
 
@@ -1091,9 +1092,9 @@ def init(sleepSecond):
         # if needUpdate(REDIS_KEY_UPDATE_BLACK_LIST_FLAG):
         #     initBlackList()
         if needUpdate(REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG):
-            initWhiteListSP()
+            initWhiteListSP(REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG)
         if needUpdate(REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG):
-            initBlackListSP()
+            initBlackListSP(REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG)
         # if needUpdate(REDIS_KEY_UPDATE_THREAD_NUM_FLAG):
         #     init_threads_num()
         # if needUpdate(REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG):
@@ -1302,8 +1303,8 @@ def main():
     init_extra_dns_port()
     init_dns_query_num()
     init_dns_timeout()
-    initWhiteListSP()
-    initBlackListSP()
+    initWhiteListSP(REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG)
+    initBlackListSP(REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG)
     # initIPV4List()
     initSimpleWhiteList()
     initSimpleBlackList()
