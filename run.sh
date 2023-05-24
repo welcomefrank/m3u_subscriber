@@ -5,8 +5,6 @@ redis-server /etc/redis/redis.conf &
 python3 /app/dns.py &
 # 启动主Python应用程序进程
 python3 /app/main.py &
-# 启动Nginx
-nginx -g 'daemon off;'
 # just keep this script running
 while [[ true ]]; do
     sleep 1
