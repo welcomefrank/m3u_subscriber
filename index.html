@@ -394,18 +394,6 @@
         <input type="radio" name="page" id="page30">
         <span>YY直播源</span>
     </label>
-    <label>
-        <input type="radio" name="page" id="page31">
-        <span>webdav直播源</span>
-    </label>
-    <label>
-        <input type="radio" name="page" id="page32">
-        <span>Douyu直播源</span>
-    </label>
-    <label>
-        <input type="radio" name="page" id="page33">
-        <span>Alist直播源</span>
-    </label>
 </div>
 <div id="choice">
     <div id="page1" style="display: block;">
@@ -1296,73 +1284,6 @@
             <button onclick="changeFileName('maxTimeout', 'maxTimeout', maxTimeout)" class="stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
-            webdav/alist直播超过时限没有人访问切片数据，干掉最近访问uuid之外所有切片数据(秒)
-        </div>
-        <div style="width:100%">
-            <input type="text" id="maxTimeoutIgnoreLastUUID" class="stubboninput" placeholder="300"/>
-            <button onclick="changeFileName('maxTimeoutIgnoreLastUUID', 'maxTimeoutIgnoreLastUUID', maxTimeoutIgnoreLastUUID)"
-                    class="stubbonsave">修改
-            </button>
-        </div>
-        <div style="display: flex;width: 100%;">
-            webdav/alist直播超过时限没有人访问切片数据，干掉全部切片数据(秒)
-        </div>
-        <div style="width:100%">
-            <input type="text" id="maxTimeoutIgnoreAllUUID" class="stubboninput" placeholder="3600"/>
-            <button onclick="changeFileName('maxTimeoutIgnoreAllUUID', 'maxTimeoutIgnoreAllUUID', maxTimeoutIgnoreAllUUID)"
-                    class="stubbonsave">修改
-            </button>
-        </div>
-
-        <div style="display: flex;width: 100%;">
-            webdav/alist直播源已经看过的切片数据保留时间(秒),根据带宽和文件大小调整
-        </div>
-        <div style="width:100%">
-            <input type="text" id="maxTimeoutTsSeen" class="stubboninput" placeholder="300"/>
-            <button onclick="changeFileName('maxTimeoutTsSeen', 'maxTimeoutTsSeen', maxTimeoutTsSeen)"
-                    class="stubbonsave">修改
-            </button>
-        </div>
-
-        <div style="display: flex;width: 100%;">
-            webdav/alist直播源检查单个切片文件是否没有被占用(正在写入)最大检测时长(秒),根据带宽和文件大小调整
-        </div>
-        <div style="width:100%">
-            <input type="text" id="maxTimeoutTsFree" class="stubboninput" placeholder="300"/>
-            <button onclick="changeFileName('maxTimeoutTsFree', 'maxTimeoutTsFree', maxTimeoutTsFree)"
-                    class="stubbonsave">修改
-            </button>
-        </div>
-
-        <div style="display: flex;width: 100%;">
-            webdav/alist直播源检查单个直播源m3u8文件是否没有被占用(正在写入)最大检测时长(秒),根据带宽和文件大小调整
-        </div>
-        <div style="width:100%">
-            <input type="text" id="maxTimeoutM3u8Free" class="stubboninput" placeholder="300"/>
-            <button onclick="changeFileName('maxTimeoutM3u8Free', 'maxTimeoutM3u8Free', maxTimeoutM3u8Free)"
-                    class="stubbonsave">修改
-            </button>
-        </div>
-        <div style="display: flex;width: 100%;">
-            webdav/alist ffmpeg音频模式处理(copy/aac),copy-速度最快;aac-解决一些音频无法播放的问题
-        </div>
-        <div style="width:100%">
-            <input type="text" id="audioType" class="stubboninput" placeholder="300"/>
-            <button onclick="changeFileName('audioType', 'audioType', audioType)"
-                    class="stubbonsave">修改
-            </button>
-        </div>
-        <div style="display: flex;width: 100%;">
-            webdav/alist 多线程设置,机器不好的不要调太大，容易系统崩溃
-        </div>
-        <div style="width:100%">
-            <input type="text" id="ffmpegThread" class="stubboninput" placeholder="2"/>
-            <button onclick="changeFileName('ffmpegThread', 'ffmpegThread', ffmpegThread)"
-                    class="stubbonsave">修改
-            </button>
-        </div>
-
-        <div style="display: flex;width: 100%;">
             系统用户名
         </div>
         <div style="width:100%">
@@ -1527,14 +1448,6 @@
             <div class="grid-item">
                 <button id="switch35" class="switchfunctionbutton" onclick="toggleSwitch('switch35')">已关闭</button>
                 <input class="toggletext" type="text" value="项目直播源-定时器">
-            </div>
-            <div class="grid-item">
-                <button id="switch36" class="switchfunctionbutton" onclick="toggleSwitch('switch36')">已关闭</button>
-                <input class="toggletext" type="text" value="alist-定时器">
-            </div>
-            <div class="grid-item">
-                <button id="switch37" class="switchfunctionbutton" onclick="toggleSwitch('switch37')">已关闭</button>
-                <input class="toggletext" type="text" value="切片销毁-定时器">
             </div>
         </div>
     </div>
@@ -2178,176 +2091,6 @@
             </table>
         </div>
     </div>
-    <div id="page31" style="display: none;">
-        <h1>webdav直播源</h1>
-        <div style="float: left;width: 70%">
-            <h3 style="color: crimson">使用该功能时记得开启切片销毁定时器，不使用时记得关闭</h3>
-            <h3 style="color: crimson">使用这个功能一定要在挂载容器时指定外部路径来挂载/app/slices，否则docker会爆内存</h3>
-            <h3>定时20秒自动删除除去最近一次观看的视频之外的全部切片</h3>
-            <h3>定时5分钟自动删除最近一次观看的视频已经读取的切片</h3>
-            <h3>超融合订阅地址:参考m3u格式</h3>
-            <h3 class="urllink">webdav-无加密:http://192.168.5.1:22771/secret/webdav.m3u</h3>
-            <h3>上传文件导入webdav账号</h3>
-        </div>
-        <div style="width:100%">
-            <div>
-                <input type="file" id="upload-json-btn28" class="uploadjsonbtn" style="width: 100%"></input>
-            </div>
-            <div>
-                <button class="button stepflag" onclick="execute28()" style="width: 100%">生成webdav超融合订阅
-                </button>
-            </div>
-            <div>
-                <button id="download-json-btn28" class="button download-json-btn" style="width: 100%">
-                    导出webdav账号备份
-                </button>
-            </div>
-
-            <div style="display: flex;width: 100%;">
-                webdav用户名:username
-            </div>
-            <div style="width:100%">
-                <input type="text" id="webdavUsernameM3u" class="stubboninput" placeholder="ppap"/>
-                <button onclick="changeSyncData('username', 'm3u', 'webdavUsernameM3u', webdavUsernameM3u)"
-                        class="stubbonsave">
-                    修改
-                </button>
-            </div>
-            <div style="display: flex;width: 100%;">
-                webdav密码:password
-            </div>
-            <div style="width:100%">
-                <input type="text" id="webdavPassM3u" class="stubboninput" placeholder="123456"/>
-                <button onclick="changeSyncData('password', 'm3u', 'webdavPassM3u', webdavPassM3u)" class="stubbonsave">
-                    修改
-                </button>
-            </div>
-            <br>
-            <div>
-                <button id="download-json-btn28-2" class="button download-json-btn" style="width: 100%">
-                    导出webdav子目录备份
-                </button>
-            </div>
-            <h3>上传文件导入webdav子目录数据</h3>
-            <div>
-                <input type="file" id="upload-json-btn282" class="uploadjsonbtn" style="width: 100%"></input>
-            </div>
-            <div style="width: 97%;">
-                <input type="text" id="searchInput28" placeholder="搜索框" class="searchbox"
-                       style="width: 100%"></input>
-            </div>
-            <div>
-                <button id="add-row28" class="addNewSubscriber" style="width:100%">新增子目录</button>
-            </div>
-            <button id="removem3ulinks28" class="button removeallSubscriber"
-                    onclick="removelinksBase('/api/removem3ulinks28')">删除全部子目录
-            </button>
-            <br>
-            <button style="margin-right:5px " id="removem3ulinks282" class="button removeallSubscriber"
-                    onclick="removelinksBase('/api/removem3ulinks282')">删除全部切片
-            </button>
-            <br>
-            <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">订阅来源:webdav直播子目录(不包括视频文件本身)
-                    +频道分组名字(举例子:游戏王5DS,这一行配置代表全部游戏王5DS的直播源)
-                </div>
-                <div class="notice" style="display: flex;width: 20%;">操作</div>
-            </div>
-            <table id="input-table28" style="width:100%">
-                <tbody style="width:100%">
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-
-    <div id="page32" style="display: none;">
-        <h1>Douyu直播源</h1>
-        <div style="float: left;width: 70%">
-            <h3>后台默认1小时自动执行生成操作,需要在功能开关开启</h3>
-            <h3>超融合哔哩哔哩订阅地址:参考m3u格式</h3>
-            <h3 class="urllink">douyu-无加密:http://192.168.5.1:22771/secret/douyu.m3u</h3>
-            <h3 class="urllink">douyu-无加密-txt:http://192.168.5.1:22771/secret/douyu.txt</h3>
-            <h3>上传文件导入合并Douyu频道</h3>
-        </div>
-        <div style="width:100%">
-            <div>
-                <input type="file" id="upload-json-btn29" class="uploadjsonbtn" style="width: 100%"></input>
-            </div>
-            <div>
-                <button id="add-row29" class="addNewSubscriber" style="width:100%">新增Douyu直播频道</button>
-            </div>
-            <div>
-                <button class="button stepflag" onclick="execute29()" style="width: 100%">生成Douyu超融合订阅
-                </button>
-            </div>
-            <div>
-                <button id="download-json-btn29" class="button download-json-btn" style="width: 100%">
-                    导出Douyu直播频道备份
-                </button>
-            </div>
-            <div style="width: 97%;">
-                <input type="text" id="searchInput29" placeholder="搜索框" class="searchbox"
-                       style="width: 100%"></input>
-            </div>
-            <button id="removem3ulinks29" class="button removeallSubscriber"
-                    onclick="removelinksBase('/api/removem3ulinks29')">删除全部订阅
-            </button>
-            <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">订阅来源:Douyu直播ID+频道名字
-                </div>
-                <div class="notice" style="display: flex;width: 20%;">操作</div>
-            </div>
-            <table id="input-table29" style="width:100%">
-                <tbody style="width:100%">
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div id="page33" style="display: none;">
-        <h1>Alist直播源</h1>
-        <div style="float: left;width: 70%">
-            <h3 style="color: crimson">使用该功能时记得开启切片销毁定时器，不使用时记得关闭</h3>
-            <h3 style="color: crimson">谨慎使用，建议一次只爬取一个站点，死机了我可不管</h3>
-            <h3>超融合Alist订阅地址:参考m3u格式</h3>
-            <h3 class="urllink">alist-无加密:http://192.168.5.1:22771/secret/alist.m3u</h3>
-            <h3>上传文件导入合并Alist订阅</h3>
-        </div>
-        <div style="width:100%">
-            <div>
-                <input type="file" id="upload-json-btn30" class="uploadjsonbtn" style="width: 100%"></input>
-            </div>
-            <div>
-                <button id="add-row30" class="addNewSubscriber" style="width:100%">新增Alist直播频道</button>
-            </div>
-            <div>
-                <button class="button stepflag" onclick="execute30()" style="width: 100%">生成Alist超融合订阅
-                </button>
-            </div>
-            <div>
-                <button id="download-json-btn30" class="button download-json-btn" style="width: 100%">
-                    导出Alist订阅备份
-                </button>
-            </div>
-            <div style="width: 97%;">
-                <input type="text" id="searchInput30" placeholder="搜索框" class="searchbox"
-                       style="width: 100%"></input>
-            </div>
-            <button id="removem3ulinks30" class="button removeallSubscriber"
-                    onclick="removelinksBase('/api/removem3ulinks30')">删除全部订阅
-            </button>
-            <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">订阅来源:Alist网址+网址备注
-                </div>
-                <div class="notice" style="display: flex;width: 20%;">操作</div>
-            </div>
-            <table id="input-table30" style="width:100%">
-                <tbody style="width:100%">
-                </tbody>
-            </table>
-        </div>
-    </div>
 </div>
 
 <script>
@@ -2543,14 +2286,6 @@
     const inputTable25 = document.getElementById('input-table25');
     const downloadBtn25 = document.getElementById('download-json-btn25');
 
-    const addRowButton29 = document.getElementById('add-row29');
-    const inputTable29 = document.getElementById('input-table29');
-    const downloadBtn29 = document.getElementById('download-json-btn29');
-
-    const addRowButton30 = document.getElementById('add-row30');
-    const inputTable30 = document.getElementById('input-table30');
-    const downloadBtn30 = document.getElementById('download-json-btn30');
-
     const addRowButton26 = document.getElementById('add-row26');
     const inputTable26 = document.getElementById('input-table26');
     const downloadBtn26 = document.getElementById('download-json-btn26');
@@ -2558,11 +2293,6 @@
     const addRowButton27 = document.getElementById('add-row27');
     const inputTable27 = document.getElementById('input-table27');
     const downloadBtn27 = document.getElementById('download-json-btn27');
-
-    const downloadBtn28 = document.getElementById('download-json-btn28');
-    const addRowButton28 = document.getElementById('add-row28');
-    const inputTable28 = document.getElementById('input-table28');
-    const downloadBtn282 = document.getElementById('download-json-btn28-2');
 
 
     // 输入框显示中国DNS端口
@@ -2625,12 +2355,6 @@
     const searchInput26 = document.getElementById('searchInput26');
     // 获取页面元素-YY直播源
     const searchInput27 = document.getElementById('searchInput27');
-    // 获取页面元素-webdav直播源
-    const searchInput28 = document.getElementById('searchInput28');
-    // 获取页面元素-douyu直播源
-    const searchInput29 = document.getElementById('searchInput29');
-    // 获取页面元素-alist直播源
-    const searchInput30 = document.getElementById('searchInput30');
 
     searchAddListener2(searchInput18, inputTable18)
     searchAddListener2(searchInput17, inputTable17)
@@ -2660,16 +2384,10 @@
     searchAddListener(searchInput24, inputTable24)
     // 给bilibili直播源搜索框绑定'oninput'事件
     searchAddListener(searchInput25, inputTable25)
-    // 给douyu直播源搜索框绑定'oninput'事件
-    searchAddListener(searchInput29, inputTable29)
-    // 给alist直播源搜索框绑定'oninput'事件
-    searchAddListener(searchInput30, inputTable30)
     // 给huya直播源搜索框绑定'oninput'事件
     searchAddListener(searchInput26, inputTable26)
     // 给YY直播源搜索框绑定'oninput'事件
     searchAddListener(searchInput27, inputTable27)
-    // 给webdav直播源搜索框绑定'oninput'事件
-    searchAddListener(searchInput28, inputTable28)
     // 给简易dns白名单搜索框绑定'oninput'事件
     searchAddListener(searchInput4, inputTable12)
     // 给m3u白名单搜索框绑定'oninput'事件
@@ -2836,7 +2554,7 @@
             var tagnamefile = parts2[2]
             var parts3 = tagnamefile.split(".")
             var tagname = parts3[0]
-            if (tagname === 'youtube' || tagname === 'bilibili' || tagname === 'huya' || tagname === 'YY' || tagname === 'douyu' || tagname === 'webdav' || tagname === 'alist') {
+            if (tagname === 'youtube' || tagname === 'bilibili' || tagname === 'huya' || tagname === 'YY' ) {
                 elements[i].innerHTML = prefix + "//" + newIp + suffix2 + "/" + tagname + "." + parts3[1];
                 continue
             }
@@ -3345,15 +3063,6 @@
         reloadBase('/api/getall25', inputTable25)
     }
 
-    //douyu直播源-从数据库拉取关键字列表数据
-    function reloadDouyuM3U() {
-        reloadBase('/api/getall29', inputTable29)
-    }
-
-    //alist直播源-从数据库拉取关键字列表数据
-    function reloadAlistM3U() {
-        reloadBase('/api/getall30', inputTable30)
-    }
 
     //huya直播源-从数据库拉取关键字列表数据
     function reloadHuyaM3U() {
@@ -3363,11 +3072,6 @@
     //YY直播源-从数据库拉取关键字列表数据
     function reloadYYM3U() {
         reloadBase('/api/getall27', inputTable27)
-    }
-
-    //webdav直播源-从数据库拉取关键字列表数据
-    function reloadWebdavM3U() {
-        reloadBase('/api/getall28', inputTable28)
     }
 
     //加密订阅密码历史记录-从数据库拉取关键字列表数据
@@ -3599,15 +3303,6 @@
         saveInputValuebase(inputValue, name, '/api/addnewm3u25')
     }
 
-    //douyu配置
-    function saveInputValue29(inputValue, name) {
-        saveInputValuebase(inputValue, name, '/api/addnewm3u29')
-    }
-
-    //alist配置
-    function saveInputValue30(inputValue, name) {
-        saveInputValuebase(inputValue, name, '/api/addnewm3u30')
-    }
 
     //huya配置
     function saveInputValue26(inputValue, name) {
@@ -3617,11 +3312,6 @@
     //YY配置
     function saveInputValue27(inputValue, name) {
         saveInputValuebase(inputValue, name, '/api/addnewm3u27')
-    }
-
-    //webdav配置
-    function saveInputValue28(inputValue, name) {
-        saveInputValuebase(inputValue, name, '/api/addnewm3u28')
     }
 
     //永久列表-保留输入行数据
@@ -3752,16 +3442,6 @@
         deleteInputRowBase(row, inputValue, '/api/deletewm3u25')
     }
 
-    //删除douyu直播源
-    function deleteInputRow29(row, inputValue) {
-        deleteInputRowBase(row, inputValue, '/api/deletewm3u29')
-    }
-
-    //删除alist直播源
-    function deleteInputRow30(row, inputValue) {
-        deleteInputRowBase(row, inputValue, '/api/deletewm3u30')
-    }
-
     //删除huya直播源
     function deleteInputRow26(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u26')
@@ -3770,11 +3450,6 @@
     //删除YY直播源
     function deleteInputRow27(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u27')
-    }
-
-    //删除webdav直播源
-    function deleteInputRow28(row, inputValue) {
-        deleteInputRowBase(row, inputValue, '/api/deletewm3u28')
     }
 
     //删除加密订阅密码历史记录
@@ -3853,16 +3528,10 @@
     inputableAddEventListener(inputTable24, 'saveInputValue24', 'deleteInputRow24')
     //bilibili直播源
     inputableAddEventListener(inputTable25, 'saveInputValue25', 'deleteInputRow25')
-    //douyu直播源
-    inputableAddEventListener(inputTable29, 'saveInputValue29', 'deleteInputRow29')
-    //alist直播源
-    inputableAddEventListener(inputTable30, 'saveInputValue30', 'deleteInputRow30')
     //huya直播源
     inputableAddEventListener(inputTable26, 'saveInputValue26', 'deleteInputRow26')
     //YY直播源
     inputableAddEventListener(inputTable27, 'saveInputValue27', 'deleteInputRow27')
-    //webdav直播源
-    inputableAddEventListener(inputTable28, 'saveInputValue28', 'deleteInputRow28')
     //简易DNS黑名单
     inputableAddEventListener(inputTable13, 'saveInputValue13', 'deleteInputRow13')
     //简易DNS白名单
@@ -3957,18 +3626,10 @@
     fileInputAddEventListenerBase('upload-json-btn24', 'redisKeyYoutube', '/api/upload_json')
     //bilibili直播源-导入json配置
     fileInputAddEventListenerBase('upload-json-btn25', 'redisKeyBilibili', '/api/upload_json')
-    //douyu直播源-导入json配置
-    fileInputAddEventListenerBase('upload-json-btn29', 'redisKeyDouyu', '/api/upload_json')
-    //alist直播源-导入json配置
-    fileInputAddEventListenerBase('upload-json-btn30', 'redisKeyAlist', '/api/upload_json')
     //huya直播源-导入json配置
     fileInputAddEventListenerBase('upload-json-btn26', 'redisKeyHuya', '/api/upload_json')
     //YY直播源-导入json配置
     fileInputAddEventListenerBase('upload-json-btn27', 'redisKeyYY', '/api/upload_json')
-    //webdav直播源账号-导入json配置
-    fileInputAddEventListenerBase('upload-json-btn28', 'redisKeyWebdavM3u', '/api/upload_json')
-    //webdav直播源子目录-导入json配置
-    fileInputAddEventListenerBase('upload-json-btn282', 'redisKeyWebdavPathList', '/api/upload_json')
     //网络下载配置加密上传-导入json配置
     fileInputAddEventListenerBase('upload-json-btn17', 'downloadAndSecretUploadUrlPasswordAndName', '/api/upload_json')
     //m3u白名单分组优先级-导入json配置
@@ -4362,10 +4023,6 @@
             reloadFunctionOpenButton('switch34')
             //youtube-定时器
             reloadFunctionOpenButton('switch35')
-                        //alist-定时器
-            reloadFunctionOpenButton('switch36')
-                                    //切片销毁-定时器
-            reloadFunctionOpenButton('switch37')
         } else if (selectedPage === pages[18].id) {
             reloadDNSSIMPLEWhiteList()
         } else if (selectedPage === pages[19].id) {
@@ -4389,14 +4046,6 @@
             reloadHuyaM3U()
         } else if (selectedPage === pages[29].id) {
             reloadYYM3U()
-        } else if (selectedPage === pages[30].id) {
-            getSyncData('username', 'm3u', 'webdavUsernameM3u', webdavUsernameM3u)
-            getSyncData('password', 'm3u', 'webdavPassM3u', webdavPassM3u)
-            reloadWebdavM3U()
-        } else if (selectedPage === pages[31].id) {
-            reloadDouyuM3U()
-        } else if (selectedPage === pages[32].id) {
-            reloadAlistM3U()
         }
         if (selectedPage !== pages[1].id) {
             window.removeEventListener('scroll', handleScroll);
@@ -4501,18 +4150,10 @@
     downloadBtnAddEventListenerBase('download-json-btn24', 'redisKeyYoutube')
     // bilibili直播源-导出订阅json配置
     downloadBtnAddEventListenerBase('download-json-btn25', 'redisKeyBilibili')
-    // douyu直播源-导出订阅json配置
-    downloadBtnAddEventListenerBase('download-json-btn29', 'redisKeyDouyu')
-    // alist直播源-导出订阅json配置
-    downloadBtnAddEventListenerBase('download-json-btn30', 'redisKeyAlist')
     // huya直播源-导出订阅json配置
     downloadBtnAddEventListenerBase('download-json-btn26', 'redisKeyHuya')
     // YY直播源-导出订阅json配置
     downloadBtnAddEventListenerBase('download-json-btn27', 'redisKeyYY')
-    // WEBDAV直播源账号密码-导出订阅json配置
-    downloadBtnAddEventListenerBase('download-json-btn28', 'redisKeyWebdavM3u')
-    // WEBDAV直播源子目录-导出订阅json配置
-    downloadBtnAddEventListenerBase('download-json-btn28-2', 'redisKeyWebdavPathList')
     // 下载加密上传-导出订阅json配置
     downloadBtnAddEventListenerBase('download-json-btn17', 'downloadAndSecretUploadUrlPasswordAndName')
     // M3U白名单分组优先级-导出订阅json配置
@@ -4617,16 +4258,10 @@
     addRowButtonAddEventListener(addRowButton24, inputTable24)
     //bilibili直播源-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton25, inputTable25)
-    //douyu直播源-只添加一行列表，不存储数据
-    addRowButtonAddEventListener(addRowButton29, inputTable29)
-    //alist直播源-只添加一行列表，不存储数据
-    addRowButtonAddEventListener(addRowButton30, inputTable30)
     //huya直播源-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton26, inputTable26)
     //YY直播源-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton27, inputTable27)
-    //webdav直播源-只添加一行列表，不存储数据
-    addRowButtonAddEventListener(addRowButton28, inputTable28)
     //DNS简易白名单-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton12, inputTable12)
     //M3U白名单-关键字-只添加一行列表，不存储数据
@@ -4783,16 +4418,6 @@
         executeBase('/api/chaoronghe25')
     }
 
-    //超融合-douyu直播源生成
-    function execute29() {
-        executeBase('/api/chaoronghe29')
-    }
-
-    //超融合-alist直播源生成
-    function execute30() {
-        executeBase('/api/chaoronghe30')
-    }
-
     //超融合-huya直播源生成
     function execute26() {
         executeBase('/api/chaoronghe26')
@@ -4801,11 +4426,6 @@
     //超融合-YY直播源生成
     function execute27() {
         executeBase('/api/chaoronghe27')
-    }
-
-    //超融合-webdav直播源生成
-    function execute28() {
-        executeBase('/api/chaoronghe28')
     }
 
     function executeBase(requestPath) {
