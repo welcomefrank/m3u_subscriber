@@ -19,27 +19,27 @@
 
 ## 普通:一般用下面的就可以
 
-docker run -v /m3u:/app/slices  -d --name m3usubscriber  --restart unless-stopped --net=host -e TZ=Asia/Shanghai jkld310/m3usubscriber:latest
+docker run   -d --name m3usubscriber  --restart unless-stopped --net=host -e TZ=Asia/Shanghai jkld310/m3usubscriber:latest
 
-docker run -v /m3u:/app/slices  -d --name m3usubscriber --restart unless-stopped --net=host -e TZ=Asia/Shanghai jkld310/m3usubscriber:arm64v8
+docker run   -d --name m3usubscriber --restart unless-stopped --net=host -e TZ=Asia/Shanghai jkld310/m3usubscriber:arm64v8
 
-docker run -v /m3u:/app/slices  -d --name m3usubscriber --restart unless-stopped --net=host -e TZ=Asia/Shanghai jkld310/m3usubscriber:x86_64
+docker run   -d --name m3usubscriber --restart unless-stopped --net=host -e TZ=Asia/Shanghai jkld310/m3usubscriber:x86_64
 
 ## 特权:开放全部线程和管理权限
 
-docker run -v /m3u:/app/slices  -d --name m3usubscriber --restart unless-stopped --net=host --memory=1000m --cpus=0.000 --privileged=true --cap-add=ALL -e TZ=Asia/Shanghai jkld310/m3usubscriber:latest
+docker run   -d --name m3usubscriber --restart unless-stopped --net=host --memory=1000m --cpus=0.000 --privileged=true --cap-add=ALL -e TZ=Asia/Shanghai jkld310/m3usubscriber:latest
 
-docker run -v /m3u:/app/slices  -d --name m3usubscriber  --restart unless-stopped --net=host --memory=1000m --cpus=0.000 --privileged=true --cap-add=ALL -e TZ=Asia/Shanghai jkld310/m3usubscriber:arm64v8
+docker run   -d --name m3usubscriber  --restart unless-stopped --net=host --memory=1000m --cpus=0.000 --privileged=true --cap-add=ALL -e TZ=Asia/Shanghai jkld310/m3usubscriber:arm64v8
 
-docker run -v /m3u:/app/slices   -d --name m3usubscriber --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged=true --cap-add=ALL -e TZ=Asia/Shanghai jkld310/m3usubscriber:x86_64
+docker run    -d --name m3usubscriber --restart unless-stopped --net=host --memory=500m --cpus=0.000 --privileged=true --cap-add=ALL -e TZ=Asia/Shanghai jkld310/m3usubscriber:x86_64
 
 #### 二、bridge模式:不建议使用，有BUG
 
-docker run -v /m3u:/app/slices  -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 22770:22770 -p 22772:22772 -e TZ=Asia/Shanghai jkld310/m3usubscriber:latest
+docker run   -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 22770:22770 -p 22772:22772 -e TZ=Asia/Shanghai jkld310/m3usubscriber:latest
 
-docker run -v /m3u:/app/slices  -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 22770:22770 -p 22772:22772 -e TZ=Asia/Shanghai jkld310/m3usubscriber:arm64v8
+docker run   -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 22770:22770 -p 22772:22772 -e TZ=Asia/Shanghai jkld310/m3usubscriber:arm64v8
 
-docker run -v /m3u:/app/slices  -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 22770:22770 -p 22772:22772 -e TZ=Asia/Shanghai jkld310/m3usubscriber:x86_64
+docker run   -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 22770:22770 -p 22772:22772 -e TZ=Asia/Shanghai jkld310/m3usubscriber:x86_64
 
 ### 非常高兴能为您介绍本工具所实现的各项功能：
 
