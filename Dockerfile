@@ -1,7 +1,7 @@
 FROM nginx
 # 将当前目录下的 python 脚本复制到容器中的 /app 目录
 # 创建目录
-RUN mkdir -p /app/ini /app/img /app/secret /app/slices
+RUN mkdir -p /app/ini /app/img /app/secret
 COPY ./*.py /app/
 COPY ./ini/*.ini /app/ini/
 COPY ./list/*.list /app/secret/
