@@ -14,7 +14,7 @@ import re
 # import shutil
 # import signal
 # import subprocess
-import uuid
+# import uuid
 from functools import wraps
 from xml.etree.ElementTree import fromstring
 
@@ -26,7 +26,7 @@ import urllib
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
 
-import execjs
+# import execjs
 import m3u8 as m3u8
 from zhconv import convert
 import aiohttp
@@ -34,7 +34,7 @@ import aiofiles
 import redis
 import requests
 import time
-from urllib.parse import urlparse, quote
+from urllib.parse import urlparse
 # import yaml
 from flask import Flask, jsonify, request, send_file, render_template, send_from_directory, \
     after_this_request, redirect
@@ -203,7 +203,6 @@ REDIS_KEY_YY_M3U = 'redisKeyYYM3u'
 redisKeyYYM3u = {}
 
 port_live = 22771
-
 
 NORMAL_REDIS_KEY = 'normalRedisKey'
 # 全部有redis备份字典key-普通redis结构，重要且数据量比较少的
@@ -618,8 +617,6 @@ async def asynctask(m3u_dict):
 def copyAndRename(source_file):
     with open(source_file, 'rb') as fsrc:
         return fsrc.read()
-
-
 
 
 def check_file(m3u_dict):
@@ -3481,6 +3478,7 @@ def initReloadCacheForNormal():
             except Exception as e:
                 pass
 
+
 def initReloadCacheForSpecial():
     for redisKey in specialRedisKey:
         if redisKey in REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME:
@@ -4152,8 +4150,6 @@ def deletewm3u25():
     return dellist(request, REDIS_KEY_BILIBILI)
 
 
-
-
 # 删除huya直播源
 @app.route('/api/deletewm3u26', methods=['POST'])
 @requires_auth
@@ -4209,8 +4205,6 @@ def getall25():
     return returnDictCache(REDIS_KEY_BILIBILI, redisKeyBilili)
 
 
-
-
 # 拉取全部huya
 @app.route('/api/getall26', methods=['GET'])
 @requires_auth
@@ -4225,7 +4219,6 @@ def getall26():
 def getall27():
     global redisKeyYY
     return returnDictCache(REDIS_KEY_YY, redisKeyYY)
-
 
 
 def returnDictCache(redisKey, cacheDict):
@@ -4422,8 +4415,6 @@ def addnewm3u25():
     global redisKeyBilili
     redisKeyBilili[addurl] = name
     return addlist(request, REDIS_KEY_BILIBILI)
-
-
 
 
 # 添加huya直播源
@@ -5119,6 +5110,7 @@ async def download_files5():
     m3u_dict = await download_file5_single(ids, mintimeout, maxTimeout)
     return m3u_dict
 
+
 async def download_files6_single(ids, mintimeout, maxTimeout):
     m3u_dict = {}
     try:
@@ -5264,6 +5256,7 @@ async def grab2(session, id, m3u_dict, sem, mintimeout, maxTimeout):
         return
     except Exception as e:
         print(f"bilibili An error occurred while processing {id}. Error: {e}")
+
 
 def huya_live(e):
     i, b = e.split('?')
@@ -5605,6 +5598,7 @@ def chaoronghe25():
         return "result"
     except Exception as e:
         return "empty"
+
 
 # 生成全部huyta直播源
 @app.route('/api/chaoronghe26', methods=['GET'])
@@ -6000,6 +5994,7 @@ def removem3ulinks25():
     redis_del_map(REDIS_KEY_BILIBILI_M3U)
     return "success"
 
+
 # 删除全部huya直播源
 @app.route('/api/removem3ulinks26', methods=['GET'])
 @requires_auth
@@ -6020,7 +6015,6 @@ def removem3ulinks27():
     redisKeyYYM3u.clear()
     redis_del_map(REDIS_KEY_YY_M3U)
     return "success"
-
 
 
 # 删除全部简易DNS白名单
