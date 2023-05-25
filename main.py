@@ -1089,8 +1089,16 @@ def upload_json_base(rediskey, file_content):
     try:
         json_dict = json.loads(file_content)
         if rediskey not in specialRedisKey:
-            redis_add_map(rediskey, json_dict)
-            importToReloadCache(rediskey, json_dict)
+            if rediskey == REDIS_KEY_M3U_WHITELIST:
+                dict_final = {}
+                for key, value in json_dict.items():
+                    dict_final[convert(key, 'zh-tw').lower()] = value
+                    dict_final[convert(key, 'zh-cn').lower()] = value
+                redis_add_map(rediskey, dict_final)
+                importToReloadCache(rediskey, dict_final)
+            else:
+                redis_add_map(rediskey, json_dict)
+                importToReloadCache(rediskey, json_dict)
         else:
             importToReloadCacheForSpecial(rediskey, json_dict)
         return jsonify({'success': True})
@@ -2939,13 +2947,15 @@ def find_m3u_name_txt(lines, name_dict, def_group):
             if re.match(r"^[^#].*,(http|rtsp|rtmp|P2p|mitv)", line):
                 name, url = getChannelAndUrl(",", line)
                 if name:
-                    name_dict[name] = def_group
+                    name_dict[convert(name, 'zh-tw')] = def_group
+                    name_dict[convert(name, 'zh-cn')] = def_group
                 else:
                     continue
             elif re.match(r"^[^#].*，(http|rtsp|rtmp|P2p|mitv)", line):
                 name, url = getChannelAndUrl("，", line)
                 if name:
-                    name_dict[name] = def_group
+                    name_dict[convert(name, 'zh-tw')] = def_group
+                    name_dict[convert(name, 'zh-cn')] = def_group
                 else:
                     continue
             else:
@@ -2976,6 +2986,7 @@ def format_data(data, index, step, my_dict):
                 if searchurl in my_dict.keys():
                     continue
                 if name:
+                    name=name.lower()
                     fullName = update_epg_by_name(name)
                     my_dict[searchurl] = fullName
                     addChinaChannel(name, searchurl, fullName)
@@ -2987,6 +2998,7 @@ def format_data(data, index, step, my_dict):
                 if searchurl in my_dict.keys():
                     continue
                 if name:
+                    name = name.lower()
                     fullName = update_epg_by_name(name)
                     my_dict[searchurl] = fullName
                     addChinaChannel(name, searchurl, fullName)
@@ -3014,7 +3026,7 @@ def format_data(data, index, step, my_dict):
                     last_comma_index = preline.rfind(",")
                     if last_comma_index == -1:
                         raise ValueError("字符串中不存在逗号")
-                    tvg_name = preline[last_comma_index + 1:].strip()
+                    tvg_name = preline[last_comma_index + 1:].strip().lower()
                     fullName = update_epg_by_name(tvg_name)
                     my_dict[searchurl] = fullName
                     addChinaChannel(tvg_name, searchurl, fullName)
@@ -3089,6 +3101,7 @@ def process_data(data, index, step, my_dict):
                 if searchurl in my_dict.keys():
                     continue
                 if name:
+                    name = name.lower()
                     fullName = update_epg_by_name(name)
                     my_dict[searchurl] = fullName
                     addChinaChannel(name, searchurl, fullName)
@@ -3104,6 +3117,7 @@ def process_data(data, index, step, my_dict):
                 if searchurl in my_dict.keys():
                     continue
                 if name:
+                    name = name.lower()
                     fullName = update_epg_by_name(name)
                     my_dict[searchurl] = fullName
                     addChinaChannel(name, searchurl, fullName)
@@ -3138,7 +3152,7 @@ def process_data(data, index, step, my_dict):
                     last_comma_index = preline.rfind(",")
                     if last_comma_index == -1:
                         raise ValueError("字符串中不存在逗号")
-                    tvg_name = preline[last_comma_index + 1:].strip()
+                    tvg_name = preline[last_comma_index + 1:].strip().lower()
                     fullName = update_epg_by_name(tvg_name)
                     addChinaChannel(tvg_name, searchurl, fullName)
                 except Exception as e:
@@ -3222,13 +3236,13 @@ def update_epg_nope(s):
         last_comma_index = s.rfind(",")
         if last_comma_index == -1:
             raise ValueError("字符串中不存在逗号")
-        tvg_name = s[last_comma_index + 1:].strip()
+        tvg_name = s[last_comma_index + 1:].strip().lower()
     except Exception as e:
         try:
             tvg_name = re.search(r'tvg-name="([^"]+)"', s)
             if tvg_name is None:
                 raise ValueError("未找到 tvg-name 属性")
-            tvg_name = tvg_name.group(1)
+            tvg_name = tvg_name.group(1).lower()
         except Exception as e:
             # 处理异常
             tvg_name = ""
@@ -3267,13 +3281,13 @@ def update_epg(s, searchurl):
         last_comma_index = s.rfind(",")
         if last_comma_index == -1:
             raise ValueError("字符串中不存在逗号")
-        tvg_name = s[last_comma_index + 1:].strip()
+        tvg_name = s[last_comma_index + 1:].strip().lower()
     except Exception as e:
         try:
             tvg_name = re.search(r'tvg-name="([^"]+)"', s)
             if tvg_name is None:
                 raise ValueError("未找到 tvg-name 属性")
-            tvg_name = tvg_name.group(1)
+            tvg_name = tvg_name.group(1).lower()
         except Exception as e:
             # 处理异常
             tvg_name = ""
@@ -7645,7 +7659,8 @@ def process_file2():
     all_matches = re.findall(regex_pattern, file_content)
     group_dict = {}
     for i in all_matches:
-        group_dict[i] = group
+        group_dict[convert(i, 'zh-tw')] = group
+        group_dict[convert(i, 'zh-cn')] = group
     # 将字典转换为JSON字符串并返回
     json_str = json.dumps(group_dict)
     filename = f'{secret_path}group.json'
